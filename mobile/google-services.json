@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1059931069454",
+    "project_id": "nationalcreeradviceapp",
+    "storage_bucket": "nationalcreeradviceapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1059931069454:android:7d64718f364f2448f8f05f",
+        "android_client_info": {
+          "package_name": "za.gov.ncap.careeradvice"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1059931069454-pl4qegd1fv7nhsmesdftcav6gs2f100h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtJEm3oOyHIRZrkAjcmoKmiz_T0d16JDs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1059931069454-pl4qegd1fv7nhsmesdftcav6gs2f100h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

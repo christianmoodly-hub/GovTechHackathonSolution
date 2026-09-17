@@ -1,16 +1,14 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ImageBackground,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,10 +19,6 @@ import { AuthHeader } from "../components/auth/AuthHeader";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
 import { HELPLINE, PROVINCES, REGISTER_ROLES } from "../data/staticContent";
-import {
-  issueRegistrationOtp,
-  verifyRegistrationOtp,
-} from "../services/otp";
 import type { Demographics } from "../services/types";
 import { colors, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
@@ -63,12 +57,6 @@ export default function RegisterScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-
-  const [otpOpen, setOtpOpen] = useState(false);
-  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [otpHint, setOtpHint] = useState<string | null>(null);
-  const [otpFallback, setOtpFallback] = useState<string | null>(null);
-  const otpRefs = useRef<Array<TextInput | null>>([]);
 
   const message = localError || error;
 
@@ -139,19 +127,6 @@ export default function RegisterScreen() {
     return base;
   };
 
-  const sendOtp = async () => {
-    const result = await issueRegistrationOtp(email);
-    setOtpHint(
-      result.emailed
-        ? `We emailed a 6-digit code to ${result.email}. Check inbox / spam.`
-        : `Email delivery was blocked. Use the on-screen code to continue.`,
-    );
-    setOtpFallback(result.fallbackCode ?? null);
-    if (result.fallbackCode) {
-      console.log("[register] fallback OTP:", result.fallbackCode);
-    }
-  };
-
   const onSubmit = async () => {
     setLocalError(null);
     clearError();
@@ -166,71 +141,18 @@ export default function RegisterScreen() {
 
     setBusy(true);
     try {
-      await sendOtp();
-      setOtpDigits(["", "", "", "", "", ""]);
-      setOtpOpen(true);
-    } catch (err) {
-      console.error("[register] OTP issue failed", err);
-      setLocalError(
-        err instanceof Error ? err.message : "Could not send verification code.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onVerifyOtp = async () => {
-    setLocalError(null);
-    clearError();
-    const code = otpDigits.join("");
-    if (code.length !== 6) {
-      setLocalError("Enter the full 6-digit verification code.");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await verifyRegistrationOtp(email, code);
       await registerWithPassword({
         email,
         password: pin,
         fullName,
         demographics: buildDemographics(),
       });
-      setOtpOpen(false);
+      // AuthGate routes to /verify-email until Firebase emailVerified is true.
     } catch (err) {
-      console.error("[register] verify/create failed", err);
+      console.error("[register] create failed", err);
       setLocalError(err instanceof Error ? err.message : "Registration failed.");
     } finally {
       setBusy(false);
-    }
-  };
-
-  const onResendOtp = async () => {
-    setLocalError(null);
-    setBusy(true);
-    try {
-      await sendOtp();
-      setOtpDigits(["", "", "", "", "", ""]);
-    } catch (err) {
-      console.error("[register] OTP resend failed", err);
-      setLocalError(
-        err instanceof Error ? err.message : "Could not resend verification code.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const setOtpDigit = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setOtpDigits((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < 5) {
-      otpRefs.current[index + 1]?.focus();
     }
   };
 
@@ -269,7 +191,7 @@ export default function RegisterScreen() {
               </View>
               <View style={styles.trustChip}>
                 <MaterialIcon name="bolt" size={14} color={colors.success} />
-                <Text style={styles.trustText}>Email OTP Verify</Text>
+                <Text style={styles.trustText}>Firebase Email Verify</Text>
               </View>
             </View>
             <View style={styles.progressTrack}>
@@ -403,7 +325,7 @@ export default function RegisterScreen() {
               label="Primary Mobile Number"
               leadingIcon="sms"
               placeholder="+27 72 000 0000"
-              hint="Used for advisor callbacks. Verification code is emailed for this build."
+              hint="Used for advisor callbacks. Account verification is emailed by Firebase."
               value={mobile}
               onChangeText={setMobile}
               keyboardType="phone-pad"
@@ -413,7 +335,7 @@ export default function RegisterScreen() {
               trailingLabel="Required"
               leadingIcon="mail"
               placeholder="your@emailaddress.co.za"
-              hint="Required for account security, OTP verification, and password recovery."
+              hint="Firebase will email you a verification link after you create your account."
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -576,19 +498,19 @@ export default function RegisterScreen() {
             </View>
           </ImageBackground>
 
-          {message && !otpOpen ? <Text style={styles.error}>{message}</Text> : null}
+          {message ? <Text style={styles.error}>{message}</Text> : null}
 
           <Pressable
             style={[styles.primaryBtn, (!canSubmit || busy || isLoading) && styles.disabled]}
             disabled={!canSubmit || busy || isLoading}
             onPress={() => void onSubmit()}
           >
-            {busy && !otpOpen ? (
+            {busy ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
                 <Text style={styles.primaryText}>
-                  Create Account & Verify via Email OTP
+                  Create Account & Send Verification Email
                 </Text>
                 <MaterialIcon name="arrow_forward" size={20} color={colors.onPrimary} />
               </>
@@ -623,71 +545,6 @@ export default function RegisterScreen() {
         </ScrollView>
         <AuthFooter />
       </KeyboardAvoidingView>
-
-      <Modal visible={otpOpen} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.modalCard}
-          >
-            <Pressable
-              style={styles.modalClose}
-              onPress={() => setOtpOpen(false)}
-              disabled={busy}
-            >
-              <MaterialIcon name="close" size={22} color={colors.textSecondary} />
-            </Pressable>
-            <View style={styles.modalIcon}>
-              <MaterialIcon name="sms" size={28} color={colors.primary} />
-            </View>
-            <Text style={styles.modalTitle}>Enter Free Email OTP</Text>
-            <Text style={styles.modalBody}>
-              {otpHint ??
-                `A 6-digit code was sent to ${email.trim().toLowerCase() || "your email"}.`}
-            </Text>
-            {otpFallback ? (
-              <View style={styles.fallbackBox}>
-                <Text style={styles.fallbackLabel}>Your verification code</Text>
-                <Text style={styles.fallbackCode}>{otpFallback}</Text>
-              </View>
-            ) : null}
-            <View style={styles.otpRow}>
-              {otpDigits.map((digit, index) => (
-                <TextInput
-                  key={`otp-${index}`}
-                  ref={(ref) => {
-                    otpRefs.current[index] = ref;
-                  }}
-                  value={digit}
-                  onChangeText={(v) => setOtpDigit(index, v)}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  style={styles.otpBox}
-                  editable={!busy}
-                />
-              ))}
-            </View>
-            {message ? <Text style={styles.error}>{message}</Text> : null}
-            <Pressable
-              style={[styles.primaryBtn, busy && styles.disabled]}
-              disabled={busy}
-              onPress={() => void onVerifyOtp()}
-            >
-              {busy ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <>
-                  <Text style={styles.primaryText}>Verify & Launch Khetha</Text>
-                  <MaterialIcon name="rocket_launch" size={18} color={colors.onPrimary} />
-                </>
-              )}
-            </Pressable>
-            <Pressable onPress={() => void onResendOtp()} disabled={busy}>
-              <Text style={styles.resend}>Didn&apos;t receive it? Resend code</Text>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -899,69 +756,4 @@ const styles = StyleSheet.create({
   helpTitle: { ...typography.labelLg, color: colors.text, fontWeight: "700" },
   helpBody: { ...typography.bodySm, color: colors.textSecondary },
   inlineLink: { color: colors.primary, fontWeight: "700" },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.55)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    padding: spacing.xl,
-    gap: spacing.md,
-    paddingBottom: spacing.xxxl,
-  },
-  modalClose: { alignSelf: "flex-end" },
-  modalIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  modalTitle: {
-    ...typography.headlineSm,
-    color: colors.text,
-    textAlign: "center",
-  },
-  modalBody: {
-    ...typography.bodySm,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  fallbackBox: {
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    alignItems: "center",
-    gap: 4,
-  },
-  fallbackLabel: { ...typography.caption, color: colors.success },
-  fallbackCode: {
-    fontSize: 28,
-    fontWeight: "700",
-    letterSpacing: 6,
-    color: colors.primaryDark,
-  },
-  otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
-  otpBox: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.canvas,
-    textAlign: "center",
-    ...typography.headlineSm,
-    color: colors.text,
-  },
-  resend: {
-    ...typography.labelLg,
-    color: colors.primary,
-    textAlign: "center",
-    marginTop: spacing.sm,
-  },
 });

@@ -20,6 +20,7 @@
         "backgroundColor": "#006A4E"
       },
       "package": "za.gov.ncap.careeradvice",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",

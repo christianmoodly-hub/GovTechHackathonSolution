@@ -9,7 +9,7 @@ import { href } from "../utils/href";
 const PUBLIC_ROUTES = new Set(["sign-in", "register", "recover"]);
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoading, profile } = useAuth();
+  const { isSignedIn, isLoading, profile, emailVerificationRequired } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -18,6 +18,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const root = String(segments[0] ?? "");
     const onPublic = PUBLIC_ROUTES.has(root);
+    const onVerifyEmail = root === "verify-email";
     const onOnboarding = root === "onboarding";
     const hasDemographics = Boolean(profile?.demographics?.completedAt);
 
@@ -26,12 +27,36 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (isSignedIn && onPublic) {
+    if (isSignedIn && emailVerificationRequired && !onVerifyEmail) {
+      router.replace(href("/verify-email"));
+      return;
+    }
+
+    if (isSignedIn && !emailVerificationRequired && onVerifyEmail) {
       router.replace(href(hasDemographics ? "/" : "/onboarding"));
       return;
     }
 
-    if (isSignedIn && !hasDemographics && !onOnboarding) {
+    if (isSignedIn && onPublic) {
+      router.replace(
+        href(
+          emailVerificationRequired
+            ? "/verify-email"
+            : hasDemographics
+              ? "/"
+              : "/onboarding",
+        ),
+      );
+      return;
+    }
+
+    if (
+      isSignedIn &&
+      !emailVerificationRequired &&
+      !hasDemographics &&
+      !onOnboarding &&
+      !onVerifyEmail
+    ) {
       router.replace(href("/onboarding"));
       return;
     }
@@ -39,7 +64,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isSignedIn && hasDemographics && onOnboarding) {
       router.replace(href("/"));
     }
-  }, [isSignedIn, isLoading, profile?.demographics?.completedAt, segments, router]);
+  }, [
+    isSignedIn,
+    isLoading,
+    emailVerificationRequired,
+    profile?.demographics?.completedAt,
+    segments,
+    router,
+  ]);
 
   if (isLoading) {
     return (

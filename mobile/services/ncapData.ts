@@ -200,16 +200,21 @@ export async function updateProfile(
   try {
     const ref = doc(getDb(), PROFILES, trimmed);
     const existing = await getDoc(ref);
+    const existingData = existing.exists() ? existing.data() : {};
+
+    // Always send required keys so security rules' hasAll() passes even on merge writes.
     const payload: DocumentData = {
+      questionnaireResults:
+        data.questionnaireResults !== undefined
+          ? data.questionnaireResults
+          : (existingData.questionnaireResults ?? {}),
+      favourites:
+        data.favourites !== undefined
+          ? data.favourites
+          : (existingData.favourites ?? []),
       updatedAt: serverTimestamp(),
     };
 
-    if (data.questionnaireResults !== undefined) {
-      payload.questionnaireResults = data.questionnaireResults;
-    }
-    if (data.favourites !== undefined) {
-      payload.favourites = data.favourites;
-    }
     if (data.demographics !== undefined) {
       payload.demographics =
         data.demographics === null
@@ -222,12 +227,6 @@ export async function updateProfile(
 
     if (!existing.exists()) {
       payload.createdAt = serverTimestamp();
-      if (payload.questionnaireResults === undefined) {
-        payload.questionnaireResults = {};
-      }
-      if (payload.favourites === undefined) {
-        payload.favourites = [];
-      }
     }
 
     await setDoc(ref, payload, { merge: true });

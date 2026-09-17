@@ -24,15 +24,29 @@
   </head>
   <body>
     <main>
-      <h1>Opening NCAP…</h1>
-      <p>If the app does not open automatically, tap the link below.</p>
+      <h1 id="title">Opening NCAP…</h1>
+      <p id="body">If the app does not open automatically, tap the link below.</p>
       <p><a id="open" href="#">Open NCAP sign-in</a></p>
     </main>
     <script>
       (function () {
-        var params = window.location.search || "";
+        var params = new URLSearchParams(window.location.search || "");
         var hash = window.location.hash || "";
-        var deepLink = "ncap://sign-in" + params + hash;
+        var hasOob =
+          params.has("oobCode") ||
+          (hash && hash.indexOf("oobCode") !== -1);
+
+        // Email-verification continue URL lands here without an oobCode.
+        if (!hasOob) {
+          document.getElementById("title").textContent = "Email verified";
+          document.getElementById("body").textContent =
+            "Return to the Khetha app and tap “I’ve verified — continue”.";
+          document.getElementById("open").style.display = "none";
+          return;
+        }
+
+        var deepLink =
+          "ncap://sign-in" + (window.location.search || "") + hash;
         var anchor = document.getElementById("open");
         anchor.setAttribute("href", deepLink);
         window.location.replace(deepLink);

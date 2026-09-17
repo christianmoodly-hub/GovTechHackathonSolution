@@ -13,6 +13,7 @@ import {
   GoogleAuthProvider,
   isSignInWithEmailLink,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInAnonymously,
@@ -32,6 +33,13 @@ import type { Demographics, UserProfile } from "../services/types";
 
 const EMAIL_FOR_SIGN_IN_KEY = "ncap.emailForSignIn";
 
+/** Password accounts must confirm email; Google / anonymous skip this. */
+export function requiresEmailVerification(user: User | null | undefined): boolean {
+  if (!user || user.isAnonymous) return false;
+  if (user.emailVerified) return false;
+  return user.providerData.some((p) => p.providerId === "password");
+}
+
 export type RegisterInput = {
   email: string;
   password: string;
@@ -45,11 +53,14 @@ type AuthContextValue = {
   isSignedIn: boolean;
   isLoading: boolean;
   error: string | null;
+  emailVerificationRequired: boolean;
   sendSignInLink: (email: string) => Promise<void>;
   completeSignInFromLink: (url: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInWithGoogleIdToken: (idToken: string) => Promise<void>;
   registerWithPassword: (input: RegisterInput) => Promise<void>;
+  resendEmailVerification: () => Promise<void>;
+  refreshEmailVerification: () => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   continueAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -71,6 +82,14 @@ function buildActionCodeSettings() {
       installApp: true,
       minimumVersion: "1",
     },
+  };
+}
+
+function buildEmailVerificationSettings() {
+  // Completes in the browser; user returns to the app and taps “I’ve verified”.
+  return {
+    url: "https://nationalcreeradviceapp.firebaseapp.com/auth/verified.html",
+    handleCodeInApp: false,
   };
 }
 
@@ -103,6 +122,8 @@ function mapAuthError(err: unknown, fallback: string): string {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  /** Bumps when Firebase mutates User in place (e.g. after reload) so context recomputes. */
+  const [userRevision, setUserRevision] = useState(0);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -333,6 +354,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         await ensureProfile(credential.user.uid);
         await updateProfile(credential.user.uid, { demographics });
+
+        try {
+          await sendEmailVerification(
+            credential.user,
+            buildEmailVerificationSettings(),
+          );
+          console.log("[auth] verification email sent to", trimmed);
+        } catch (verifyErr) {
+          console.warn("[auth] sendEmailVerification failed", verifyErr);
+          // Account still created — user can resend from the verify screen.
+        }
+
         await bootstrapProfile(credential.user);
         setUser(credential.user);
       } catch (err) {
@@ -348,6 +381,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [bootstrapProfile],
   );
+
+  const resendEmailVerification = useCallback(async () => {
+    const auth = getFirebaseAuth();
+    const current = auth.currentUser;
+    if (!current) throw new Error("Sign in again to resend the verification email.");
+    if (current.emailVerified) return;
+
+    setError(null);
+    try {
+      await sendEmailVerification(current, buildEmailVerificationSettings());
+      console.log("[auth] verification email resent to", current.email);
+    } catch (err) {
+      console.error("[auth] resendEmailVerification failed", err);
+      const message = mapAuthError(err, "Could not resend verification email.");
+      setError(message);
+      throw new Error(message);
+    }
+  }, []);
+
+  const refreshEmailVerification = useCallback(async () => {
+    const auth = getFirebaseAuth();
+    const current = auth.currentUser;
+    if (!current) return false;
+
+    // Reload + force token refresh so emailVerified is fetched from the server.
+    await current.reload();
+    await current.getIdToken(true);
+    const refreshed = auth.currentUser;
+    if (!refreshed) return false;
+
+    const verified = refreshed.emailVerified;
+    console.log("[auth] refreshEmailVerification", {
+      email: refreshed.email,
+      emailVerified: verified,
+    });
+
+    // Firebase mutates User in place — same object ref would skip React updates.
+    setUserRevision((n) => n + 1);
+    setUser(refreshed);
+    return verified;
+  }, []);
 
   const sendPasswordReset = useCallback(async (email: string) => {
     const trimmed = email.trim().toLowerCase();
@@ -407,11 +481,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSignedIn: !!user,
       isLoading,
       error,
+      emailVerificationRequired: requiresEmailVerification(user),
       sendSignInLink,
       completeSignInFromLink,
       signInWithPassword,
       signInWithGoogleIdToken,
       registerWithPassword,
+      resendEmailVerification,
+      refreshEmailVerification,
       sendPasswordReset,
       continueAsGuest,
       signOut,
@@ -420,6 +497,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      userRevision,
       profile,
       isLoading,
       error,
@@ -428,6 +506,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signInWithGoogleIdToken,
       registerWithPassword,
+      resendEmailVerification,
+      refreshEmailVerification,
       sendPasswordReset,
       continueAsGuest,
       signOut,
