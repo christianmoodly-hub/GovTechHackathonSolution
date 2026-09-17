@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "total_records": 3,
+  "unknown_occupation_codes": 0,
+  "empty_tasks": 0,
+  "empty_qualifications": 0,
+  "empty_entry_requirements": 0,
+  "qualifications_with_url": 1,
+  "fetch_failures": 0
+}
