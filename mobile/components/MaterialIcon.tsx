@@ -115,6 +115,8 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   save: "save",
   arrow_drop_down: "arrow-drop-down",
   info: "info",
+  nature_people: "nature-people",
+  health_and_safety: "health-and-safety",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {
