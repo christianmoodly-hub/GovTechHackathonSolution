@@ -15,15 +15,21 @@ import {
 } from "firebase/firestore";
 import { getDb } from "../firebase/client";
 import type {
+  FavouriteRef,
+  FavouriteType,
   Occupation,
   OccupationSummary,
   ProfileUpdate,
+  Provider,
+  Qualification,
   QuestionnaireResultsMap,
   UserProfile,
 } from "./types";
 
 const PROFILES = "profiles";
 const OCCUPATIONS = "occupations";
+const QUALIFICATIONS = "qualifications";
+const PROVIDERS = "providers";
 const OCC_INDEX_CACHE_KEY = "ncap.occupationSummaries.v1";
 const PAGE_SIZE = 100;
 
@@ -45,6 +51,7 @@ function mapProfile(id: string, data: DocumentData): UserProfile {
         ? (data.questionnaireResults as QuestionnaireResultsMap)
         : {},
     favourites: Array.isArray(data.favourites) ? data.favourites : [],
+    pushToken: data.pushToken ?? null,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
@@ -164,6 +171,9 @@ export async function updateProfile(
     }
     if (data.favourites !== undefined) {
       payload.favourites = data.favourites;
+    }
+    if (data.pushToken !== undefined) {
+      payload.pushToken = data.pushToken;
     }
 
     if (!existing.exists()) {
@@ -297,4 +307,110 @@ export async function getOccupationSummaries(options?: {
       { cause: err },
     );
   }
+}
+
+function mapQualification(id: string, data: DocumentData): Qualification {
+  return {
+    id,
+    title: String(data.title ?? ""),
+    url: String(data.url ?? ""),
+    generalQualificationId: data.generalQualificationId,
+    qualificationId: data.qualificationId ?? null,
+    nqfLevel: data.nqfLevel ?? null,
+    duration: data.duration ?? null,
+    saqaUrl: data.saqaUrl ?? null,
+    providers: Array.isArray(data.providers) ? data.providers : [],
+    providerUrls: Array.isArray(data.providerUrls) ? data.providerUrls : [],
+    schemaVersion: data.schemaVersion,
+    scrapedAt: data.scrapedAt,
+  };
+}
+
+function mapProvider(id: string, data: DocumentData): Provider {
+  return {
+    id,
+    name: String(data.name ?? ""),
+    url: String(data.url ?? ""),
+    providerId: String(data.providerId ?? id),
+    website: data.website ?? null,
+    email: data.email ?? null,
+    telephone: data.telephone ?? null,
+    fax: data.fax ?? null,
+    streetAddress: data.streetAddress ?? null,
+    postalAddress: data.postalAddress ?? null,
+    offeredQualifications: Array.isArray(data.offeredQualifications)
+      ? data.offeredQualifications
+      : [],
+    offeredSaqaUrls: Array.isArray(data.offeredSaqaUrls)
+      ? data.offeredSaqaUrls
+      : [],
+    schemaVersion: data.schemaVersion,
+    scrapedAt: data.scrapedAt,
+  };
+}
+
+export async function getQualification(
+  id: string,
+): Promise<Qualification | null> {
+  const trimmed = id.trim();
+  if (!trimmed) {
+    throw new NcapDataError("invalid-argument", "Qualification id is required");
+  }
+  try {
+    const snap = await getDoc(doc(getDb(), QUALIFICATIONS, trimmed));
+    if (!snap.exists()) return null;
+    return mapQualification(snap.id, snap.data());
+  } catch (err) {
+    throw new NcapDataError(
+      "get-qualification-failed",
+      `Failed to load qualification ${trimmed}`,
+      { cause: err },
+    );
+  }
+}
+
+export async function getProvider(id: string): Promise<Provider | null> {
+  const trimmed = id.trim();
+  if (!trimmed) {
+    throw new NcapDataError("invalid-argument", "Provider id is required");
+  }
+  try {
+    const snap = await getDoc(doc(getDb(), PROVIDERS, trimmed));
+    if (!snap.exists()) return null;
+    return mapProvider(snap.id, snap.data());
+  } catch (err) {
+    throw new NcapDataError(
+      "get-provider-failed",
+      `Failed to load provider ${trimmed}`,
+      { cause: err },
+    );
+  }
+}
+
+export function isFavourited(
+  favourites: FavouriteRef[] | undefined,
+  url: string,
+): boolean {
+  return (favourites ?? []).some((item) => item.url === url);
+}
+
+/**
+ * Toggle a favourite on the profile. Returns the updated favourites array
+ * and whether the item was added (true) or removed (false).
+ */
+export async function toggleFavourite(
+  uid: string,
+  item: { type: FavouriteType; url: string; title: string },
+  currentFavourites: FavouriteRef[] = [],
+): Promise<{ favourites: FavouriteRef[]; added: boolean }> {
+  const exists = currentFavourites.some((fav) => fav.url === item.url);
+  const favourites = exists
+    ? currentFavourites.filter((fav) => fav.url !== item.url)
+    : [
+        ...currentFavourites,
+        { type: item.type, url: item.url, title: item.title },
+      ];
+
+  await updateProfile(uid, { favourites });
+  return { favourites, added: !exists };
 }

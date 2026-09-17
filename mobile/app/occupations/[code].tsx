@@ -9,7 +9,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { FavouriteToggle } from "../../components/FavouriteToggle";
 import { getOccupation } from "../../services/ncapData";
+import { stableUrlId } from "../../services/ids";
 import type { Occupation } from "../../services/types";
 
 export default function OccupationDetailScreen() {
@@ -44,6 +46,12 @@ export default function OccupationDetailScreen() {
     };
   }, [code]);
 
+  const openQualification = async (url: string | null | undefined) => {
+    if (!url) return;
+    const id = await stableUrlId(url);
+    router.push(`/qualifications/${id}`);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -59,6 +67,12 @@ export default function OccupationDetailScreen() {
             <Text style={styles.kicker}>Occupation</Text>
             <Text style={styles.title}>{occupation.title}</Text>
             <Text style={styles.code}>Code {occupation.occupationCode}</Text>
+
+            <FavouriteToggle
+              type="occupation"
+              url={occupation.url}
+              title={occupation.title}
+            />
 
             {occupation.alternativeTitles?.length ? (
               <View style={styles.section}>
@@ -85,11 +99,20 @@ export default function OccupationDetailScreen() {
               {(occupation.qualifications?.length
                 ? occupation.qualifications
                 : [{ title: "No linked qualifications on this record.", url: null }]
-              ).map((qual, index) => (
-                <Text key={`${qual.title}-${index}`} style={styles.bullet}>
-                  • {qual.title}
-                </Text>
-              ))}
+              ).map((qual, index) =>
+                qual.url ? (
+                  <Pressable
+                    key={`${qual.title}-${index}`}
+                    onPress={() => void openQualification(qual.url)}
+                  >
+                    <Text style={styles.link}>• {qual.title}</Text>
+                  </Pressable>
+                ) : (
+                  <Text key={`${qual.title}-${index}`} style={styles.bullet}>
+                    • {qual.title}
+                  </Text>
+                ),
+              )}
             </View>
 
             {occupation.entryRequirements?.length ? (
@@ -128,4 +151,5 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: "700", color: "#0B3D2E" },
   body: { fontSize: 14, lineHeight: 21, color: "#4A5C54" },
   bullet: { fontSize: 14, lineHeight: 21, color: "#4A5C54" },
+  link: { fontSize: 14, lineHeight: 21, color: "#0B3D2E", fontWeight: "600" },
 });

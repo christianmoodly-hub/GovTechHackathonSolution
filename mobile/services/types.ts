@@ -1,7 +1,9 @@
+export type FavouriteType = "occupation" | "qualification" | "provider";
+
 export type FavouriteRef = {
-  collection: "occupations" | "qualifications" | "providers";
-  id: string;
-  url?: string;
+  type: FavouriteType;
+  url: string;
+  title: string;
 };
 
 export type Occupation = {
@@ -18,6 +20,47 @@ export type Occupation = {
   scrapedAt?: string;
 };
 
+export type Qualification = {
+  id: string;
+  title: string;
+  url: string;
+  generalQualificationId?: string;
+  qualificationId?: string | null;
+  nqfLevel?: string | null;
+  duration?: string | null;
+  saqaUrl?: string | null;
+  providers: {
+    name: string;
+    url?: string | null;
+    provider_id?: string | null;
+  }[];
+  providerUrls: string[];
+  schemaVersion?: number;
+  scrapedAt?: string;
+};
+
+export type Provider = {
+  id: string;
+  name: string;
+  url: string;
+  providerId: string;
+  website?: string | null;
+  email?: string | null;
+  telephone?: string | null;
+  fax?: string | null;
+  streetAddress?: string | null;
+  postalAddress?: string | null;
+  offeredQualifications: {
+    title: string;
+    saqa_url?: string | null;
+    saqa_id?: string | null;
+    nqf_level?: string | null;
+  }[];
+  offeredSaqaUrls: string[];
+  schemaVersion?: number;
+  scrapedAt?: string;
+};
+
 /** Lightweight row used for questionnaire matching / list indexes. */
 export type OccupationSummary = {
   occupationCode: string;
@@ -30,6 +73,7 @@ export type UserProfile = {
   id: string;
   questionnaireResults: QuestionnaireResultsMap;
   favourites: FavouriteRef[];
+  pushToken?: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
@@ -37,6 +81,7 @@ export type UserProfile = {
 export type ProfileUpdate = {
   questionnaireResults?: QuestionnaireResultsMap;
   favourites?: FavouriteRef[];
+  pushToken?: string | null;
 };
 
 export type QuestionnaireId =

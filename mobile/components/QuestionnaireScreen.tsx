@@ -9,18 +9,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ProgressBar } from "../../components/ProgressBar";
-import { OptionButton } from "../../components/OptionButton";
-import { MatchResultsList } from "../../components/MatchResultsList";
-import { useAuth } from "../../contexts/AuthContext";
-import { getOccupationSummaries, updateProfile } from "../../services/ncapData";
+import { ProgressBar } from "./ProgressBar";
+import { OptionButton } from "./OptionButton";
+import { MatchResultsList } from "./MatchResultsList";
+import { useAuth } from "../contexts/AuthContext";
+import { getOccupationSummaries, updateProfile } from "../services/ncapData";
 import type {
   QuestionnaireId,
   QuestionnaireResult,
   QuestionnaireResultsMap,
-} from "../../services/types";
-import type { QuestionnaireDefinition } from "../../questionnaires/domains";
-import { matchOccupations, scoreAnswers } from "../../questionnaires/scoring";
+} from "../services/types";
+import type { QuestionnaireDefinition } from "../questionnaires/domains";
+import { matchOccupations, scoreAnswers } from "../questionnaires/scoring";
 
 type Props = {
   definition: QuestionnaireDefinition;

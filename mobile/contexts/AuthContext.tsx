@@ -19,7 +19,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { getFirebaseAuth } from "../firebase/client";
-import { ensureProfile, getProfile } from "../services/ncapData";
+import { ensureProfile, getProfile, updateProfile } from "../services/ncapData";
+import { registerForPushNotificationsAsync } from "../services/notifications";
 import type { UserProfile } from "../services/types";
 
 const EMAIL_FOR_SIGN_IN_KEY = "ncap.emailForSignIn";
@@ -63,7 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handlingLink = useRef(false);
 
   const bootstrapProfile = useCallback(async (nextUser: User) => {
-    const nextProfile = await ensureProfile(nextUser.uid);
+    let nextProfile = await ensureProfile(nextUser.uid);
+
+    // Register Expo push token on every sign-in / session restore and
+    // persist it on profiles/{uid}.pushToken (best-effort; never blocks auth).
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token && token !== nextProfile.pushToken) {
+        nextProfile = await updateProfile(nextUser.uid, { pushToken: token });
+      }
+    } catch (err) {
+      console.warn("[notifications] Push token registration failed", err);
+    }
+
     setProfile(nextProfile);
   }, []);
 

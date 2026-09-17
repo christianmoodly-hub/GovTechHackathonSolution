@@ -27,6 +27,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
              'questionnaireResults',
              'favourites',
+             'pushToken',
              'createdAt',
              'updatedAt'
            ]);
