@@ -323,3 +323,386 @@ export function tagToneColors(tone: QualTag["tone"]): { bg: string; fg: string }
       return { bg: "#F1F5F9", fg: "#64748B" };
   }
 }
+
+export function qualificationCategoryCrumb(title: string): string {
+  const type = detectQualType(title);
+  if (/electric|engineer|mechanic|mechatron/i.test(title)) return "TVET Engineering";
+  if (/ict|computer|software|information/i.test(title)) return "ICT & Digital";
+  if (/nurs|health|care/i.test(title)) return "Health Sciences";
+  if (/business|commerce|manag|account/i.test(title)) return "Business Studies";
+  if (type === "ncv") return "TVET NC(V)";
+  if (type === "degree") return "Higher Education";
+  if (type === "occupational") return "Occupational";
+  if (type === "nated") return "NATED Diploma";
+  return "National Register";
+}
+
+export function qualificationDetailTags(title: string): QualTag[] {
+  const tags: QualTag[] = [
+    {
+      id: "nsfas",
+      label: "NSFAS Fee-Free Eligible",
+      icon: "verified",
+      tone: "funded",
+    },
+  ];
+  if (/electric|engineer|solar|scarce|critical|ict|nurs|data/i.test(title)) {
+    tags.push({
+      id: "scarce",
+      label: "Critical Scarce Skill",
+      icon: "bolt",
+      tone: "field",
+    });
+  }
+  const type = detectQualType(title);
+  if (type === "nated" || type === "occupational" || /artisan|technician|trade/i.test(title)) {
+    tags.push({
+      id: "gateway",
+      label: "Artisan / Technician Gateway",
+      icon: "engineering",
+      tone: "neutral",
+    });
+  } else if (type === "degree") {
+    tags.push({
+      id: "he",
+      label: "Degree Pathway",
+      icon: "school",
+      tone: "neutral",
+    });
+  }
+  return tags;
+}
+
+export function qualificationCouncilHint(title: string): string {
+  const type = detectQualType(title);
+  if (type === "nated" || type === "ncv") return "QCTO / DHET TVET NATED";
+  if (type === "occupational") return "QCTO / SETA";
+  if (type === "degree" || type === "hcert") return "CHE / DHET";
+  return "DHET / SAQA";
+}
+
+export function qualificationIndustryBanner(title: string): string {
+  if (/electric|power|heavy current/i.test(title)) {
+    return "Eskom & Municipal Power Grid Industry Standard";
+  }
+  if (/solar|renewable|pv/i.test(title)) {
+    return "Green Economy & Renewable Energy Industry Standard";
+  }
+  if (/ict|computer|software|data/i.test(title)) {
+    return "Digital Economy & MICT SETA Industry Standard";
+  }
+  if (/nurs|health/i.test(title)) {
+    return "Public Health & HPCSA Pathway Standard";
+  }
+  return "National Skills Priority Industry Standard";
+}
+
+export function qualificationDescription(title: string): string {
+  const type = detectQualType(title);
+  if (/electric|heavy current/i.test(title)) {
+    return "A nationally recognized engineering diploma equipping learners with theoretical mastery (N4–N6) and compulsory 18-month workplace logbook training for heavy current power distribution, industrial automation, and renewable grid connection.";
+  }
+  if (type === "nated") {
+    return "A nationally recognized NATED diploma combining theoretical trimesters with compulsory workplace experience so graduates can enter technician and artisan pathways across South Africa.";
+  }
+  if (type === "degree") {
+    return "A SAQA-registered higher education qualification preparing graduates for professional practice, postgraduate study, and scarce-skill roles aligned to national development priorities.";
+  }
+  if (type === "ncv") {
+    return "A vocational certificate pathway offered at public TVET colleges, building foundational and occupational skills from NC(V) Levels 2–4 with strong workplace readiness.";
+  }
+  if (type === "occupational") {
+    return "An occupational certificate designed around workplace competence, often delivered through learnerships or apprenticeships with SETA / QCTO quality assurance.";
+  }
+  return "A government-vetted qualification from the National Career Advice Portal. Review entry requirements, curriculum structure, accredited campuses, and funding support to plan your next step.";
+}
+
+export function qualificationApsTarget(title: string): string {
+  const type = detectQualType(title);
+  if (type === "degree") return "28+";
+  if (type === "nated") return "22+";
+  if (type === "hcert") return "21+";
+  if (type === "ncv" || type === "occupational") return "18+";
+  return "22+";
+}
+
+export type QualBenchmark = {
+  id: string;
+  icon: string;
+  label: string;
+  value: string;
+  hint: string;
+};
+
+export function qualificationBenchmarks(
+  title: string,
+  duration?: string | null,
+): QualBenchmark[] {
+  const type = detectQualType(title);
+  const dur = qualificationDurationHint(title, duration);
+  return [
+    {
+      id: "duration",
+      icon: "schedule",
+      label: "Duration",
+      value: dur.split("(")[0].trim() || "3 Years",
+      hint:
+        type === "nated"
+          ? "18 mos class + 18 mos industry"
+          : type === "degree"
+            ? "Full-time study"
+            : "Provider dependent",
+    },
+    {
+      id: "entry",
+      icon: "rule",
+      label: "Entry Benchmark",
+      value:
+        type === "degree"
+          ? "Bachelor's APS"
+          : type === "ncv"
+            ? "Grade 9+"
+            : "Pure Maths 40%+",
+      hint:
+        type === "degree"
+          ? "NSC Bachelor's endorsement"
+          : type === "ncv"
+            ? "GETC / AET Level 4"
+            : "Or Tech Maths 50% / N3",
+    },
+    {
+      id: "career",
+      icon: "engineering",
+      label: "Career Destination",
+      value: /electric/i.test(title)
+        ? "Electrical Tech"
+        : type === "degree"
+          ? "Graduate pathway"
+          : "Technician / Artisan",
+      hint: /electric/i.test(title)
+        ? "Candidate Eng / Master Artisan"
+        : "Linked scarce occupations",
+    },
+    {
+      id: "funding",
+      icon: "payments",
+      label: "Funding Support",
+      value: "100% Covered",
+      hint: "NSFAS (Family income < R350k)",
+    },
+  ];
+}
+
+export type CurriculumModule = {
+  icon: string;
+  title: string;
+  meta: string;
+};
+
+export type CurriculumTerm = {
+  id: string;
+  level: string;
+  title: string;
+  subtitle: string;
+  modules: CurriculumModule[];
+};
+
+export function qualificationCurriculum(title: string): CurriculumTerm[] {
+  if (/electric|heavy current|electrotechn/i.test(title)) {
+    return [
+      {
+        id: "n4",
+        level: "N4",
+        title: "Trimester 1: Foundation Engineering",
+        subtitle: "10 Weeks + DHET National Exam",
+        modules: [
+          { icon: "calculate", title: "Mathematics N4", meta: "Code: 16030164" },
+          {
+            icon: "science",
+            title: "Engineering Science N4",
+            meta: "Code: 15070414",
+          },
+          {
+            icon: "electrical_services",
+            title: "Electrotechnics N4",
+            meta: "Code: 08080074",
+          },
+          {
+            icon: "memory",
+            title: "Industrial Electronics N4",
+            meta: "Code: 08080164",
+          },
+        ],
+      },
+      {
+        id: "n5",
+        level: "N5",
+        title: "Trimester 2: Intermediate Systems",
+        subtitle: "10 Weeks + DHET National Exam",
+        modules: [
+          { icon: "calculate", title: "Mathematics N5", meta: "Differential Calculus" },
+          {
+            icon: "bolt",
+            title: "Power Machines N5",
+            meta: "Thermodynamics",
+          },
+          {
+            icon: "electrical_services",
+            title: "Electrotechnics N5",
+            meta: "AC Machinery",
+          },
+          {
+            icon: "build",
+            title: "Fault Finding & Protective Devices N5",
+            meta: "Switchgear",
+          },
+        ],
+      },
+      {
+        id: "n6",
+        level: "N6",
+        title: "Trimester 3: Advanced Heavy Current",
+        subtitle: "Theoretical Diploma Capstone",
+        modules: [
+          { icon: "calculate", title: "Mathematics N6", meta: "Complex Integration" },
+          {
+            icon: "bolt",
+            title: "Power Machines N6",
+            meta: "Turbines & Condensers",
+          },
+          {
+            icon: "electrical_services",
+            title: "Electrotechnics N6",
+            meta: "High Voltage Transmission",
+          },
+          {
+            icon: "badge",
+            title: "Supervisory Management N6",
+            meta: "Site Leadership",
+          },
+        ],
+      },
+    ];
+  }
+
+  const type = detectQualType(title);
+  if (type === "nated") {
+    return [
+      {
+        id: "n4",
+        level: "N4",
+        title: "Trimester 1: Foundation",
+        subtitle: "10 Weeks + DHET National Exam",
+        modules: [
+          { icon: "calculate", title: "Mathematics N4", meta: "Core theory" },
+          { icon: "school", title: "Field Fundamentals N4", meta: "Programme core" },
+          { icon: "build", title: "Trade Practice N4", meta: "Applied skills" },
+          { icon: "menu_book", title: "Communication N4", meta: "Workplace literacy" },
+        ],
+      },
+      {
+        id: "n5",
+        level: "N5",
+        title: "Trimester 2: Intermediate",
+        subtitle: "10 Weeks + DHET National Exam",
+        modules: [
+          { icon: "calculate", title: "Mathematics N5", meta: "Applied" },
+          { icon: "engineering", title: "Specialisation N5", meta: "Programme major" },
+          { icon: "science", title: "Applied Science N5", meta: "Supporting module" },
+          { icon: "rule", title: "Quality & Safety N5", meta: "Compliance" },
+        ],
+      },
+      {
+        id: "n6",
+        level: "N6",
+        title: "Trimester 3: Capstone",
+        subtitle: "Theoretical Diploma Capstone",
+        modules: [
+          { icon: "calculate", title: "Mathematics N6", meta: "Advanced" },
+          { icon: "engineering", title: "Specialisation N6", meta: "Capstone major" },
+          { icon: "badge", title: "Supervisory Management N6", meta: "Leadership" },
+          { icon: "assignment_turned_in", title: "Project / Trade Module N6", meta: "Integration" },
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "y1",
+      level: "Y1",
+      title: "Year 1: Foundations",
+      subtitle: "Core modules + orientation",
+      modules: [
+        { icon: "school", title: "Introductory Core", meta: "Programme foundation" },
+        { icon: "calculate", title: "Numeracy / Research Skills", meta: "Academic support" },
+        { icon: "menu_book", title: "Disciplinary Fundamentals", meta: "Major pathway" },
+        { icon: "groups", title: "Communication & Citizenship", meta: "Graduate attributes" },
+      ],
+    },
+    {
+      id: "y2",
+      level: "Y2",
+      title: "Year 2: Specialisation",
+      subtitle: "Applied modules + electives",
+      modules: [
+        { icon: "engineering", title: "Specialist Module A", meta: "Major" },
+        { icon: "science", title: "Specialist Module B", meta: "Major" },
+        { icon: "computer", title: "Tools & Methods", meta: "Applied practice" },
+        { icon: "rule", title: "Ethics & Standards", meta: "Professional practice" },
+      ],
+    },
+  ];
+}
+
+export function qualificationWilEmployers(title: string): string[] {
+  if (/electric|power|heavy current/i.test(title)) {
+    return [
+      "Eskom Transmission",
+      "Metro Municipalities",
+      "Renewable IPP Solar Farms",
+      "Deep Level Mining",
+    ];
+  }
+  if (/ict|computer|software/i.test(title)) {
+    return ["Banks & FinTech", "Telcos", "Public ICT Units", "Software Houses"];
+  }
+  if (/nurs|health/i.test(title)) {
+    return ["Public Hospitals", "Clinics", "NGOs", "Private Hospital Groups"];
+  }
+  return [
+    "Accredited employers",
+    "Municipal services",
+    "Industry partners",
+    "Public entities",
+  ];
+}
+
+export function qualificationEarnings(title: string): {
+  stipend: string;
+  qualified: string;
+  designation: string;
+} {
+  if (/electric|engineer/i.test(title)) {
+    return {
+      stipend: "R6,500 – R9,500 /mo",
+      qualified: "R280k – R420k /yr",
+      designation: "Pr Techni Eng (N.Dip)",
+    };
+  }
+  if (/ict|computer|software/i.test(title)) {
+    return {
+      stipend: "R5,500 – R8,500 /mo",
+      qualified: "R260k – R480k /yr",
+      designation: "MICT SETA / industry certs",
+    };
+  }
+  return {
+    stipend: "R4,500 – R7,500 /mo",
+    qualified: "R220k – R380k /yr",
+    designation: "Professional body pathway",
+  };
+}
+
+export const STITCH_QUAL_DETAIL_HERO = require("../assets/stitch/qualification-detail/img1.jpg");
+export const STITCH_QUAL_CAMPUS_FALLBACK = require("../assets/stitch/career-detail/img2.jpg");
