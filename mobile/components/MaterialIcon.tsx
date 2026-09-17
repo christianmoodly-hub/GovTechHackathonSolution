@@ -117,6 +117,7 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   info: "info",
   nature_people: "nature-people",
   health_and_safety: "health-and-safety",
+  travel_explore: "travel-explore",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {

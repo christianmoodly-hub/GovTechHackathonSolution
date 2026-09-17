@@ -15,6 +15,17 @@ export type CareerFilterId =
   | "health"
   | "agriculture";
 
+export type GradeFilterId =
+  | "any"
+  | "grade9"
+  | "grade10"
+  | "grade11"
+  | "grade12-dip"
+  | "grade12-deg"
+  | "n3";
+
+export type MathFilterId = "any" | "pure" | "lit" | "tech" | "none";
+
 const FILTERS: {
   id: CareerFilterId;
   label: string;
@@ -24,7 +35,7 @@ const FILTERS: {
   { id: "all", label: "All", icon: "menu_book" },
   {
     id: "demand",
-    label: "High Demand",
+    label: "High Demand 24/25",
     icon: "bolt",
     match: /solar|electric|software|developer|technician|artisan|nurse|data|mechatronic|millwright/i,
   },
@@ -74,11 +85,53 @@ export function matchesCareerFilter(
   return def.match.test(title);
 }
 
+/** Soft grade gate — keeps pathways reachable at or below the learner's level. */
+export function matchesGradeFilter(
+  title: string,
+  grade: GradeFilterId,
+): boolean {
+  if (grade === "any") return true;
+  const edu = occupationEducationHint(title).toLowerCase();
+  const needsDegree =
+    /degree|bachelor|nsc \(degree/.test(edu) ||
+    /doctor|engineer|scientist|lawyer|accountant|software|developer|analyst/.test(
+      title,
+    );
+  const tradeEntry = /grade 9|grade 10|n2|n3 cert/.test(edu);
+
+  switch (grade) {
+    case "grade9":
+    case "grade10":
+      return tradeEntry || !needsDegree;
+    case "grade11":
+      return !needsDegree || tradeEntry;
+    case "grade12-dip":
+    case "grade12-deg":
+    case "n3":
+      return true;
+    default:
+      return true;
+  }
+}
+
+/** Soft math stream filter based on required-math hints. */
+export function matchesMathFilter(
+  title: string,
+  math: MathFilterId,
+): boolean {
+  if (math === "any" || math === "none") return true;
+  const hint = occupationMathHint(title).toLowerCase();
+  if (math === "pure") return /pure|60%|tech/.test(hint) || /lit or pure/.test(hint);
+  if (math === "lit") return /lit|literacy|pathway/.test(hint);
+  if (math === "tech") return /tech|pure 40|pathway/.test(hint);
+  return true;
+}
+
 export function occupationIcon(title: string): string {
   const t = title.toLowerCase();
-  if (/solar|pv|renewable/.test(t)) return "wb_sunny";
+  if (/solar|pv|renewable/.test(t)) return "solar_power";
   if (/software|developer|program|web|data|ict|cyber/.test(t)) return "code";
-  if (/electric/.test(t)) return "bolt";
+  if (/electric/.test(t)) return "handyman";
   if (/nurse|health|clinic|doctor|care/.test(t)) return "medical_services";
   if (/agricultur|farm/.test(t)) return "agriculture";
   if (/teach|educat|lectur/.test(t)) return "school";
@@ -101,7 +154,11 @@ export function occupationTags(title: string): CareerTag[] {
     tags.push({ id: "green", label: "Green Economy", tone: "green" });
   }
   if (/electrician|plumber|welder|artisan|mechanic|millwright|carpenter/.test(t)) {
-    tags.push({ id: "trade", label: "Trade / TVET", tone: "trade" });
+    tags.push({
+      id: "trade",
+      label: /electric/.test(t) ? "Red Seal Trade" : "Trade / TVET",
+      tone: "trade",
+    });
   }
   if (/software|developer|data|ict|network|cyber|analyst/.test(t)) {
     tags.push({ id: "ict", label: "ICT Sector", tone: "ict" });
@@ -109,10 +166,57 @@ export function occupationTags(title: string): CareerTag[] {
   if (/nurse|health|clinic|care|therapist/.test(t)) {
     tags.push({ id: "health", label: "Health & Care", tone: "health" });
   }
+  if (/software|developer|analyst|data/.test(t)) {
+    tags.push({ id: "pathway", label: "Degree / Diploma", tone: "neutral" });
+  } else if (/electric|plumb|weld|artisan|mechanic/.test(t)) {
+    tags.push({ id: "pathway", label: "TVET Apprenticeship", tone: "neutral" });
+  } else if (/solar|technician|trade/.test(t)) {
+    tags.push({ id: "pathway", label: "Trade / TVET", tone: "neutral" });
+  }
   if (!tags.length) {
     tags.push({ id: "ncap", label: "NCAP Pathway", tone: "neutral" });
   }
   return tags.slice(0, 3);
+}
+
+export function tagIcon(tag: CareerTag): string {
+  switch (tag.id) {
+    case "demand":
+      return tag.label.includes("High Demand") ? "trending_up" : "bolt";
+    case "green":
+      return "nature";
+    case "trade":
+      return tag.label.includes("Red Seal") ? "verified" : "build";
+    case "ict":
+      return "terminal";
+    case "health":
+      return "medical_services";
+    case "pathway":
+      return "school";
+    default:
+      return "label";
+  }
+}
+
+export function occupationSubtitleHint(title: string): string {
+  const t = title.toLowerCase();
+  if (/solar|renewable|pv/.test(t)) return "Priority Skills List";
+  if (/software|developer|data|ict/.test(t)) return "Critical National Skill";
+  if (/electric/.test(t)) return "Section 26D Qualified";
+  if (/nurse|health/.test(t)) return "Priority Skills List";
+  if (matchesCareerFilter(title, "demand")) return "Priority Skills List";
+  return "";
+}
+
+export function occupationPathwayIcon(title: string): string {
+  const t = title.toLowerCase();
+  if (/solar|electric|artisan|technician|mechatronic/.test(t)) {
+    return "check_circle";
+  }
+  if (/software|data|analyst|developer/.test(t)) return "school";
+  if (/nurse|health|care/.test(t)) return "local_hospital";
+  if (/electric|plumb|weld|mechanic/.test(t)) return "engineering";
+  return "location_on";
 }
 
 export function tagToneColors(tone: CareerTag["tone"]): {
@@ -228,12 +332,100 @@ export function occupationSalaryHint(title: string): string {
   return "Varies by region & experience";
 }
 
+export function occupationSalaryYearlyHint(title: string): string {
+  const t = title.toLowerCase();
+  if (/data|software|analyst|systems|actuary/.test(t)) return "R240,000 – R520,000 /yr";
+  if (/millwright|mechatronic|artisan|mechanic/.test(t)) return "R220,000 – R480,000 /yr";
+  if (/solar|pv|technician|electrician|nurse/.test(t)) return "R180,000 – R360,000 /yr";
+  if (/doctor|engineer/.test(t)) return "R280,000 – R650,000 /yr";
+  return "Varies by region & experience";
+}
+
+export function occupationSectorOverlay(title: string): {
+  icon: string;
+  label: string;
+  badge: string;
+} {
+  const t = title.toLowerCase();
+  if (/solar|pv|renewable/.test(t)) {
+    return {
+      icon: "wb_sunny",
+      label: "Renewable Energy & Infrastructure",
+      badge: "Gazetted 2024",
+    };
+  }
+  if (/millwright|mechatronic|artisan|mechanic/.test(t)) {
+    return {
+      icon: "precision_manufacturing",
+      label: "Advanced Manufacturing & Automotive",
+      badge: "National Scarce Skill",
+    };
+  }
+  if (/software|data|ict|analyst|developer/.test(t)) {
+    return {
+      icon: "computer",
+      label: "ICT & Digital Economy",
+      badge: "High Growth",
+    };
+  }
+  if (/nurse|health|care/.test(t)) {
+    return {
+      icon: "medical_services",
+      label: "Health & Social Care",
+      badge: "Priority Skill",
+    };
+  }
+  return {
+    icon: "work_outline",
+    label: "National Career Pathway",
+    badge: "DHET Aligned",
+  };
+}
+
+export function occupationPathwayCta(title: string): string {
+  const t = title.toLowerCase();
+  if (/millwright|mechatronic|artisan|electrician|plumber|welder/.test(t)) {
+    return "View Trade Path & Requirements";
+  }
+  if (/data|software|analyst|developer|ict/.test(t)) {
+    return "View University Qualifications";
+  }
+  return "View Pathway & TVET Colleges";
+}
+
+export function riasecCodeFromBadges(
+  badges: { label: string }[],
+): string {
+  const letter: Record<string, string> = {
+    Realistic: "R",
+    Investigative: "I",
+    Artistic: "A",
+    Social: "S",
+    Enterprising: "E",
+    Conventional: "C",
+  };
+  const codes = badges
+    .map((b) => letter[b.label])
+    .filter(Boolean)
+    .slice(0, 2);
+  return codes.length ? codes.join("-") : "R-I";
+}
+
+export function matchAccent(index: number): string {
+  if (index === 0) return "#15803D";
+  if (index === 1) return "#C2611A";
+  return "#2B6CB0";
+}
+
 export function occupationPathwayHint(title: string): string {
   const t = title.toLowerCase();
-  if (/solar|electric|artisan|technician|mechatronic/.test(t)) {
-    return "TVET Colleges Nearby";
+  if (/solar|pv/.test(t)) return "4 TVET Colleges Nearby";
+  if (/electric|artisan|technician|mechatronic/.test(t)) {
+    return "Apprenticeship Available";
   }
-  if (/software|data|analyst|developer/.test(t)) return "University / UoT Pathways";
+  if (/software|data|analyst|developer/.test(t)) {
+    return "University & Coding Academies";
+  }
   if (/nurse|health|care/.test(t)) return "Health training providers";
   return "Accredited providers nearby";
 }

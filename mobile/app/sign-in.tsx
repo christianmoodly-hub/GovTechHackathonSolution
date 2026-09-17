@@ -29,7 +29,7 @@ type Method = "sa_id" | "mobile_email" | "passport";
 const METHODS: { id: Method; label: string; icon: string }[] = [
   { id: "sa_id", label: "SA ID", icon: "badge" },
   { id: "mobile_email", label: "Mobile / Email", icon: "contact_phone" },
-  { id: "passport", label: "Passport / Refugee", icon: "flight" },
+  { id: "passport", label: "Passport /\nRefugee", icon: "flight" },
 ];
 
 export default function SignInScreen() {
@@ -67,9 +67,9 @@ export default function SignInScreen() {
     }
     if (method === "passport") {
       return {
-        label: "Passport or Refugee / Asylum Document",
+        label: "Passport / Refugee Document",
         trailing: "Alphanumeric",
-        placeholder: "e.g. A01234567 or DHA-Refugee-No",
+        placeholder: "e.g. A01234567 or DHA-No",
         hint: "Provide your valid Home Affairs-recognized foreign passport or asylum permit number.",
         keyboardType: "default" as const,
         icon: "badge",
@@ -78,7 +78,7 @@ export default function SignInScreen() {
     return {
       label: "Mobile Phone Number or Email",
       trailing: "Registered",
-      placeholder: "e.g. 072 123 4567 or learner@gmail.com",
+      placeholder: "e.g. 072 123 4567 or you@email.com",
       hint: "Enter the cellular number or email address linked to your Khetha profile.",
       keyboardType: "email-address" as const,
       icon: "contact_phone",
@@ -196,7 +196,7 @@ export default function SignInScreen() {
                     />
                     <Text
                       style={[styles.methodTabText, on && styles.methodTabTextOn]}
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {item.label}
                     </Text>
@@ -241,15 +241,18 @@ export default function SignInScreen() {
                   </View>
                   <AuthField
                     leadingIcon="lock"
-                    placeholder="Enter your secret password or PIN"
+                    placeholder="Enter password or PIN"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
                     editable={!busy && !isLoading}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     trailing={
                       <Pressable
                         onPress={() => setShowPassword((v) => !v)}
                         accessibilityLabel="Toggle password visibility"
+                        hitSlop={8}
                       >
                         <MaterialIcon
                           name={showPassword ? "visibility_off" : "visibility"}
@@ -291,7 +294,7 @@ export default function SignInScreen() {
                     onPress={() => void onEmailLink()}
                   >
                     <MaterialIcon name="sms" size={20} color={colors.primary} />
-                    <Text style={styles.secondaryText}>
+                    <Text style={styles.secondaryText} numberOfLines={2}>
                       Sign in with One-Time PIN (SMS)
                     </Text>
                   </Pressable>
@@ -326,7 +329,7 @@ export default function SignInScreen() {
                 <Text style={styles.bioTitle} numberOfLines={1}>
                   Quick Biometric Sign-In
                 </Text>
-                <Text style={styles.bioSub} numberOfLines={1}>
+                <Text style={styles.bioSub} numberOfLines={2}>
                   Enable Fingerprint or Face ID for this device
                 </Text>
               </View>
@@ -339,14 +342,22 @@ export default function SignInScreen() {
           <View style={styles.featureRow}>
             <ImageBackground source={vaultImg} style={styles.featureCard} imageStyle={styles.featureImg}>
               <View style={styles.featureOverlay}>
-                <Text style={styles.featureKickerGold}>Career Vault</Text>
-                <Text style={styles.featureTitle}>Access Stored APS & Bursaries</Text>
+                <Text style={styles.featureKickerGold} numberOfLines={1}>
+                  Career Vault
+                </Text>
+                <Text style={styles.featureTitle} numberOfLines={2}>
+                  Access Stored APS & Bursaries
+                </Text>
               </View>
             </ImageBackground>
             <ImageBackground source={tvetImg} style={styles.featureCard} imageStyle={styles.featureImg}>
               <View style={styles.featureOverlay}>
-                <Text style={styles.featureKickerGreen}>TVET & Skills</Text>
-                <Text style={styles.featureTitle}>Track Your Artisan Progress</Text>
+                <Text style={styles.featureKickerGreen} numberOfLines={1}>
+                  TVET & Skills
+                </Text>
+                <Text style={styles.featureTitle} numberOfLines={2}>
+                  Track Your Artisan Progress
+                </Text>
               </View>
             </ImageBackground>
           </View>
@@ -371,7 +382,7 @@ export default function SignInScreen() {
             onPress={() => void onGuest()}
           >
             <MaterialIcon name="explore" size={18} color={colors.textSecondary} />
-            <Text style={styles.guestText}>
+            <Text style={styles.guestText} numberOfLines={2}>
               Continue as Guest / Explore Careers Without Signing In
             </Text>
           </Pressable>
@@ -450,12 +461,13 @@ const styles = StyleSheet.create({
   },
   methodTab: {
     flex: 1,
-    minHeight: 48,
+    minWidth: 0,
+    minHeight: 52,
     borderRadius: radii.sm,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
     paddingVertical: 8,
   },
   methodTabOn: {
@@ -464,6 +476,7 @@ const styles = StyleSheet.create({
   },
   methodTabText: {
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "500",
     color: colors.textSecondary,
     textAlign: "center",
@@ -473,8 +486,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: 4,
   },
-  fieldLabel: { ...typography.labelLg, color: colors.text },
+  fieldLabel: { ...typography.labelLg, color: colors.text, flexShrink: 1 },
   forgot: { ...typography.labelMd, color: colors.primary, fontWeight: "700" },
   btnStack: { gap: spacing.sm, paddingTop: spacing.xs },
   primaryBtn: {
@@ -496,8 +511,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  secondaryText: { ...typography.labelLg, color: colors.text },
+  secondaryText: {
+    ...typography.labelLg,
+    color: colors.text,
+    flexShrink: 1,
+    textAlign: "center",
+  },
   orRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -539,11 +561,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   enableText: { ...typography.labelMd, color: colors.onPrimary },
   featureRow: { flexDirection: "row", gap: spacing.sm },
   featureCard: {
     flex: 1,
+    minWidth: 0,
     height: 112,
     borderRadius: radii.xl,
     overflow: "hidden",
@@ -584,7 +608,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     ...shadows.card,
   },
-  registerPrompt: { ...typography.bodyMd, color: colors.textSecondary, textAlign: "center" },
+  registerPrompt: {
+    ...typography.bodyMd,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
   goldBtn: {
     width: "100%",
     minHeight: layout.minTouch,
@@ -594,9 +622,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    paddingHorizontal: spacing.md,
   },
-  goldBtnText: { ...typography.labelLg, color: colors.text, fontWeight: "700" },
-  caption: { ...typography.caption, color: colors.textSecondary, textAlign: "center" },
+  goldBtnText: {
+    ...typography.labelLg,
+    color: colors.text,
+    fontWeight: "700",
+    flexShrink: 1,
+    textAlign: "center",
+  },
+  caption: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
   guestBtn: {
     minHeight: layout.minTouch,
     backgroundColor: colors.muted,
@@ -606,10 +645,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   guestText: {
     ...typography.labelMd,
     color: colors.text,
+    flex: 1,
     flexShrink: 1,
     textAlign: "center",
   },

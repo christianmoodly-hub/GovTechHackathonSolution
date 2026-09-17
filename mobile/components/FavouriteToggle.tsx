@@ -136,14 +136,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.card,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
   iconBtnActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: colors.muted,
   },
 });

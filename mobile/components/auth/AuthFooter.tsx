@@ -77,17 +77,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  muted: { ...typography.caption, color: colors.textSecondary },
-  link: { ...typography.labelMd, color: colors.primary, fontWeight: "700" },
+  muted: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  link: {
+    ...typography.labelMd,
+    color: colors.primary,
+    fontWeight: "700",
+  },
   dot: { color: colors.textSecondary },
   help: {
     backgroundColor: "#E7EEFF",
     borderRadius: radii.xl,
     padding: spacing.lg,
     gap: spacing.sm,
+    width: "100%",
   },
   helpTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  helpTitle: { ...typography.labelLg, color: colors.primary, fontWeight: "700" },
+  helpTitle: {
+    ...typography.labelLg,
+    color: colors.primary,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
   helpBody: { ...typography.bodySm, color: colors.textSecondary },
   contactCol: { gap: spacing.sm, marginTop: 4 },
   contactCard: {
@@ -99,6 +113,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  contactText: { ...typography.labelMd, color: colors.text, flex: 1 },
+  contactText: { ...typography.labelMd, color: colors.text, flex: 1, flexShrink: 1 },
   strong: { fontWeight: "700" },
 });

@@ -71,8 +71,14 @@ const styles = StyleSheet.create({
     ...typography.headlineSm,
     color: colors.text,
     flex: 1,
+    minWidth: 0,
   },
-  status: { flexDirection: "row", alignItems: "center", gap: 4 },
+  status: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
   statusDot: {
     width: 8,
     height: 8,
