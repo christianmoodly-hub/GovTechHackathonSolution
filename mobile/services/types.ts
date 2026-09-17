@@ -76,6 +76,14 @@ export type Demographics = {
   hasDisability: boolean;
   disabilityCategories: string[];
   completedAt: string;
+  fullName?: string;
+  documentType?: "rsa_id" | "passport" | "asylum";
+  saIdOrPassport?: string;
+  mobile?: string;
+  email?: string;
+  province?: string;
+  dateOfBirth?: string;
+  gender?: string;
 };
 
 export type UserProfile = {

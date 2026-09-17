@@ -1,28 +1,53 @@
 import { Platform } from "react-native";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+type NotificationsModule = typeof import("expo-notifications");
+
+/** Expo Go (SDK 53+) throws on Android if expo-notifications is imported for push. */
+function isExpoGo(): boolean {
+  return Constants.appOwnership === "expo";
+}
+
+let notificationsPromise: Promise<NotificationsModule | null> | null = null;
+
+async function loadNotifications(): Promise<NotificationsModule | null> {
+  if (isExpoGo()) return null;
+  if (!notificationsPromise) {
+    notificationsPromise = import("expo-notifications")
+      .then((Notifications) => {
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+        return Notifications;
+      })
+      .catch((err) => {
+        console.warn("[notifications] Failed to load expo-notifications", err);
+        return null;
+      });
+  }
+  return notificationsPromise;
+}
 
 /**
  * Register for Expo push notifications and return the Expo push token.
- * Returns null on web / simulators without support / permission denied.
+ * Returns null on web / Expo Go / simulators / permission denied.
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (Platform.OS === "web") return null;
+  if (Platform.OS === "web" || isExpoGo()) return null;
   if (!Device.isDevice) {
     console.log("[notifications] Push tokens require a physical device");
     return null;
   }
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
 
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
@@ -51,14 +76,15 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
 /**
  * DEMO STUB ONLY — not a real backend scheduler.
- * When a user favourites something, schedule a one-off local reminder
- * on-device so the pitch can show "notifications" without Cloud Functions
- * or a push fan-out service. Replace with a real campaign/scheduler later.
+ * Skipped in Expo Go (push/local notification APIs unavailable there on Android).
  */
 export async function scheduleFavouriteReminderStub(
   title: string,
 ): Promise<void> {
-  if (Platform.OS === "web") return;
+  if (Platform.OS === "web" || isExpoGo()) return;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
 
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
@@ -74,7 +100,6 @@ export async function scheduleFavouriteReminderStub(
       body: `You saved “${title}”. Open NCAP to continue your path.`,
       data: { kind: "favourite-reminder-stub" },
     },
-    // Short delay so the demo fires during a walkthrough without waiting overnight.
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 20,

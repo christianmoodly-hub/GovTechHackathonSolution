@@ -120,3 +120,23 @@ export const OFFLINE_VAULT_STATS = {
   storageLabel: "14.2 / 50 MB",
   note: "Presentation stats from the design mock. Live offline packaging is not wired yet.",
 } as const;
+
+export const PROVINCES = [
+  "Eastern Cape",
+  "Free State",
+  "Gauteng",
+  "KwaZulu-Natal",
+  "Limpopo",
+  "Mpumalanga",
+  "Northern Cape",
+  "North West",
+  "Western Cape",
+] as const;
+
+export const REGISTER_ROLES = [
+  { id: "grade9_10", label: "Grade 9 – 10", description: "Subject choices" },
+  { id: "grade11_12", label: "Grade 11 – 12", description: "Matric & APS score" },
+  { id: "tvet", label: "TVET / Artisan", description: "NC(V) & NATED N1–N6" },
+  { id: "university", label: "University student", description: "Degrees & diplomas" },
+  { id: "work_seeker", label: "Unemployed youth / job seeker", description: "Learnerships & YES" },
+] as const;

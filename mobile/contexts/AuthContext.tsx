@@ -9,11 +9,16 @@ import {
   type ReactNode,
 } from "react";
 import {
+  createUserWithEmailAndPassword,
   isSignInWithEmailLink,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   sendSignInLinkToEmail,
+  signInAnonymously,
+  signInWithEmailAndPassword,
   signInWithEmailLink,
   signOut as firebaseSignOut,
+  updateProfile as updateFirebaseProfile,
   type User,
 } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,9 +26,16 @@ import * as Linking from "expo-linking";
 import { getFirebaseAuth } from "../firebase/client";
 import { ensureProfile, getProfile, updateProfile } from "../services/ncapData";
 import { registerForPushNotificationsAsync } from "../services/notifications";
-import type { UserProfile } from "../services/types";
+import type { Demographics, UserProfile } from "../services/types";
 
 const EMAIL_FOR_SIGN_IN_KEY = "ncap.emailForSignIn";
+
+export type RegisterInput = {
+  email: string;
+  password: string;
+  fullName: string;
+  demographics: Omit<Demographics, "completedAt"> & { completedAt?: string };
+};
 
 type AuthContextValue = {
   user: User | null;
@@ -33,6 +45,10 @@ type AuthContextValue = {
   error: string | null;
   sendSignInLink: (email: string) => Promise<void>;
   completeSignInFromLink: (url: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  registerWithPassword: (input: RegisterInput) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  continueAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   clearError: () => void;
@@ -41,7 +57,6 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function buildActionCodeSettings() {
-  // Continues on Firebase Hosting, which deep-links into the app (ncap://sign-in).
   return {
     url: "https://nationalcreeradviceapp.firebaseapp.com/auth/complete.html",
     handleCodeInApp: true,
@@ -56,6 +71,25 @@ function buildActionCodeSettings() {
   };
 }
 
+function mapAuthError(err: unknown, fallback: string): string {
+  if (!(err instanceof Error)) return fallback;
+  const code = (err as { code?: string }).code ?? "";
+  if (code.includes("email-already-in-use")) {
+    return "An account with this email already exists. Sign in instead.";
+  }
+  if (code.includes("invalid-email")) return "Enter a valid email address.";
+  if (code.includes("weak-password")) {
+    return "Use a stronger password or a 6-digit PIN (at least 6 characters).";
+  }
+  if (code.includes("user-not-found") || code.includes("wrong-password") || code.includes("invalid-credential")) {
+    return "Email or password is incorrect.";
+  }
+  if (code.includes("too-many-requests")) {
+    return "Too many attempts. Wait a moment and try again.";
+  }
+  return err.message || fallback;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -66,8 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const bootstrapProfile = useCallback(async (nextUser: User) => {
     let nextProfile = await ensureProfile(nextUser.uid);
 
-    // Register Expo push token on every sign-in / session restore and
-    // persist it on profiles/{uid}.pushToken (best-effort; never blocks auth).
     try {
       const token = await registerForPushNotificationsAsync();
       if (token && token !== nextProfile.pushToken) {
@@ -186,6 +218,117 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(EMAIL_FOR_SIGN_IN_KEY, trimmed);
   }, []);
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed.includes("@")) throw new Error("Enter a valid email address.");
+    if (password.length < 6) throw new Error("Enter your password or 6-digit PIN.");
+
+    setError(null);
+    setIsLoading(true);
+    try {
+      const credential = await signInWithEmailAndPassword(
+        getFirebaseAuth(),
+        trimmed,
+        password,
+      );
+      await bootstrapProfile(credential.user);
+      setUser(credential.user);
+    } catch (err) {
+      const message = mapAuthError(err, "Could not sign in.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [bootstrapProfile]);
+
+  const registerWithPassword = useCallback(
+    async (input: RegisterInput) => {
+      const trimmed = input.email.trim().toLowerCase();
+      if (!trimmed.includes("@")) throw new Error("Enter a valid email address.");
+      if (input.password.length < 6) {
+        throw new Error("Create a password or 6-digit PIN (min 6 characters).");
+      }
+      if (!input.fullName.trim()) throw new Error("Enter your full legal name.");
+
+      setError(null);
+      setIsLoading(true);
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          getFirebaseAuth(),
+          trimmed,
+          input.password,
+        );
+        await updateFirebaseProfile(credential.user, {
+          displayName: input.fullName.trim(),
+        });
+
+        const demographics: Demographics = {
+          ...input.demographics,
+          email: trimmed,
+          fullName: input.fullName.trim(),
+          completedAt: new Date().toISOString(),
+        };
+
+        await ensureProfile(credential.user.uid);
+        await updateProfile(credential.user.uid, { demographics });
+        await bootstrapProfile(credential.user);
+        setUser(credential.user);
+      } catch (err) {
+        const message = mapAuthError(err, "Could not create your account.");
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [bootstrapProfile],
+  );
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed.includes("@")) {
+      throw new Error("Enter the email address on your Khetha profile.");
+    }
+    setError(null);
+    try {
+      await sendPasswordResetEmail(getFirebaseAuth(), trimmed);
+    } catch (err) {
+      const message = mapAuthError(err, "Could not send reset email.");
+      setError(message);
+      throw new Error(message);
+    }
+  }, []);
+
+  const continueAsGuest = useCallback(async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const credential = await signInAnonymously(getFirebaseAuth());
+      const demographics: Demographics = {
+        preferredLanguage: "en",
+        role: "guest",
+        hasDisability: false,
+        disabilityCategories: [],
+        completedAt: new Date().toISOString(),
+        fullName: "Guest explorer",
+      };
+      await ensureProfile(credential.user.uid);
+      await updateProfile(credential.user.uid, { demographics });
+      await bootstrapProfile(credential.user);
+      setUser(credential.user);
+    } catch (err) {
+      const message = mapAuthError(
+        err,
+        "Guest mode is unavailable. Enable Anonymous Auth in Firebase, or sign in with email.",
+      );
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [bootstrapProfile]);
+
   const signOut = useCallback(async () => {
     setError(null);
     await firebaseSignOut(getFirebaseAuth());
@@ -202,6 +345,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       sendSignInLink,
       completeSignInFromLink,
+      signInWithPassword,
+      registerWithPassword,
+      sendPasswordReset,
+      continueAsGuest,
       signOut,
       refreshProfile,
       clearError: () => setError(null),
@@ -213,6 +360,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       sendSignInLink,
       completeSignInFromLink,
+      signInWithPassword,
+      registerWithPassword,
+      sendPasswordReset,
+      continueAsGuest,
       signOut,
       refreshProfile,
     ],
