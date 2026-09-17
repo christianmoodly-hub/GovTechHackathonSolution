@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { colors, layout, radii, spacing, typography } from "../theme";
 
 export default function SignInScreen() {
   const { sendSignInLink, error, clearError, isLoading } = useAuth();
@@ -43,7 +44,7 @@ export default function SignInScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.brand}>NCAP</Text>
+        <Text style={styles.brand}>NCAP · Khetha</Text>
         <Text style={styles.title}>Sign in with email</Text>
         <Text style={styles.subtitle}>
           We will email you a one-tap sign-in link. No password needed.
@@ -75,7 +76,7 @@ export default function SignInScreen() {
               autoComplete="email"
               keyboardType="email-address"
               placeholder="you@example.com"
-              placeholderTextColor="#7A8A82"
+              placeholderTextColor={colors.textMuted}
               style={styles.input}
               value={email}
               onChangeText={setEmail}
@@ -93,7 +94,7 @@ export default function SignInScreen() {
               ]}
             >
               {busy ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.buttonText}>Email me a sign-in link</Text>
               )}
@@ -108,97 +109,92 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F4F7F5",
+    backgroundColor: colors.canvas,
   },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingHorizontal: layout.gutter,
+    paddingTop: spacing.xxxl,
     justifyContent: "center",
   },
   brand: {
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: "#0B3D2E",
-    marginBottom: 12,
+    ...typography.labelMd,
+    letterSpacing: 1.5,
+    color: colors.primary,
+    marginBottom: spacing.md,
+    textTransform: "uppercase",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#10231C",
-    marginBottom: 8,
+    ...typography.display,
+    color: colors.text,
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: "#4A5C54",
-    marginBottom: 28,
+    ...typography.bodyLg,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxxl,
   },
   form: {
-    gap: 12,
+    gap: spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#10231C",
+    ...typography.labelLg,
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#C9D5CF",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#10231C",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    ...typography.bodyLg,
+    color: colors.text,
+    minHeight: layout.minTouch,
   },
   button: {
-    marginTop: 8,
-    backgroundColor: "#0B3D2E",
-    borderRadius: 12,
-    paddingVertical: 16,
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    minHeight: layout.minTouch,
     alignItems: "center",
+    justifyContent: "center",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    ...typography.labelLg,
+    color: colors.onPrimary,
   },
   error: {
-    color: "#A11B1B",
-    fontSize: 14,
+    color: colors.error,
+    ...typography.bodySm,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
     borderWidth: 1,
-    borderColor: "#D7E2DC",
-    gap: 12,
+    borderColor: colors.border,
+    gap: spacing.md,
   },
   sentTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#10231C",
+    ...typography.headlineMd,
+    color: colors.text,
   },
   sentBody: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#4A5C54",
+    ...typography.bodyMd,
+    color: colors.textSecondary,
   },
   emailHighlight: {
     fontWeight: "700",
-    color: "#0B3D2E",
+    color: colors.primary,
   },
   secondaryButton: {
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
   },
   secondaryButtonText: {
-    color: "#0B3D2E",
-    fontWeight: "600",
+    ...typography.labelLg,
+    color: colors.primary,
   },
 });

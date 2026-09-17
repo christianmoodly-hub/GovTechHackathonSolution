@@ -16,3 +16,6 @@ output/sample_*.html
 output/sample_*.json
 _inspect_*.py
 _probe_*.py
+
+# Extracted Stitch design references (large PNGs/HTML)
+mobile/design-reference/

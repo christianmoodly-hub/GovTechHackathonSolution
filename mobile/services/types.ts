@@ -4,6 +4,7 @@ export type FavouriteRef = {
   type: FavouriteType;
   url: string;
   title: string;
+  entityId?: string;
 };
 
 export type Occupation = {
@@ -69,10 +70,19 @@ export type OccupationSummary = {
   searchText: string;
 };
 
+export type Demographics = {
+  preferredLanguage: string;
+  role: string;
+  hasDisability: boolean;
+  disabilityCategories: string[];
+  completedAt: string;
+};
+
 export type UserProfile = {
   id: string;
   questionnaireResults: QuestionnaireResultsMap;
   favourites: FavouriteRef[];
+  demographics?: Demographics | null;
   pushToken?: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -81,7 +91,35 @@ export type UserProfile = {
 export type ProfileUpdate = {
   questionnaireResults?: QuestionnaireResultsMap;
   favourites?: FavouriteRef[];
+  demographics?: Demographics | null;
   pushToken?: string | null;
+};
+
+export type QualificationSummary = {
+  id: string;
+  title: string;
+  nqfLevel?: string | null;
+  duration?: string | null;
+  searchText: string;
+};
+
+export type ProviderSummary = {
+  id: string;
+  name: string;
+  providerId: string;
+  streetAddress?: string | null;
+  searchText: string;
+};
+
+export type PageCursor = {
+  sortValue: string;
+  id: string;
+};
+
+export type PagedResult<T> = {
+  items: T[];
+  nextCursor: PageCursor | null;
+  fromCache: boolean;
 };
 
 export type QuestionnaireId =

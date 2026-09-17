@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0B3D2E"
+      "backgroundColor": "#006A4E"
     },
     "ios": {
       "supportsTablet": true,
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B3D2E"
+        "backgroundColor": "#006A4E"
       },
       "package": "za.gov.ncap.careeradvice",
       "intentFilters": [
@@ -34,7 +34,10 @@
               "pathPrefix": "/auth"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -46,7 +49,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0B3D2E"
+          "color": "#006A4E"
         }
       ]
     ],

@@ -4,14 +4,16 @@ import { useAuth } from "../contexts/AuthContext";
 import { toggleFavourite } from "../services/ncapData";
 import { scheduleFavouriteReminderStub } from "../services/notifications";
 import type { FavouriteType } from "../services/types";
+import { colors, radii, spacing, typography } from "../theme";
 
 type Props = {
   type: FavouriteType;
   url: string;
   title: string;
+  entityId?: string;
 };
 
-export function FavouriteToggle({ type, url, title }: Props) {
+export function FavouriteToggle({ type, url, title, entityId }: Props) {
   const { user, profile, refreshProfile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,9 +21,7 @@ export function FavouriteToggle({ type, url, title }: Props) {
   const favourited = (profile?.favourites ?? []).some((item) => item.url === url);
 
   if (!user) {
-    return (
-      <Text style={styles.hint}>Sign in to save favourites</Text>
-    );
+    return <Text style={styles.hint}>Sign in to save favourites</Text>;
   }
 
   const onToggle = async () => {
@@ -31,12 +31,11 @@ export function FavouriteToggle({ type, url, title }: Props) {
     try {
       const { added } = await toggleFavourite(
         user.uid,
-        { type, url, title },
+        { type, url, title, entityId },
         profile?.favourites ?? [],
       );
       await refreshProfile();
       if (added) {
-        // DEMO STUB: local one-off reminder — see notifications.ts
         await scheduleFavouriteReminderStub(title);
       }
     } catch (err) {
@@ -57,7 +56,7 @@ export function FavouriteToggle({ type, url, title }: Props) {
         accessibilityLabel={favourited ? "Remove from favourites" : "Add to favourites"}
       >
         {busy ? (
-          <ActivityIndicator color={favourited ? "#0B3D2E" : "#fff"} />
+          <ActivityIndicator color={favourited ? colors.primary : colors.onPrimary} />
         ) : (
           <Text style={[styles.label, favourited && styles.labelActive]}>
             {favourited ? "★ Favourited" : "☆ Favourite"}
@@ -72,33 +71,32 @@ export function FavouriteToggle({ type, url, title }: Props) {
 const styles = StyleSheet.create({
   button: {
     alignSelf: "flex-start",
-    backgroundColor: "#0B3D2E",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     minWidth: 120,
     alignItems: "center",
   },
   buttonActive: {
-    backgroundColor: "#D8E8E0",
+    backgroundColor: colors.primaryMuted,
     borderWidth: 1,
-    borderColor: "#0B3D2E",
+    borderColor: colors.primary,
   },
   label: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
+    ...typography.labelLg,
+    color: colors.onPrimary,
   },
   labelActive: {
-    color: "#0B3D2E",
+    color: colors.primary,
   },
   hint: {
-    fontSize: 13,
-    color: "#6A7B73",
+    ...typography.bodySm,
+    color: colors.textMuted,
   },
   error: {
-    marginTop: 6,
-    color: "#A11B1B",
-    fontSize: 13,
+    marginTop: spacing.sm,
+    color: colors.error,
+    ...typography.bodySm,
   },
 });

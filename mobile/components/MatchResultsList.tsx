@@ -1,6 +1,8 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { QuestionnaireMatch } from "../services/types";
+import { colors, radii, spacing, typography } from "../theme";
+import { href } from "../utils/href";
 
 type Props = {
   matches: QuestionnaireMatch[];
@@ -34,10 +36,7 @@ export function MatchResultsList({ matches, completedAt }: Props) {
           <Pressable
             style={styles.row}
             onPress={() =>
-              router.push({
-                pathname: "/occupations/[code]",
-                params: { code: item.occupationCode },
-              })
+              router.push(href(`/directory/occupations/${item.occupationCode}`))
             }
           >
             <Text style={styles.rank}>{index + 1}</Text>
@@ -55,18 +54,18 @@ export function MatchResultsList({ matches, completedAt }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  meta: { fontSize: 12, color: "#6A7B73" },
-  empty: { fontSize: 15, color: "#4A5C54", lineHeight: 22 },
-  sep: { height: 10 },
+  wrap: { gap: spacing.md },
+  meta: { ...typography.caption, color: colors.textMuted },
+  empty: { ...typography.bodyMd, color: colors.textSecondary },
+  sep: { height: spacing.sm },
   row: {
     flexDirection: "row",
-    gap: 12,
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "#D7E2DC",
-    padding: 14,
+    borderColor: colors.border,
+    padding: spacing.lg,
     alignItems: "center",
   },
   rank: {
@@ -76,12 +75,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     textAlignVertical: "center",
     overflow: "hidden",
-    backgroundColor: "#0B3D2E",
-    color: "#fff",
+    backgroundColor: colors.primary,
+    color: colors.onPrimary,
     fontWeight: "700",
     lineHeight: 28,
   },
-  body: { flex: 1, gap: 4 },
-  title: { fontSize: 15, fontWeight: "700", color: "#10231C" },
-  code: { fontSize: 12, color: "#6A7B73" },
+  body: { flex: 1, gap: 2 },
+  title: { ...typography.labelLg, color: colors.text },
+  code: { ...typography.caption, color: colors.textMuted },
 });

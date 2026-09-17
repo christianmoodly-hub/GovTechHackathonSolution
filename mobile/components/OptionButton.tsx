@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text } from "react-native";
+import { colors, layout, radii, spacing, typography } from "../theme";
 
 type Props = {
   label: string;
@@ -11,6 +12,8 @@ export function OptionButton({ label, selected, onPress }: Props) {
     <Pressable
       onPress={onPress}
       style={[styles.button, selected && styles.selected]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
     >
       <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
     </Pressable>
@@ -19,24 +22,25 @@ export function OptionButton({ label, selected, onPress }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    borderWidth: 1,
-    borderColor: "#C9D5CF",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    minHeight: layout.minTouch,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    justifyContent: "center",
   },
   selected: {
-    borderColor: "#0B3D2E",
-    backgroundColor: "#E7F2EC",
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
   },
   label: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: "#10231C",
+    ...typography.bodyMd,
+    color: colors.text,
   },
   labelSelected: {
     fontWeight: "700",
-    color: "#0B3D2E",
+    color: colors.primaryDark,
   },
 });

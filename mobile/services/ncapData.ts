@@ -19,9 +19,13 @@ import type {
   FavouriteType,
   Occupation,
   OccupationSummary,
+  PageCursor,
+  PagedResult,
   ProfileUpdate,
   Provider,
+  ProviderSummary,
   Qualification,
+  QualificationSummary,
   QuestionnaireResultsMap,
   UserProfile,
 } from "./types";
@@ -31,7 +35,10 @@ const OCCUPATIONS = "occupations";
 const QUALIFICATIONS = "qualifications";
 const PROVIDERS = "providers";
 const OCC_INDEX_CACHE_KEY = "ncap.occupationSummaries.v1";
+const QUAL_PAGE_CACHE_KEY = "ncap.qualificationPage.v1";
+const PROVIDER_PAGE_CACHE_KEY = "ncap.providerPage.v1";
 const PAGE_SIZE = 100;
+const DIRECTORY_PAGE_SIZE = 40;
 
 export class NcapDataError extends Error {
   readonly code: string;
@@ -51,6 +58,10 @@ function mapProfile(id: string, data: DocumentData): UserProfile {
         ? (data.questionnaireResults as QuestionnaireResultsMap)
         : {},
     favourites: Array.isArray(data.favourites) ? data.favourites : [],
+    demographics:
+      data.demographics && typeof data.demographics === "object"
+        ? (data.demographics as UserProfile["demographics"])
+        : null,
     pushToken: data.pushToken ?? null,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -171,6 +182,9 @@ export async function updateProfile(
     }
     if (data.favourites !== undefined) {
       payload.favourites = data.favourites;
+    }
+    if (data.demographics !== undefined) {
+      payload.demographics = data.demographics;
     }
     if (data.pushToken !== undefined) {
       payload.pushToken = data.pushToken;
@@ -400,7 +414,7 @@ export function isFavourited(
  */
 export async function toggleFavourite(
   uid: string,
-  item: { type: FavouriteType; url: string; title: string },
+  item: { type: FavouriteType; url: string; title: string; entityId?: string },
   currentFavourites: FavouriteRef[] = [],
 ): Promise<{ favourites: FavouriteRef[]; added: boolean }> {
   const exists = currentFavourites.some((fav) => fav.url === item.url);
@@ -408,9 +422,210 @@ export async function toggleFavourite(
     ? currentFavourites.filter((fav) => fav.url !== item.url)
     : [
         ...currentFavourites,
-        { type: item.type, url: item.url, title: item.title },
+        {
+          type: item.type,
+          url: item.url,
+          title: item.title,
+          ...(item.entityId ? { entityId: item.entityId } : {}),
+        },
       ];
 
   await updateProfile(uid, { favourites });
   return { favourites, added: !exists };
+}
+
+function toQualificationSummary(
+  qualification: Qualification,
+): QualificationSummary {
+  return {
+    id: qualification.id,
+    title: qualification.title,
+    nqfLevel: qualification.nqfLevel ?? null,
+    duration: qualification.duration ?? null,
+    searchText: [qualification.title, qualification.nqfLevel ?? ""]
+      .join(" ")
+      .toLowerCase(),
+  };
+}
+
+function toProviderSummary(provider: Provider): ProviderSummary {
+  return {
+    id: provider.id,
+    name: provider.name,
+    providerId: provider.providerId,
+    streetAddress: provider.streetAddress ?? null,
+    searchText: [provider.name, provider.streetAddress ?? "", provider.providerId]
+      .join(" ")
+      .toLowerCase(),
+  };
+}
+
+async function readPageCache<T>(
+  key: string,
+): Promise<{ cachedAt: string; items: T[] } | null> {
+  const cached = await AsyncStorage.getItem(key);
+  if (!cached) return null;
+  try {
+    return JSON.parse(cached) as { cachedAt: string; items: T[] };
+  } catch {
+    return null;
+  }
+}
+
+export async function getQualificationPage(options?: {
+  cursor?: PageCursor | null;
+  pageSize?: number;
+  forceRefresh?: boolean;
+}): Promise<PagedResult<QualificationSummary>> {
+  const pageSize = options?.pageSize ?? DIRECTORY_PAGE_SIZE;
+  const cursor = options?.cursor ?? null;
+
+  if (!cursor && !options?.forceRefresh) {
+    const cached = await readPageCache<QualificationSummary>(QUAL_PAGE_CACHE_KEY);
+    if (cached?.items?.length) {
+      return {
+        items: cached.items,
+        nextCursor:
+          cached.items.length >= pageSize
+            ? {
+                sortValue: cached.items[cached.items.length - 1].title,
+                id: cached.items[cached.items.length - 1].id,
+              }
+            : null,
+        fromCache: true,
+      };
+    }
+  }
+
+  try {
+    const pageQuery = cursor
+      ? query(
+          collection(getDb(), QUALIFICATIONS),
+          orderBy("title"),
+          startAfter(cursor.sortValue),
+          limit(pageSize),
+        )
+      : query(
+          collection(getDb(), QUALIFICATIONS),
+          orderBy("title"),
+          limit(pageSize),
+        );
+
+    const snap = await getDocs(pageQuery);
+    const items = snap.docs.map((docSnap) =>
+      toQualificationSummary(mapQualification(docSnap.id, docSnap.data())),
+    );
+
+    if (!cursor) {
+      await AsyncStorage.setItem(
+        QUAL_PAGE_CACHE_KEY,
+        JSON.stringify({ cachedAt: new Date().toISOString(), items }),
+      );
+    }
+
+    const last = items[items.length - 1];
+    return {
+      items,
+      nextCursor:
+        items.length === pageSize && last
+          ? { sortValue: last.title, id: last.id }
+          : null,
+      fromCache: false,
+    };
+  } catch (err) {
+    if (!cursor) {
+      const cached = await readPageCache<QualificationSummary>(QUAL_PAGE_CACHE_KEY);
+      if (cached?.items?.length) {
+        return {
+          items: cached.items,
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
+    }
+    throw new NcapDataError(
+      "list-qualifications-failed",
+      "Failed to load qualifications",
+      { cause: err },
+    );
+  }
+}
+
+export async function getProviderPage(options?: {
+  cursor?: PageCursor | null;
+  pageSize?: number;
+  forceRefresh?: boolean;
+}): Promise<PagedResult<ProviderSummary>> {
+  const pageSize = options?.pageSize ?? DIRECTORY_PAGE_SIZE;
+  const cursor = options?.cursor ?? null;
+
+  if (!cursor && !options?.forceRefresh) {
+    const cached = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
+    if (cached?.items?.length) {
+      return {
+        items: cached.items,
+        nextCursor:
+          cached.items.length >= pageSize
+            ? {
+                sortValue: cached.items[cached.items.length - 1].name,
+                id: cached.items[cached.items.length - 1].id,
+              }
+            : null,
+        fromCache: true,
+      };
+    }
+  }
+
+  try {
+    const pageQuery = cursor
+      ? query(
+          collection(getDb(), PROVIDERS),
+          orderBy("name"),
+          startAfter(cursor.sortValue),
+          limit(pageSize),
+        )
+      : query(
+          collection(getDb(), PROVIDERS),
+          orderBy("name"),
+          limit(pageSize),
+        );
+
+    const snap = await getDocs(pageQuery);
+    const items = snap.docs.map((docSnap) =>
+      toProviderSummary(mapProvider(docSnap.id, docSnap.data())),
+    );
+
+    if (!cursor) {
+      await AsyncStorage.setItem(
+        PROVIDER_PAGE_CACHE_KEY,
+        JSON.stringify({ cachedAt: new Date().toISOString(), items }),
+      );
+    }
+
+    const last = items[items.length - 1];
+    return {
+      items,
+      nextCursor:
+        items.length === pageSize && last
+          ? { sortValue: last.name, id: last.id }
+          : null,
+      fromCache: false,
+    };
+  } catch (err) {
+    if (!cursor) {
+      const cached = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
+      if (cached?.items?.length) {
+        return {
+          items: cached.items,
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
+    }
+    throw new NcapDataError(
+      "list-providers-failed",
+      "Failed to load providers",
+      { cause: err },
+    );
+  }
 }

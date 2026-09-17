@@ -25,7 +25,10 @@ profiles/{authUid}
   Created by the app on first sign-in (not seeded).
   Fields:
     questionnaireResults: map
-    favourites: array of DocumentReference | {collection, id} maps
+    favourites: array of {type, url, title, entityId?}
+    demographics: map | null
+      preferredLanguage, role, hasDisability, disabilityCategories[], completedAt
+    pushToken: string | null
     createdAt: timestamp
     updatedAt: timestamp
 
@@ -53,6 +56,8 @@ def profile_schema_example(uid: str) -> Dict[str, Any]:
   return {
       "questionnaireResults": {},
       "favourites": [],
+      "demographics": None,
+      "pushToken": None,
       "createdAt": None,  # server timestamp in app write
       "updatedAt": None,
   }
