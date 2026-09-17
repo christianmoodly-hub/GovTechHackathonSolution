@@ -113,6 +113,8 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   roofing: "roofing",
   pause_circle: "pause-circle-filled",
   save: "save",
+  arrow_drop_down: "arrow-drop-down",
+  info: "info",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {
