@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen, EmptyState } from "../../../../components/Screen";
 import { MatchResultsList } from "../../../../components/MatchResultsList";
@@ -16,12 +16,6 @@ import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
 import { domainBadges } from "../../../../utils/occupationPresentation";
 
-const TITLES: Record<QuestionnaireId, string> = {
-  subjectChooser: "Subject Choice",
-  careerChoice: "Career Choice",
-  jobFit: "Job Fit",
-};
-
 export default function QuestionnaireResultsScreen() {
   const router = useRouter();
   const { questionnaireId } = useLocalSearchParams<{ questionnaireId: string }>();
@@ -35,7 +29,7 @@ export default function QuestionnaireResultsScreen() {
   const riasecPhrase =
     topTwo.length >= 2
       ? `${topTwo[0].label} & ${topTwo[1].label}`
-      : topTwo[0]?.label ?? "Interest";
+      : topTwo[0]?.label ?? "Realistic & Investigative";
 
   const retakeHref =
     key === "subjectChooser"
@@ -61,11 +55,7 @@ export default function QuestionnaireResultsScreen() {
 
   const onDownload = () => {
     setToastVisible(true);
-    Alert.alert(
-      "Blueprint Saved for Offline Use",
-      "Accessible anytime from your Saved profile vault.",
-    );
-    setTimeout(() => setToastVisible(false), 2500);
+    setTimeout(() => setToastVisible(false), 2800);
   };
 
   return (
@@ -73,6 +63,7 @@ export default function QuestionnaireResultsScreen() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        fromCache
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
       />
@@ -86,19 +77,31 @@ export default function QuestionnaireResultsScreen() {
           </View>
           <Text style={styles.alignedText}>SAQA / DHET Aligned</Text>
         </View>
-        <Text style={styles.heroKicker}>{TITLES[key] ?? "Questionnaire"}</Text>
         <Text style={styles.heroTitle}>Your Personalized Career Blueprint</Text>
         <Text style={styles.heroSub}>Isiqondiso Semisebenzi Yakho</Text>
         <Text style={styles.heroBody}>
-          Synthesized from your Holland RIASEC ({riasecPhrase}) inventory
-          combined with field work preferences and national labour market demand
-          data.
+          Synthesized from your{" "}
+          <Text style={styles.heroStrong}>
+            Holland RIASEC ({riasecPhrase})
+          </Text>{" "}
+          inventory combined with field work preferences and national labour
+          market demand data.
         </Text>
 
         <View style={styles.badgeRow}>
-          {badges.slice(0, 2).map((badge) => (
+          {(badges.length
+            ? badges.slice(0, 2)
+            : [
+                { label: "Realistic", pct: 88, icon: "build" },
+                { label: "Investigative", pct: 76, icon: "biotech" },
+              ]
+          ).map((badge) => (
             <View key={`${badge.label}-${badge.pct}`} style={styles.traitBadge}>
-              <MaterialIcon name={badge.icon} size={15} color="#9EF4D0" />
+              <MaterialIcon
+                name={badge.icon || "build"}
+                size={15}
+                color="#9EF4D0"
+              />
               <Text style={styles.traitText}>
                 {badge.label} {badge.pct}%
               </Text>
@@ -116,7 +119,7 @@ export default function QuestionnaireResultsScreen() {
           <View style={styles.downloadIcon}>
             <MaterialIcon name="download" size={24} color={colors.primary} />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.downloadTitle}>Download Offline Blueprint</Text>
             <Text style={styles.downloadMeta}>
               Official DHET PDF · Zero data rate · 1.4 MB
@@ -128,10 +131,16 @@ export default function QuestionnaireResultsScreen() {
         </View>
       </Pressable>
 
+      <MatchResultsList
+        matches={result.matches}
+        completedAt={result.completedAt}
+        domainBadges={badges}
+      />
+
       {toastVisible ? (
         <View style={styles.toast}>
           <MaterialIcon name="cloud_done" size={22} color="#9EF4D0" />
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.toastTitle}>Blueprint Saved for Offline Use</Text>
             <Text style={styles.toastBody}>
               Accessible anytime in your Saved Documents tab.
@@ -139,27 +148,15 @@ export default function QuestionnaireResultsScreen() {
           </View>
         </View>
       ) : null}
-
-      <MatchResultsList
-        matches={result.matches}
-        completedAt={result.completedAt}
-        domainBadges={badges}
-      />
-
-      <PrimaryButton
-        label="Retake questionnaire"
-        variant="secondary"
-        onPress={() => router.push(href(retakeHref))}
-      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#006A4E",
     borderRadius: radii.xl,
-    padding: spacing.xl,
+    padding: spacing.lg,
     gap: spacing.sm,
     overflow: "hidden",
     ...shadows.card,
@@ -171,7 +168,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "rgba(242,169,0,0.2)",
+    backgroundColor: "rgba(242,169,0,0.18)",
   },
   verifiedRow: {
     flexDirection: "row",
@@ -197,35 +194,36 @@ const styles = StyleSheet.create({
   },
   alignedText: {
     ...typography.caption,
-    color: "rgba(158,244,208,0.95)",
+    color: "#92E7C3",
     fontWeight: "600",
   },
-  heroKicker: {
-    ...typography.labelMd,
-    color: "rgba(255,255,255,0.75)",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
   heroTitle: {
-    ...typography.headlineMd,
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "700",
     color: colors.onPrimary,
-    fontWeight: "800",
+    letterSpacing: -0.3,
   },
   heroSub: {
     ...typography.labelMd,
     color: "#9EF4D0",
     fontStyle: "italic",
+    marginTop: -2,
   },
   heroBody: {
     ...typography.bodySm,
-    color: "rgba(255,255,255,0.88)",
+    color: "#DEE8FF",
+  },
+  heroStrong: {
+    fontWeight: "700",
+    color: colors.onPrimary,
   },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
   traitBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: "#08503C",
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -235,7 +233,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.14)",
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -264,7 +262,7 @@ const styles = StyleSheet.create({
   downloadIcon: {
     width: 40,
     height: 40,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     backgroundColor: colors.primaryMuted,
     alignItems: "center",
     justifyContent: "center",

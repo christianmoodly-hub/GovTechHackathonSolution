@@ -467,12 +467,22 @@ export async function toggleFavourite(
 function toQualificationSummary(
   qualification: Qualification,
 ): QualificationSummary {
+  const qualificationId =
+    qualification.qualificationId ??
+    qualification.generalQualificationId ??
+    null;
   return {
     id: qualification.id,
     title: qualification.title,
     nqfLevel: qualification.nqfLevel ?? null,
     duration: qualification.duration ?? null,
-    searchText: [qualification.title, qualification.nqfLevel ?? ""]
+    qualificationId,
+    providerCount: qualification.providers?.length ?? 0,
+    searchText: [
+      qualification.title,
+      qualification.nqfLevel ?? "",
+      qualificationId ?? "",
+    ]
       .join(" ")
       .toLowerCase(),
   };

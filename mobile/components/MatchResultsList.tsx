@@ -13,6 +13,7 @@ import {
   matchPercent,
   occupationEducationHint,
   occupationPathwayCta,
+  occupationRiasecCode,
   occupationSalaryYearlyHint,
   occupationSectorOverlay,
   occupationTags,
@@ -33,8 +34,8 @@ export function MatchResultsList({
 }: Props) {
   const router = useRouter();
   const maxScore = matches.reduce((m, item) => Math.max(m, item.score), 0);
-  const shown = matches.slice(0, 8);
-  const riasec = riasecCodeFromBadges(domainBadges);
+  const shown = matches.slice(0, 3);
+  const fallbackRiasec = riasecCodeFromBadges(domainBadges);
 
   if (!matches.length) {
     return (
@@ -65,19 +66,33 @@ export function MatchResultsList({
       {shown.map((item, index) => {
         const pct = matchPercent(item.score, maxScore);
         const tags = occupationTags(item.title);
-        const photo = STITCH_RESULT_IMAGES[index % STITCH_RESULT_IMAGES.length];
         const accent = matchAccent(index);
         const overlay = occupationSectorOverlay(item.title);
         const cta = occupationPathwayCta(item.title);
         const primary = index === 0;
+        const showPhoto = index < 2;
+        const photo = STITCH_RESULT_IMAGES[index];
         const occupationUrl = `ncap://occupation/${item.occupationCode}`;
+        const riasec = occupationRiasecCode(item.title, fallbackRiasec);
+        const pillStyle =
+          index === 0
+            ? styles.matchPill
+            : index === 1
+              ? styles.matchPillOchre
+              : styles.matchPillMuted;
+        const pctColor =
+          index === 0
+            ? colors.success
+            : index === 1
+              ? colors.ochre
+              : colors.secondary;
 
         return (
           <View key={item.occupationCode} style={styles.card}>
             <View style={[styles.accentBar, { backgroundColor: accent }]} />
 
             <View style={styles.cardTop}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={{ flex: 1, paddingRight: 8, minWidth: 0 }}>
                 <View style={styles.fitRow}>
                   <View style={[styles.fitDot, { backgroundColor: accent }]} />
                   <Text style={[styles.fitLabel, { color: accent }]}>
@@ -87,43 +102,50 @@ export function MatchResultsList({
                 <Text style={styles.title}>{item.title}</Text>
               </View>
               <View style={styles.scoreCol}>
-                <View style={styles.matchPill}>
-                  <MaterialIcon name="thumb_up" size={14} color={accent} />
-                  <Text style={styles.matchPct}>{pct}% Match</Text>
+                <View style={pillStyle}>
+                  <MaterialIcon name="thumb_up" size={14} color={pctColor} />
+                  <Text style={[styles.matchPct, { color: pctColor }]}>
+                    {pct}% Match
+                  </Text>
                 </View>
                 <Text style={styles.riasec}>RIASEC: {riasec}</Text>
               </View>
             </View>
 
-            <View style={styles.photoWrap}>
-              <Image source={photo} style={styles.photo} resizeMode="cover" />
-              <View style={styles.photoGradient} />
-              <View style={styles.photoOverlays}>
-                <View style={styles.sectorRow}>
-                  <MaterialIcon
-                    name={overlay.icon}
-                    size={14}
-                    color={colors.onPrimary}
-                  />
-                  <Text style={styles.sectorText}>{overlay.label}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.gazettedPill,
-                    index === 1 && styles.gazettedOchre,
-                  ]}
-                >
-                  <Text
+            {showPhoto && photo ? (
+              <View style={styles.photoWrap}>
+                <Image source={photo} style={styles.photo} resizeMode="cover" />
+                <View style={styles.photoGradient} />
+                <View style={styles.photoOverlays}>
+                  <View style={styles.sectorRow}>
+                    <MaterialIcon
+                      name={overlay.icon}
+                      size={14}
+                      color={colors.onPrimary}
+                    />
+                    <Text style={styles.sectorText} numberOfLines={1}>
+                      {overlay.label}
+                    </Text>
+                  </View>
+                  <View
                     style={[
-                      styles.gazettedText,
-                      index === 1 && styles.gazettedTextOchre,
+                      styles.gazettedPill,
+                      index === 1 && styles.gazettedOchre,
                     ]}
                   >
-                    {overlay.badge}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.gazettedText,
+                        index === 1 && styles.gazettedTextOchre,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {overlay.badge}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            ) : null}
 
             <View style={styles.tagRow}>
               {tags.slice(0, 3).map((tag) => {
@@ -216,7 +238,7 @@ export function MatchResultsList({
         <View style={[styles.nextIcon, { backgroundColor: "#FFF4E5" }]}>
           <MaterialIcon name="account_balance" size={28} color={colors.ochre} />
         </View>
-        <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
           <View style={styles.nextTitleRow}>
             <Text style={styles.nextTitle}>Check NSFAS & Bursary Eligibility</Text>
             <View style={styles.govPill}>
@@ -245,7 +267,7 @@ export function MatchResultsList({
         <View style={[styles.nextIcon, { backgroundColor: colors.primaryMuted }]}>
           <MaterialIcon name="location_on" size={28} color={colors.primary} />
         </View>
-        <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
           <Text style={styles.nextTitle}>Find Nearest Accredited Institutions</Text>
           <Text style={styles.nextBody}>
             Locate 50 Public TVET colleges and 26 Universities across all 9
@@ -271,7 +293,7 @@ export function MatchResultsList({
               color={colors.onPrimary}
             />
           </View>
-          <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
             <Text style={styles.helpTitle}>
               Need help making sense of your options?
             </Text>
@@ -305,7 +327,9 @@ export function MatchResultsList({
             </View>
             <View style={styles.hoursRow}>
               <MaterialIcon name="schedule" size={14} color={colors.textSecondary} />
-              <Text style={styles.hoursText}>{HELPLINE.hours} (SAST)</Text>
+              <Text style={styles.hoursText}>
+                Monday to Friday: 08:00 – 16:30 (SAST)
+              </Text>
             </View>
           </View>
         </View>
@@ -367,7 +391,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  matchPct: { ...typography.labelMd, color: colors.success, fontWeight: "800" },
+  matchPillOchre: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFF4E5",
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  matchPillMuted: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.muted,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  matchPct: { ...typography.labelMd, fontWeight: "800" },
   riasec: { ...typography.caption, color: colors.textSecondary },
   title: { ...typography.headlineSm, color: colors.text, fontWeight: "800", marginTop: 2 },
   photoWrap: {

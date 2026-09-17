@@ -118,6 +118,23 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   nature_people: "nature-people",
   health_and_safety: "health-and-safety",
   travel_explore: "travel-explore",
+  pending: "pending",
+  radio_button_unchecked: "radio-button-unchecked",
+  help: "help",
+  help_outline: "help-outline",
+  expand_less: "expand-less",
+  update: "update",
+  construction: "construction",
+  electrical_services: "electrical-services",
+  speed: "speed",
+  account_balance_wallet: "account-balance-wallet",
+  domain: "domain",
+  apartment: "apartment",
+  cancel: "cancel",
+  filter_alt: "filter-alt",
+  headset_mic: "headset-mic",
+  solar_power: "wb-sunny",
+  arrow_back_ios: "arrow-back-ios",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {

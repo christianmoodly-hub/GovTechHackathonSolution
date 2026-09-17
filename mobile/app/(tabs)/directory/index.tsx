@@ -170,12 +170,10 @@ export default function CareersDirectoryScreen() {
   const listHeader = (
     <View style={styles.headerBlock}>
       <View style={styles.titleRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>
-            Careers Directory{" "}
-            <Text style={styles.titleAlt}>(Imisebenzi)</Text>
-          </Text>
-        </View>
+        <Text style={styles.title} numberOfLines={2}>
+          Careers Directory{" "}
+          <Text style={styles.titleAlt}>(Imisebenzi)</Text>
+        </Text>
         <View style={styles.saqaPill}>
           <Text style={styles.saqaText}>DHET & SAQA</Text>
         </View>
@@ -194,12 +192,14 @@ export default function CareersDirectoryScreen() {
       <Pressable style={styles.filterTrigger} onPress={openFilter}>
         <View style={styles.filterTriggerLeft}>
           <MaterialIcon name="tune" size={20} color={colors.primary} />
-          <Text style={styles.filterTriggerLabel}>
+          <Text style={styles.filterTriggerLabel} numberOfLines={2}>
             Filter by Grade & Math Requirement
           </Text>
         </View>
         <View style={styles.gradePill}>
-          <Text style={styles.gradePillText}>{gradeShort}</Text>
+          <Text style={styles.gradePillText} numberOfLines={1}>
+            {gradeShort}
+          </Text>
           <MaterialIcon
             name="expand_more"
             size={16}
@@ -276,6 +276,7 @@ export default function CareersDirectoryScreen() {
         fromCache={fromCache}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
+        detail={`Offline Database Active · ${summaries.length.toLocaleString()} Occupations Available · Updated yesterday`}
       />
 
       <FlatList
@@ -602,7 +603,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.sm,
   },
-  title: { ...typography.headlineLg, color: colors.text, fontSize: 22 },
+  title: {
+    ...typography.headlineLg,
+    color: colors.text,
+    fontSize: 22,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
   titleAlt: {
     ...typography.headlineSm,
     color: colors.primary,
@@ -613,6 +621,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    flexShrink: 0,
+    marginTop: 4,
   },
   saqaText: {
     ...typography.labelMd,
@@ -637,8 +647,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    minWidth: 0,
   },
-  filterTriggerLabel: { ...typography.labelLg, color: colors.text, flex: 1 },
+  filterTriggerLabel: {
+    ...typography.labelLg,
+    color: colors.text,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
   gradePill: {
     flexDirection: "row",
     alignItems: "center",
@@ -647,6 +664,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    flexShrink: 0,
   },
   gradePillText: {
     ...typography.caption,

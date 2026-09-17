@@ -1,6 +1,6 @@
-import { StyleSheet, TextInput, View, Text } from "react-native";
+import { Platform, StyleSheet, TextInput, View, Text } from "react-native";
 import { MaterialIcon } from "./MaterialIcon";
-import { colors, layout, radii, spacing, typography } from "../theme";
+import { colors, layout, radii, shadows, spacing, typography } from "../theme";
 
 type Props = {
   value: string;
@@ -19,12 +19,15 @@ export function SearchField({
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <View style={styles.field}>
-        <MaterialIcon name="search" size={20} color={colors.textMuted} />
+        <View style={styles.iconSlot} pointerEvents="none">
+          <MaterialIcon name="search" size={20} color={colors.textSecondary} />
+        </View>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor="rgba(111,122,115,0.85)"
+          underlineColorAndroid="transparent"
           style={styles.input}
           autoCorrect={false}
           autoCapitalize="none"
@@ -36,23 +39,35 @@ export function SearchField({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.sm },
+  wrap: { gap: spacing.sm, width: "100%" },
   label: { ...typography.labelLg, color: colors.text },
   field: {
     minHeight: layout.minTouch,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    height: 48,
     backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    ...shadows.card,
+  },
+  iconSlot: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
   },
   input: {
     flex: 1,
-    ...typography.bodyMd,
+    minWidth: 0,
+    height: 48,
+    margin: 0,
+    paddingHorizontal: 4,
+    paddingVertical: Platform.OS === "android" ? 10 : 12,
+    fontSize: 15,
+    fontWeight: "400",
     color: colors.text,
-    paddingVertical: spacing.md,
+    ...(Platform.OS === "android" ? { includeFontPadding: false } : null),
   },
 });

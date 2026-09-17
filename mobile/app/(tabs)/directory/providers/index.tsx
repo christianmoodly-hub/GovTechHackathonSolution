@@ -67,7 +67,7 @@ export default function ProvidersDirectoryScreen() {
       <SearchField
         value={query}
         onChangeText={setQuery}
-        placeholder="Search provider name or address"
+        placeholder="Search provider or address…"
       />
 
       {loading ? <LoadingState /> : null}

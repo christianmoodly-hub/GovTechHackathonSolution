@@ -109,6 +109,8 @@ export type QualificationSummary = {
   title: string;
   nqfLevel?: string | null;
   duration?: string | null;
+  qualificationId?: string | null;
+  providerCount?: number;
   searchText: string;
 };
 

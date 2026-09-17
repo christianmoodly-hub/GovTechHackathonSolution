@@ -143,8 +143,34 @@ export function occupationIcon(title: string): string {
 export function occupationTags(title: string): CareerTag[] {
   const tags: CareerTag[] = [];
   const t = title.toLowerCase();
+  if (/solar|pv/.test(t)) {
+    tags.push({ id: "demand", label: "DHET High Demand", tone: "demand" });
+    tags.push({ id: "green", label: "Green Economy", tone: "green" });
+    tags.push({ id: "pathway", label: "TVET N4–N6 / Artisan", tone: "neutral" });
+    return tags;
+  }
+  if (/mechatronic|millwright/.test(t)) {
+    tags.push({ id: "demand", label: "Scarce Skill Gazetted", tone: "demand" });
+    tags.push({ id: "trade", label: "Trade Test Certified", tone: "trade" });
+    tags.push({
+      id: "pathway",
+      label: "Centres of Specialisation (CoS)",
+      tone: "neutral",
+    });
+    return tags;
+  }
+  if (/data|analyst|systems specialist/.test(t)) {
+    tags.push({ id: "ict", label: "ICT Sector", tone: "ict" });
+    tags.push({
+      id: "pathway",
+      label: "University Diploma / BTech / Degree",
+      tone: "neutral",
+    });
+    tags.push({ id: "ncap", label: "Remote-Friendly", tone: "green" });
+    return tags;
+  }
   if (
-    /solar|electric|software|developer|technician|artisan|nurse|data|mechatronic/.test(
+    /electric|software|developer|technician|artisan|nurse|data|mechatronic/.test(
       t,
     )
   ) {
@@ -304,13 +330,22 @@ export function occupationAccent(title: string): string {
 
 export function occupationEducationHint(title: string): string {
   const t = title.toLowerCase();
-  if (/doctor|engineer|scientist|analyst|lawyer|accountant/.test(t)) {
+  if (/solar|pv/.test(t)) {
+    return "Grade 12 Pure Maths / Tech Maths 50%, Physical Science";
+  }
+  if (/mechatronic|millwright/.test(t)) {
+    return "NCV Level 4 or N3 Engineering Studies (Maths & Science pass)";
+  }
+  if (/data|analyst|systems specialist|software/.test(t)) {
+    return "APS 28+, Grade 12 Pure Maths 60% or Mathematical Literacy 70%";
+  }
+  if (/doctor|engineer|scientist|lawyer|accountant/.test(t)) {
     return "Grade 12 NSC (Degree route)";
   }
   if (/nurse|teacher|technician|developer/.test(t)) {
     return "Grade 12 or Diploma / NQF 5";
   }
-  if (/electrician|plumber|welder|artisan|mechanic|millwright/.test(t)) {
+  if (/electrician|plumber|welder|artisan|mechanic/.test(t)) {
     return "Grade 12 or N3 Cert";
   }
   return "Grade 12 / TVET N3 or equivalent";
@@ -411,6 +446,18 @@ export function riasecCodeFromBadges(
   return codes.length ? codes.join("-") : "R-I";
 }
 
+/** Per-occupation RIASEC pair used on recommendation cards (Stitch). */
+export function occupationRiasecCode(title: string, fallback = "R-I"): string {
+  const t = title.toLowerCase();
+  if (/solar|pv|electric|artisan|mechanic|millwright|mechatronic|plumb|weld/.test(t)) {
+    if (/millwright|mechatronic/.test(t)) return "R-C";
+    return "R-I";
+  }
+  if (/data|software|analyst|systems|ict|developer/.test(t)) return "I-C";
+  if (/nurse|care|teach|social/.test(t)) return "S-I";
+  return fallback;
+}
+
 export function matchAccent(index: number): string {
   if (index === 0) return "#15803D";
   if (index === 1) return "#C2611A";
@@ -434,7 +481,6 @@ export function occupationPathwayHint(title: string): string {
 export const STITCH_RESULT_IMAGES = [
   require("../assets/stitch/results/img1.jpg"),
   require("../assets/stitch/results/img2.jpg"),
-  require("../assets/stitch/career-detail/img1.jpg"),
 ] as const;
 
 export const STITCH_JOBFIT_IMAGES = {
