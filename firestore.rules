@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Reference catalogue — seeded by Admin SDK / seed script only
+    match /occupations/{occupationCode} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /qualifications/{qualificationId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /providers/{providerId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // User profile — owner-only, no cross-user access
+    match /profiles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['questionnaireResults', 'favourites'])
+        && request.resource.data.keys().hasOnly([
+             'questionnaireResults',
+             'favourites',
+             'createdAt',
+             'updatedAt'
+           ]);
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

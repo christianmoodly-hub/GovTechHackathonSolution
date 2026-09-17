@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "NCAP Career Advice",
+    "slug": "ncap-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ncap",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0B3D2E"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "za.gov.ncap.careeradvice"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B3D2E"
+      },
+      "package": "za.gov.ncap.careeradvice",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "ncap"
+            },
+            {
+              "scheme": "https",
+              "host": "nationalcreeradviceapp.firebaseapp.com",
+              "pathPrefix": "/auth"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

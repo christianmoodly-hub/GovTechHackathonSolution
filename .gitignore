@@ -1,0 +1,14 @@
+# Secrets / local credentials
+firebase/serviceAccountKey.json
+**/serviceAccount*.json
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Scraper scratch
+output/sample_*.html
+output/sample_*.json
+_inspect_*.py
+_probe_*.py

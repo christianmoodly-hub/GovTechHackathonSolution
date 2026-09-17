@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NCAP Sign-in</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f4f7f5;
+        color: #10231c;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px;
+        text-align: center;
+      }
+      a {
+        color: #0b3d2e;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Opening NCAP…</h1>
+      <p>If the app does not open automatically, tap the link below.</p>
+      <p><a id="open" href="#">Open NCAP sign-in</a></p>
+    </main>
+    <script>
+      (function () {
+        var params = window.location.search || "";
+        var hash = window.location.hash || "";
+        var deepLink = "ncap://sign-in" + params + hash;
+        var anchor = document.getElementById("open");
+        anchor.setAttribute("href", deepLink);
+        window.location.replace(deepLink);
+      })();
+    </script>
+  </body>
+</html>
