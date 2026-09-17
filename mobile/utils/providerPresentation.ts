@@ -323,3 +323,302 @@ export function providerImage(index: number): ImageSourcePropType {
   ];
   return images[index % images.length];
 }
+
+export const STITCH_PROVIDER_DETAIL_HERO = require("../assets/stitch/provider-detail/img1.jpg");
+
+export function providerShortCode(name: string): string {
+  if (/ekurhuleni east/i.test(name)) return "EEC";
+  if (/false bay/i.test(name)) return "FBC";
+  if (/tshwane university|tut/i.test(name)) return "TUT";
+  if (/coastal kzn/i.test(name)) return "CKZN";
+  const parts = name
+    .replace(/\(.*?\)/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !/college|university|of|the|and/i.test(w));
+  return parts
+    .slice(0, 3)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 4) || "PROV";
+}
+
+export function providerCrumbType(name: string, address?: string | null): string {
+  const kind = detectProviderKind(name, address);
+  if (kind === "uot") return "Universities of Technology";
+  if (kind === "uni") return "Public Universities";
+  return "Public TVET Colleges";
+}
+
+export function providerHeroBadges(
+  name: string,
+  address?: string | null,
+): { primary: string; secondary: string } {
+  const kind = detectProviderKind(name, address);
+  if (kind === "uot") {
+    return {
+      primary: "DHET University of Technology",
+      secondary: "UoT · Career-focused Degrees",
+    };
+  }
+  if (kind === "uni") {
+    return {
+      primary: "DHET Public University",
+      secondary: "Higher Education · Research",
+    };
+  }
+  return {
+    primary: "DHET Accredited Public TVET",
+    secondary: isCentreOfSpecialisation(name)
+      ? "CoS · Renewable & Electrical"
+      : "TVET · Occupational & Vocational",
+  };
+}
+
+export type ProviderStat = {
+  id: string;
+  icon: string;
+  label: string;
+  value: string;
+};
+
+export function providerDetailStats(
+  name: string,
+  programmeCount?: number,
+): ProviderStat[] {
+  const programmes =
+    programmeCount && programmeCount > 0
+      ? `${programmeCount} Accredited`
+      : /ekurhuleni east/i.test(name)
+        ? "42 Accredited"
+        : "Accredited";
+  return [
+    {
+      id: "campuses",
+      icon: "domain",
+      label: "Campuses",
+      value: /ekurhuleni east/i.test(name)
+        ? "6 Branches"
+        : /false bay/i.test(name)
+          ? "5 Branches"
+          : providerCampusCount(name).includes("Campus")
+            ? providerCampusCount(name)
+            : "Multi-campus",
+    },
+    {
+      id: "programmes",
+      icon: "school",
+      label: "Programmes",
+      value: programmes,
+    },
+    {
+      id: "funding",
+      icon: "payments",
+      label: "Funding",
+      value: "100% NSFAS",
+    },
+    {
+      id: "nqf",
+      icon: "military_tech",
+      label: "Qualifications",
+      value: detectProviderKind(name) === "uni" || detectProviderKind(name) === "uot"
+        ? "NQF Levels 5–10"
+        : "NQF Levels 2–6",
+    },
+  ];
+}
+
+export type ProviderCampusHub = {
+  id: string;
+  icon: string;
+  name: string;
+  subtitle: string;
+  focus: string;
+  address: string;
+};
+
+export function providerCampusHubs(
+  name: string,
+  address?: string | null,
+): ProviderCampusHub[] {
+  if (/ekurhuleni east/i.test(name)) {
+    return [
+      {
+        id: "springs",
+        icon: "engineering",
+        name: "Springs Campus",
+        subtitle: "Engineering & NATED Studies",
+        focus:
+          "Electrical Engineering (Heavy/Light Current), Mechanical Engineering Workshops, Fitting & Turning labs.",
+        address: "Plantation, Springs",
+      },
+      {
+        id: "sam",
+        icon: "solar_power",
+        name: "Sam Nzima Campus (Kwa-Thema)",
+        subtitle: "Centre of Specialisation: Solar & ICT",
+        focus:
+          "National Centre of Specialisation Solar PV Training Bay, High-speed Fibre CISCO Academy, Electronics.",
+        address: "17/19 Sam Nzima Dr, Kwa-Thema",
+      },
+      {
+        id: "daveyton",
+        icon: "local_cafe",
+        name: "Daveyton Campus",
+        subtitle: "Business Studies & Hospitality",
+        focus:
+          "Fully functional Industrial Training Kitchen, Tourism simulation suite, Financial Administration suites.",
+        address: "Heald St, Daveyton",
+      },
+      {
+        id: "brakpan",
+        icon: "construction",
+        name: "Brakpan Campus",
+        subtitle: "Artisan Trades & Fabrication",
+        focus:
+          "Welding test bays, Boiler Making workshops, Vehicle maintenance bay, Rigging practice rigs.",
+        address: "98 Victoria Ave, Brakpan",
+      },
+    ];
+  }
+  if (/false bay/i.test(name)) {
+    return [
+      {
+        id: "westlake",
+        icon: "engineering",
+        name: "Westlake Campus",
+        subtitle: "Engineering & Maritime",
+        focus: "Heavy current labs, solar innovation hub, and trade workshops.",
+        address: "Westlake, Cape Town",
+      },
+      {
+        id: "muizenberg",
+        icon: "sailing",
+        name: "Muizenberg Campus",
+        subtitle: "Maritime & Hospitality",
+        focus: "Maritime studies and coastal vocational pathways.",
+        address: "Muizenberg",
+      },
+      {
+        id: "fishhoek",
+        icon: "build",
+        name: "Fish Hoek Campus",
+        subtitle: "Artisan & Skills",
+        focus: "Fitting, fabrication, and occupational programmes.",
+        address: "Fish Hoek",
+      },
+    ];
+  }
+  return [
+    {
+      id: "main",
+      icon: "apartment",
+      name: "Main Campus",
+      subtitle: "Primary learning hub",
+      focus: "Core programmes and student support services.",
+      address: address?.trim() || "See institutional prospectus",
+    },
+  ];
+}
+
+export type ProviderFaculty = {
+  id: string;
+  title: string;
+  badge: string;
+  body: string;
+  tags: string[];
+};
+
+export function providerFaculties(
+  name: string,
+  offeredTitles: string[],
+): ProviderFaculty[] {
+  if (offeredTitles.length >= 6) {
+    const chunks = [
+      offeredTitles.slice(0, 3),
+      offeredTitles.slice(3, 6),
+      offeredTitles.slice(6, 9),
+    ].filter((c) => c.length);
+    const titles = [
+      "Engineering & Technical",
+      "Business & Services",
+      "Occupational & Skills",
+    ];
+    return chunks.map((chunk, i) => ({
+      id: `fac-${i}`,
+      title: titles[i] ?? `Programme Cluster ${i + 1}`,
+      badge: "Accredited",
+      body: chunk.join(", ") + ".",
+      tags: ["SAQA Listed", "Provider Offerings"],
+    }));
+  }
+
+  if (/ekurhuleni east|false bay|tvet|college/i.test(name)) {
+    return [
+      {
+        id: "eng",
+        title: "Engineering Studies",
+        badge: "N1–N6 & NC(V)",
+        body: "Electrical Infrastructure Construction, Mechanical Engineering, Civil & Building Construction, Motor Mechanics.",
+        tags: ["Maths Lit / Pure Req.", "Artisan Pathway"],
+      },
+      {
+        id: "biz",
+        title: "Business & Information Technology",
+        badge: "NC(V) & NATED",
+        body: "Financial Management, Marketing Management, Systems Development, Office Administration, Public Management.",
+        tags: ["Grade 9–12 Entry", "Internship Placements"],
+      },
+      {
+        id: "occ",
+        title: "Occupational & Skills Programmes",
+        badge: "QCTO / CoS",
+        body: "Solar Photovoltaic (PV) Service Technician, Installation Electrician, Community Development Practitioner.",
+        tags: ["Direct Apprenticeship", "SETA Stipend"],
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "ug",
+      title: "Undergraduate Faculties",
+      badge: "Degree & Diploma",
+      body: "Core undergraduate pathways aligned to national scarce skills and graduate employment.",
+      tags: ["NSC Entry", "WIL Options"],
+    },
+    {
+      id: "pg",
+      title: "Postgraduate & Research",
+      badge: "Honours+",
+      body: "Advanced study and applied research linked to industry and public-sector priorities.",
+      tags: ["Research Ready", "Professional Bodies"],
+    },
+  ];
+}
+
+export function providerHeadOffice(
+  name: string,
+  address?: string | null,
+): { title: string; address: string } {
+  if (/ekurhuleni east/i.test(name)) {
+    return {
+      title: "Central Administration (Sam Nzima)",
+      address: "17/19 Sam Nzima Drive, Kwa-Thema, Springs, 1575, Gauteng",
+    };
+  }
+  return {
+    title: "Head Office / Main Campus",
+    address: address?.trim() || "Address listed on the institutional profile",
+  };
+}
+
+export function providerWebsiteHost(website?: string | null): string | null {
+  if (!website) return null;
+  try {
+    const url = website.startsWith("http") ? website : `https://${website}`;
+    return new URL(url).host.replace(/^www\./, "www.");
+  } catch {
+    return website.replace(/^https?:\/\//, "");
+  }
+}
+
