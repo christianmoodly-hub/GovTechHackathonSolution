@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen, EmptyState, LoadingState } from "../../../../components/Screen";
 import { SearchField } from "../../../../components/SearchField";
 import { MaterialIcon } from "../../../../components/MaterialIcon";
@@ -23,6 +23,7 @@ import {
   HELPLINE,
   OFFLINE_VAULT_STATS,
 } from "../../../../data/staticContent";
+import { parseQualTypeParam } from "../../../../data/learningPaths";
 import { getQualificationPage } from "../../../../services/ncapData";
 import type {
   PageCursor,
@@ -52,6 +53,7 @@ const PAGE_SIZE = 20;
 
 export default function QualificationsDirectoryScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string | string[] }>();
   const [items, setItems] = useState<QualificationSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
   const [query, setQuery] = useState("");
@@ -63,6 +65,11 @@ export default function QualificationsDirectoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
+
+  useEffect(() => {
+    const fromParam = parseQualTypeParam(params.type);
+    if (fromParam) setTypeFilter(fromParam);
+  }, [params.type]);
 
   const load = useCallback(
     async (opts?: { refresh?: boolean; next?: PageCursor | null }) => {

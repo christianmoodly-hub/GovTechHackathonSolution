@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen, EmptyState, LoadingState } from "../../../components/Screen";
 import { SearchField } from "../../../components/SearchField";
 import { MaterialIcon } from "../../../components/MaterialIcon";
@@ -20,6 +20,7 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { HELPLINE } from "../../../data/staticContent";
+import { parseCareerFilterParam } from "../../../data/learningPaths";
 import { getOccupationSummaries } from "../../../services/ncapData";
 import type { OccupationSummary } from "../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
@@ -88,6 +89,7 @@ const FILTER_ICON_COLOR: Record<CareerFilterId, string> = {
 
 export default function CareersDirectoryScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ filter?: string | string[] }>();
   const [summaries, setSummaries] = useState<OccupationSummary[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CareerFilterId>("all");
@@ -101,6 +103,11 @@ export default function CareersDirectoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
+
+  useEffect(() => {
+    const fromParam = parseCareerFilterParam(params.filter);
+    if (fromParam) setFilter(fromParam);
+  }, [params.filter]);
 
   const load = useCallback(async (forceRefresh = false) => {
     setError(null);

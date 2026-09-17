@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ImageSourcePropType,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Screen } from "../../../components/Screen";
 import { MaterialIcon } from "../../../components/MaterialIcon";
@@ -9,6 +17,10 @@ import {
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
 import { HELPLINE, OFFLINE_VAULT_STATS } from "../../../data/staticContent";
+import {
+  FIELD_PATHS,
+  QUESTIONNAIRE_PATH_IMAGES,
+} from "../../../data/learningPaths";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { href } from "../../../utils/href";
 
@@ -46,6 +58,7 @@ type Pathway = {
   cta: string;
   ctaIcon: string;
   journeyLabel: string;
+  banner: ImageSourcePropType;
 };
 
 const PATHWAYS: Pathway[] = [
@@ -67,6 +80,7 @@ const PATHWAYS: Pathway[] = [
     cta: "Launch Subject Chooser",
     ctaIcon: "chevron_right",
     journeyLabel: "Subject Choice (Grade 10–12)",
+    banner: QUESTIONNAIRE_PATH_IMAGES.subjectChooser,
   },
   {
     key: "careerChoice",
@@ -90,6 +104,7 @@ const PATHWAYS: Pathway[] = [
     cta: "Start Interest Profiler",
     ctaIcon: "arrow_forward",
     journeyLabel: "Career Interest (Holland RIASEC)",
+    banner: QUESTIONNAIRE_PATH_IMAGES.careerChoice,
   },
   {
     key: "jobFit",
@@ -113,6 +128,7 @@ const PATHWAYS: Pathway[] = [
     cta: "Assess Your Job Fit",
     ctaIcon: "chevron_right",
     journeyLabel: "Job Fit (Trade & Artisan Focus)",
+    banner: QUESTIONNAIRE_PATH_IMAGES.jobFit,
   },
 ];
 
@@ -328,22 +344,26 @@ export default function QuestionnairesHub() {
         const badge = badgeColors(p.badgeTone);
         return (
           <View key={p.key} style={styles.pathwayCard}>
+            <View style={styles.pathwayBanner}>
+              <Image
+                source={p.banner}
+                style={styles.pathwayBannerImage}
+                resizeMode="cover"
+              />
+              <View style={styles.pathwayBannerOverlay} />
+              <View style={styles.pathwayBannerBadge}>
+                <MaterialIcon name={p.badgeIcon} size={14} color={badge.fg} />
+                <Text
+                  style={[styles.badgeText, { color: badge.fg }]}
+                  numberOfLines={1}
+                >
+                  {p.badgeLabel}
+                </Text>
+              </View>
+            </View>
             <View style={[styles.accentBar, { backgroundColor: p.accent }]} />
             <View style={styles.pathwayInner}>
               <View style={styles.pathwayMetaRow}>
-                <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                  <MaterialIcon
-                    name={p.badgeIcon}
-                    size={14}
-                    color={badge.fg}
-                  />
-                  <Text
-                    style={[styles.badgeText, { color: badge.fg }]}
-                    numberOfLines={1}
-                  >
-                    {p.badgeLabel}
-                  </Text>
-                </View>
                 <View style={styles.duration}>
                   <MaterialIcon
                     name="timer"
@@ -401,6 +421,54 @@ export default function QuestionnairesHub() {
           </View>
         );
       })}
+
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionTitle}>Explore by field</Text>
+        <Text style={styles.sectionMeta}>Browse directories</Text>
+      </View>
+      <Text style={styles.fieldIntro}>
+        Visual gateways into university, health, and digital careers — no new
+        questionnaires, just curated directory routes.
+      </Text>
+
+      {FIELD_PATHS.map((field) => (
+        <Pressable
+          key={field.id}
+          style={styles.fieldCard}
+          onPress={() => router.push(href(field.href))}
+        >
+          <View style={styles.fieldBanner}>
+            <Image
+              source={field.image}
+              style={styles.pathwayBannerImage}
+              resizeMode="cover"
+            />
+            <View style={styles.pathwayBannerOverlay} />
+            <View style={styles.fieldBannerContent}>
+              <View
+                style={[styles.fieldIcon, { backgroundColor: `${field.accent}DD` }]}
+              >
+                <MaterialIcon
+                  name={field.icon}
+                  size={18}
+                  color={colors.onPrimary}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.fieldTitle}>{field.title}</Text>
+                <Text style={styles.fieldSubtitle} numberOfLines={2}>
+                  {field.subtitle}
+                </Text>
+              </View>
+              <MaterialIcon
+                name="arrow_forward"
+                size={20}
+                color={colors.onPrimary}
+              />
+            </View>
+          </View>
+        </Pressable>
+      ))}
 
       <View style={styles.faqCard}>
         <View style={styles.faqHead}>
@@ -640,6 +708,70 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...shadows.card,
   },
+  pathwayBanner: {
+    height: 148,
+    backgroundColor: colors.muted,
+  },
+  pathwayBannerImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  pathwayBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15,23,42,0.32)",
+  },
+  pathwayBannerBadge: {
+    position: "absolute",
+    left: spacing.md,
+    bottom: spacing.md,
+    right: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  fieldIntro: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  fieldCard: {
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  fieldBanner: {
+    height: 120,
+    backgroundColor: colors.muted,
+    justifyContent: "flex-end",
+  },
+  fieldBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  fieldIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fieldTitle: {
+    ...typography.labelLg,
+    color: colors.onPrimary,
+    fontWeight: "800",
+  },
+  fieldSubtitle: {
+    ...typography.caption,
+    color: "rgba(255,255,255,0.9)",
+  },
   accentBar: {
     position: "absolute",
     left: 0,
@@ -655,7 +787,7 @@ const styles = StyleSheet.create({
   pathwayMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: spacing.sm,
   },
   badge: {

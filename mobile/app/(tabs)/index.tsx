@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ImageSourcePropType,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Screen } from "../../components/Screen";
 import { MaterialIcon } from "../../components/MaterialIcon";
@@ -9,6 +17,7 @@ import {
 } from "../../components/KhethaBrandBar";
 import { useAuth } from "../../contexts/AuthContext";
 import { HELPLINE, LANGUAGES, OFFLINE_VAULT_STATS } from "../../data/staticContent";
+import { QUESTIONNAIRE_PATH_IMAGES } from "../../data/learningPaths";
 import { getHomeStrings, isHomeLocale, type HomeLocale } from "../../i18n/home";
 import { updateProfile } from "../../services/ncapData";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
@@ -146,6 +155,7 @@ export default function HomeScreen() {
         metaIcon="rule"
         meta={t.subjectMeta}
         cta={t.subjectCta}
+        banner={QUESTIONNAIRE_PATH_IMAGES.subjectChooser}
         onPress={() => router.push(href("/questionnaires/subject-chooser"))}
       />
       <GatewayCard
@@ -157,6 +167,7 @@ export default function HomeScreen() {
         metaIcon="data_saver_on"
         meta={t.careerMeta}
         cta={t.careerCta}
+        banner={QUESTIONNAIRE_PATH_IMAGES.careerChoice}
         onPress={() => router.push(href("/questionnaires/career-choice"))}
       />
       <GatewayCard
@@ -168,6 +179,7 @@ export default function HomeScreen() {
         metaIcon="handyman"
         meta={t.jobFitMeta}
         cta={t.jobFitCta}
+        banner={QUESTIONNAIRE_PATH_IMAGES.jobFit}
         onPress={() => router.push(href("/questionnaires/job-fit"))}
       />
 
@@ -297,6 +309,7 @@ function GatewayCard({
   metaIcon,
   meta,
   cta,
+  banner,
   onPress,
 }: {
   accent: string;
@@ -307,17 +320,28 @@ function GatewayCard({
   metaIcon: string;
   meta: string;
   cta: string;
+  banner: ImageSourcePropType;
   onPress: () => void;
 }) {
   return (
     <Pressable style={styles.gateway} onPress={onPress}>
+      <View style={styles.gatewayBanner}>
+        <Image
+          source={banner}
+          style={styles.gatewayBannerImage}
+          resizeMode="cover"
+        />
+        <View style={styles.gatewayBannerOverlay} />
+        <View style={[styles.gatewayBannerTag, { backgroundColor: accent }]}>
+          <Text style={styles.gatewayBannerTagText}>{tag}</Text>
+        </View>
+      </View>
       <View style={[styles.gatewayAccent, { backgroundColor: accent }]} />
       <View style={styles.gatewayInner}>
         <View style={styles.gatewayTop}>
           <View style={[styles.gatewayIcon, { backgroundColor: `${accent}18` }]}>
             <MaterialIcon name={icon} size={22} color={accent} />
           </View>
-          <Text style={[styles.gatewayTag, { color: accent }]}>{tag}</Text>
         </View>
         <Text style={styles.gatewayTitle}>{title}</Text>
         <Text style={styles.gatewayBody}>{body}</Text>
@@ -449,11 +473,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
-    flexDirection: "row",
     ...shadows.card,
   },
-  gatewayAccent: { width: 5 },
-  gatewayInner: { flex: 1, padding: spacing.lg, gap: spacing.sm },
+  gatewayBanner: {
+    height: 120,
+    backgroundColor: colors.muted,
+  },
+  gatewayBannerImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  gatewayBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15,23,42,0.28)",
+  },
+  gatewayBannerTag: {
+    position: "absolute",
+    left: spacing.md,
+    bottom: spacing.md,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  gatewayBannerTagText: {
+    ...typography.caption,
+    color: colors.onPrimary,
+    fontWeight: "800",
+  },
+  gatewayAccent: { height: 4, width: "100%" },
+  gatewayInner: { padding: spacing.lg, gap: spacing.sm },
   gatewayTop: {
     flexDirection: "row",
     alignItems: "center",
