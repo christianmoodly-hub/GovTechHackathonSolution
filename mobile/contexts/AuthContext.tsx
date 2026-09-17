@@ -10,11 +10,13 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInAnonymously,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithEmailLink,
   signOut as firebaseSignOut,
@@ -46,6 +48,7 @@ type AuthContextValue = {
   sendSignInLink: (email: string) => Promise<void>;
   completeSignInFromLink: (url: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  signInWithGoogleIdToken: (idToken: string) => Promise<void>;
   registerWithPassword: (input: RegisterInput) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   continueAsGuest: () => Promise<void>;
@@ -87,7 +90,15 @@ function mapAuthError(err: unknown, fallback: string): string {
   if (code.includes("too-many-requests")) {
     return "Too many attempts. Wait a moment and try again.";
   }
-  return err.message || fallback;
+  if (code.includes("account-exists-with-different-credential")) {
+    return "An account already exists with this email using a different sign-in method.";
+  }
+  if (code.includes("popup-closed") || code.includes("cancelled") || code.includes("canceled")) {
+    return "Google sign-in was cancelled.";
+  }
+  // Prefer the concrete Firestore / network message when present.
+  if (err.message && err.message !== fallback) return err.message;
+  return fallback;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -242,6 +253,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [bootstrapProfile]);
 
+  const signInWithGoogleIdToken = useCallback(
+    async (idToken: string) => {
+      if (!idToken.trim()) {
+        throw new Error("Google sign-in did not return an ID token.");
+      }
+
+      setError(null);
+      setIsLoading(true);
+      try {
+        const credential = GoogleAuthProvider.credential(idToken);
+        const result = await signInWithCredential(getFirebaseAuth(), credential);
+        const displayName = result.user.displayName?.trim();
+        if (displayName && !result.user.displayName) {
+          await updateFirebaseProfile(result.user, { displayName });
+        }
+        await bootstrapProfile(result.user);
+        setUser(result.user);
+      } catch (err) {
+        console.error("[auth] signInWithGoogleIdToken failed", err);
+        const message = mapAuthError(err, "Google sign-in failed.");
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [bootstrapProfile],
+  );
+
   const registerWithPassword = useCallback(
     async (input: RegisterInput) => {
       const trimmed = input.email.trim().toLowerCase();
@@ -264,17 +304,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         const demographics: Demographics = {
-          ...input.demographics,
-          email: trimmed,
-          fullName: input.fullName.trim(),
+          preferredLanguage: input.demographics.preferredLanguage,
+          role: input.demographics.role,
+          hasDisability: input.demographics.hasDisability,
+          disabilityCategories: input.demographics.disabilityCategories ?? [],
           completedAt: new Date().toISOString(),
+          fullName: input.fullName.trim(),
+          email: trimmed,
         };
+        if (input.demographics.documentType) {
+          demographics.documentType = input.demographics.documentType;
+        }
+        if (input.demographics.saIdOrPassport?.trim()) {
+          demographics.saIdOrPassport = input.demographics.saIdOrPassport.trim();
+        }
+        if (input.demographics.mobile?.trim()) {
+          demographics.mobile = input.demographics.mobile.trim();
+        }
+        if (input.demographics.province) {
+          demographics.province = input.demographics.province;
+        }
+        if (input.demographics.dateOfBirth?.trim()) {
+          demographics.dateOfBirth = input.demographics.dateOfBirth.trim();
+        }
+        if (input.demographics.gender) {
+          demographics.gender = input.demographics.gender;
+        }
 
         await ensureProfile(credential.user.uid);
         await updateProfile(credential.user.uid, { demographics });
         await bootstrapProfile(credential.user);
         setUser(credential.user);
       } catch (err) {
+        console.error("[auth] registerWithPassword failed", err);
+        const nested = (err as { cause?: unknown })?.cause;
+        if (nested) console.error("[auth] registerWithPassword cause", nested);
         const message = mapAuthError(err, "Could not create your account.");
         setError(message);
         throw new Error(message);
@@ -346,6 +410,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendSignInLink,
       completeSignInFromLink,
       signInWithPassword,
+      signInWithGoogleIdToken,
       registerWithPassword,
       sendPasswordReset,
       continueAsGuest,
@@ -361,6 +426,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendSignInLink,
       completeSignInFromLink,
       signInWithPassword,
+      signInWithGoogleIdToken,
       registerWithPassword,
       sendPasswordReset,
       continueAsGuest,

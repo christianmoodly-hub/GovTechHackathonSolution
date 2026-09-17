@@ -1,14 +1,16 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ImageBackground,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,8 +21,14 @@ import { AuthHeader } from "../components/auth/AuthHeader";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
 import { HELPLINE, PROVINCES, REGISTER_ROLES } from "../data/staticContent";
+import {
+  issueRegistrationOtp,
+  verifyRegistrationOtp,
+} from "../services/otp";
+import type { Demographics } from "../services/types";
 import { colors, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
+import { deriveFromSaId } from "../utils/saId";
 
 const classroomImg = require("../assets/auth/feature-classroom.jpg");
 
@@ -56,6 +64,12 @@ export default function RegisterScreen() {
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
+  const [otpFallback, setOtpFallback] = useState<string | null>(null);
+  const otpRefs = useRef<Array<TextInput | null>>([]);
+
   const message = localError || error;
 
   const idValid = useMemo(() => {
@@ -74,6 +88,23 @@ export default function RegisterScreen() {
     return sum % 10 === 0;
   }, [docType, saIdOrPassport]);
 
+  const onSaIdChange = (value: string) => {
+    const cleaned =
+      docType === "rsa_id" ? value.replace(/\D/g, "").slice(0, 13) : value;
+    setSaIdOrPassport(cleaned);
+
+    if (docType !== "rsa_id") return;
+
+    const derived = deriveFromSaId(cleaned);
+    if (!derived) return;
+
+    // Autofill as soon as YYMMDD is valid (6+ digits); refresh gender at 10+.
+    setDateOfBirth(derived.dateOfBirth);
+    if (cleaned.length >= 10) {
+      setGender(derived.gender);
+    }
+  };
+
   const canSubmit = useMemo(
     () =>
       Boolean(
@@ -86,6 +117,40 @@ export default function RegisterScreen() {
       ),
     [fullName, email, pin, confirmPin, role, agreed],
   );
+
+  const buildDemographics = (): Omit<Demographics, "completedAt"> => {
+    const base: Omit<Demographics, "completedAt"> = {
+      preferredLanguage: "en",
+      role,
+      hasDisability,
+      disabilityCategories: [],
+      fullName: fullName.trim(),
+      documentType: docType,
+      email: email.trim().toLowerCase(),
+    };
+    const saId = saIdOrPassport.trim();
+    const mobileTrim = mobile.trim();
+    const dob = dateOfBirth.trim();
+    if (saId) base.saIdOrPassport = saId;
+    if (mobileTrim) base.mobile = mobileTrim;
+    if (province) base.province = province;
+    if (dob) base.dateOfBirth = dob;
+    if (gender) base.gender = gender;
+    return base;
+  };
+
+  const sendOtp = async () => {
+    const result = await issueRegistrationOtp(email);
+    setOtpHint(
+      result.emailed
+        ? `We emailed a 6-digit code to ${result.email}. Check inbox / spam.`
+        : `Email delivery was blocked. Use the on-screen code to continue.`,
+    );
+    setOtpFallback(result.fallbackCode ?? null);
+    if (result.fallbackCode) {
+      console.log("[register] fallback OTP:", result.fallbackCode);
+    }
+  };
 
   const onSubmit = async () => {
     setLocalError(null);
@@ -101,29 +166,71 @@ export default function RegisterScreen() {
 
     setBusy(true);
     try {
+      await sendOtp();
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpOpen(true);
+    } catch (err) {
+      console.error("[register] OTP issue failed", err);
+      setLocalError(
+        err instanceof Error ? err.message : "Could not send verification code.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onVerifyOtp = async () => {
+    setLocalError(null);
+    clearError();
+    const code = otpDigits.join("");
+    if (code.length !== 6) {
+      setLocalError("Enter the full 6-digit verification code.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await verifyRegistrationOtp(email, code);
       await registerWithPassword({
         email,
         password: pin,
         fullName,
-        demographics: {
-          preferredLanguage: "en",
-          role,
-          hasDisability,
-          disabilityCategories: [],
-          fullName: fullName.trim(),
-          documentType: docType,
-          saIdOrPassport: saIdOrPassport.trim() || undefined,
-          mobile: mobile.trim() || undefined,
-          email: email.trim().toLowerCase(),
-          province: province || undefined,
-          dateOfBirth: dateOfBirth.trim() || undefined,
-          gender: gender || undefined,
-        },
+        demographics: buildDemographics(),
       });
+      setOtpOpen(false);
     } catch (err) {
+      console.error("[register] verify/create failed", err);
       setLocalError(err instanceof Error ? err.message : "Registration failed.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onResendOtp = async () => {
+    setLocalError(null);
+    setBusy(true);
+    try {
+      await sendOtp();
+      setOtpDigits(["", "", "", "", "", ""]);
+    } catch (err) {
+      console.error("[register] OTP resend failed", err);
+      setLocalError(
+        err instanceof Error ? err.message : "Could not resend verification code.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setOtpDigit = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    setOtpDigits((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
+    if (digit && index < 5) {
+      otpRefs.current[index + 1]?.focus();
     }
   };
 
@@ -162,7 +269,7 @@ export default function RegisterScreen() {
               </View>
               <View style={styles.trustChip}>
                 <MaterialIcon name="bolt" size={14} color={colors.success} />
-                <Text style={styles.trustText}>Instant SMS Access</Text>
+                <Text style={styles.trustText}>Email OTP Verify</Text>
               </View>
             </View>
             <View style={styles.progressTrack}>
@@ -171,7 +278,6 @@ export default function RegisterScreen() {
             <Text style={styles.progressLabel}>Step 1 of 4</Text>
           </View>
 
-          {/* Personal Information */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHead}>
               <View style={{ flex: 1 }}>
@@ -211,9 +317,6 @@ export default function RegisterScreen() {
                     onPress={() => setDocType(id)}
                     style={[styles.docChip, on && styles.docChipOn]}
                   >
-                    {id === "rsa_id" ? (
-                      <Text style={{ fontSize: 12 }}>{on ? "🇿🇦" : ""}</Text>
-                    ) : null}
                     <Text style={[styles.docChipText, on && styles.docChipTextOn]}>
                       {label}
                     </Text>
@@ -233,7 +336,7 @@ export default function RegisterScreen() {
                 docType === "rsa_id" ? "e.g. 7401015800088" : "Document number"
               }
               value={saIdOrPassport}
-              onChangeText={setSaIdOrPassport}
+              onChangeText={onSaIdChange}
               keyboardType={docType === "rsa_id" ? "number-pad" : "default"}
               maxLength={docType === "rsa_id" ? 13 : 40}
               trailing={
@@ -257,6 +360,11 @@ export default function RegisterScreen() {
               label="Date of Birth"
               leadingIcon="history_edu"
               placeholder="YYYY-MM-DD"
+              hint={
+                docType === "rsa_id"
+                  ? "Filled automatically from your RSA ID (you can still edit it)."
+                  : undefined
+              }
               value={dateOfBirth}
               onChangeText={setDateOfBirth}
             />
@@ -277,7 +385,6 @@ export default function RegisterScreen() {
             </View>
           </View>
 
-          {/* Contact */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHead}>
               <View style={{ flex: 1 }}>
@@ -296,17 +403,17 @@ export default function RegisterScreen() {
               label="Primary Mobile Number"
               leadingIcon="sms"
               placeholder="+27 72 000 0000"
-              hint="Select +27 for South Africa. Used for free OTP login, exam reminders & advisor calls."
+              hint="Used for advisor callbacks. Verification code is emailed for this build."
               value={mobile}
               onChangeText={setMobile}
               keyboardType="phone-pad"
             />
             <AuthField
-              label="Email Address"
-              trailingLabel="Optional but advised"
+              label="Email Address *"
+              trailingLabel="Required"
               leadingIcon="mail"
               placeholder="your@emailaddress.co.za"
-              hint="Required for Firebase account security and password recovery."
+              hint="Required for account security, OTP verification, and password recovery."
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -329,7 +436,6 @@ export default function RegisterScreen() {
             </View>
           </View>
 
-          {/* Situation */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHead}>
               <View style={{ flex: 1 }}>
@@ -360,9 +466,7 @@ export default function RegisterScreen() {
                     <View style={styles.roleTileTop}>
                       <MaterialIcon name={meta.icon} size={22} color={meta.color} />
                       <View style={[styles.radio, on && styles.radioOn]}>
-                        {on ? (
-                          <View style={styles.radioDot} />
-                        ) : null}
+                        {on ? <View style={styles.radioDot} /> : null}
                       </View>
                     </View>
                     <Text style={styles.roleTitle}>{item.label}</Text>
@@ -395,7 +499,6 @@ export default function RegisterScreen() {
             })}
           </View>
 
-          {/* Security */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHead}>
               <View style={{ flex: 1 }}>
@@ -473,19 +576,19 @@ export default function RegisterScreen() {
             </View>
           </ImageBackground>
 
-          {message ? <Text style={styles.error}>{message}</Text> : null}
+          {message && !otpOpen ? <Text style={styles.error}>{message}</Text> : null}
 
           <Pressable
             style={[styles.primaryBtn, (!canSubmit || busy || isLoading) && styles.disabled]}
             disabled={!canSubmit || busy || isLoading}
             onPress={() => void onSubmit()}
           >
-            {busy ? (
+            {busy && !otpOpen ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
                 <Text style={styles.primaryText}>
-                  Create Account & Verify via Free SMS OTP
+                  Create Account & Verify via Email OTP
                 </Text>
                 <MaterialIcon name="arrow_forward" size={20} color={colors.onPrimary} />
               </>
@@ -520,6 +623,71 @@ export default function RegisterScreen() {
         </ScrollView>
         <AuthFooter />
       </KeyboardAvoidingView>
+
+      <Modal visible={otpOpen} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalCard}
+          >
+            <Pressable
+              style={styles.modalClose}
+              onPress={() => setOtpOpen(false)}
+              disabled={busy}
+            >
+              <MaterialIcon name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+            <View style={styles.modalIcon}>
+              <MaterialIcon name="sms" size={28} color={colors.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Enter Free Email OTP</Text>
+            <Text style={styles.modalBody}>
+              {otpHint ??
+                `A 6-digit code was sent to ${email.trim().toLowerCase() || "your email"}.`}
+            </Text>
+            {otpFallback ? (
+              <View style={styles.fallbackBox}>
+                <Text style={styles.fallbackLabel}>Your verification code</Text>
+                <Text style={styles.fallbackCode}>{otpFallback}</Text>
+              </View>
+            ) : null}
+            <View style={styles.otpRow}>
+              {otpDigits.map((digit, index) => (
+                <TextInput
+                  key={`otp-${index}`}
+                  ref={(ref) => {
+                    otpRefs.current[index] = ref;
+                  }}
+                  value={digit}
+                  onChangeText={(v) => setOtpDigit(index, v)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  style={styles.otpBox}
+                  editable={!busy}
+                />
+              ))}
+            </View>
+            {message ? <Text style={styles.error}>{message}</Text> : null}
+            <Pressable
+              style={[styles.primaryBtn, busy && styles.disabled]}
+              disabled={busy}
+              onPress={() => void onVerifyOtp()}
+            >
+              {busy ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <>
+                  <Text style={styles.primaryText}>Verify & Launch Khetha</Text>
+                  <MaterialIcon name="rocket_launch" size={18} color={colors.onPrimary} />
+                </>
+              )}
+            </Pressable>
+            <Pressable onPress={() => void onResendOtp()} disabled={busy}>
+              <Text style={styles.resend}>Didn&apos;t receive it? Resend code</Text>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -607,9 +775,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.canvas,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
   },
   docChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   docChipText: { ...typography.labelMd, color: colors.text },
@@ -734,4 +899,69 @@ const styles = StyleSheet.create({
   helpTitle: { ...typography.labelLg, color: colors.text, fontWeight: "700" },
   helpBody: { ...typography.bodySm, color: colors.textSecondary },
   inlineLink: { color: colors.primary, fontWeight: "700" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.55)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.xl,
+    gap: spacing.md,
+    paddingBottom: spacing.xxxl,
+  },
+  modalClose: { alignSelf: "flex-end" },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+  },
+  modalTitle: {
+    ...typography.headlineSm,
+    color: colors.text,
+    textAlign: "center",
+  },
+  modalBody: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  fallbackBox: {
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    alignItems: "center",
+    gap: 4,
+  },
+  fallbackLabel: { ...typography.caption, color: colors.success },
+  fallbackCode: {
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: 6,
+    color: colors.primaryDark,
+  },
+  otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
+  otpBox: {
+    flex: 1,
+    height: 48,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.canvas,
+    textAlign: "center",
+    ...typography.headlineSm,
+    color: colors.text,
+  },
+  resend: {
+    ...typography.labelLg,
+    color: colors.primary,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
 });

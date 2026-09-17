@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { AuthField, AuthCheckbox } from "../components/auth/AuthField";
 import { AuthFooter, HelpContactCards } from "../components/auth/AuthFooter";
 import { AuthHeader } from "../components/auth/AuthHeader";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, layout, radii, shadows, spacing, typography } from "../theme";
@@ -294,6 +295,23 @@ export default function SignInScreen() {
                       Sign in with One-Time PIN (SMS)
                     </Text>
                   </Pressable>
+
+                  <View style={styles.orRow}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orText}>or</Text>
+                    <View style={styles.orLine} />
+                  </View>
+
+                  <GoogleSignInButton
+                    disabled={busy || isLoading}
+                    onError={(msg) => {
+                      if (!msg) {
+                        setLocalError(null);
+                        return;
+                      }
+                      setLocalError(msg);
+                    }}
+                  />
                 </View>
               </>
             )}
@@ -480,6 +498,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryText: { ...typography.labelLg, color: colors.text },
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginVertical: 2,
+  },
+  orLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong },
+  orText: { ...typography.caption, color: colors.textMuted, textTransform: "uppercase" },
   disabled: { opacity: 0.5 },
   error: { ...typography.bodySm, color: colors.error },
   emphasis: { fontWeight: "700", color: colors.primary },

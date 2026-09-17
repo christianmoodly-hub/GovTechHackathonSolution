@@ -50,6 +50,32 @@ export class NcapDataError extends Error {
   }
 }
 
+/** Firestore rejects `undefined` field values — strip them before writes. */
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as T;
+  }
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+      if (nested !== undefined) {
+        out[key] = stripUndefinedDeep(nested);
+      }
+    }
+    return out as T;
+  }
+  return value;
+}
+
+function firestoreErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const code = (err as { code?: string }).code;
+  if (code === "permission-denied") {
+    return "Firestore permission denied. Deploy firestore.rules and ensure you are signed in.";
+  }
+  return err.message || String(err);
+}
+
 function mapProfile(id: string, data: DocumentData): UserProfile {
   return {
     id,
@@ -153,9 +179,10 @@ export async function ensureProfile(uid: string): Promise<UserProfile> {
     return mapProfile(snap.id, snap.data());
   } catch (err) {
     if (err instanceof NcapDataError) throw err;
+    console.error("[ncapData] ensureProfile failed", uid, err);
     throw new NcapDataError(
       "ensure-profile-failed",
-      `Failed to create profile ${uid}`,
+      `Failed to create profile: ${firestoreErrorMessage(err)}`,
       { cause: err },
     );
   }
@@ -184,7 +211,10 @@ export async function updateProfile(
       payload.favourites = data.favourites;
     }
     if (data.demographics !== undefined) {
-      payload.demographics = data.demographics;
+      payload.demographics =
+        data.demographics === null
+          ? null
+          : stripUndefinedDeep(data.demographics);
     }
     if (data.pushToken !== undefined) {
       payload.pushToken = data.pushToken;
@@ -211,9 +241,10 @@ export async function updateProfile(
     return mapProfile(refreshed.id, refreshed.data());
   } catch (err) {
     if (err instanceof NcapDataError) throw err;
+    console.error("[ncapData] updateProfile failed", trimmed, err);
     throw new NcapDataError(
       "update-profile-failed",
-      `Failed to update profile ${trimmed}`,
+      `Failed to update profile: ${firestoreErrorMessage(err)}`,
       { cause: err },
     );
   }
