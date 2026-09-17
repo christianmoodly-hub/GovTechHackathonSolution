@@ -2,9 +2,13 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as WebBrowser from "expo-web-browser";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { colors } from "../theme";
 import { href } from "../utils/href";
+
+// Finish in-app browser OAuth returns (Google Sign-In) at the root.
+WebBrowser.maybeCompleteAuthSession();
 
 const PUBLIC_ROUTES = new Set(["sign-in", "register", "recover"]);
 

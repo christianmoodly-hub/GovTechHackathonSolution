@@ -1,4 +1,5 @@
 import { StyleSheet, TextInput, View, Text } from "react-native";
+import { MaterialIcon } from "./MaterialIcon";
 import { colors, layout, radii, spacing, typography } from "../theme";
 
 type Props = {
@@ -18,7 +19,7 @@ export function SearchField({
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <View style={styles.field}>
-        <Text style={styles.icon}>⌕</Text>
+        <MaterialIcon name="search" size={20} color={colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -42,13 +43,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.card,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-  icon: { color: colors.textMuted, fontSize: 16 },
   input: {
     flex: 1,
     ...typography.bodyMd,

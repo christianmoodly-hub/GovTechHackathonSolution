@@ -13,6 +13,10 @@ export type CareerDomain =
 export type QuestionOption = {
   id: string;
   label: string;
+  description?: string;
+  icon?: string;
+  /** Optional local image for rich Stitch-style option cards. */
+  image?: number;
   /** Domain weights added when this option is selected. */
   weights: Partial<Record<CareerDomain, number>>;
 };

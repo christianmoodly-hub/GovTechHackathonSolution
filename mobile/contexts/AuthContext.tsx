@@ -329,7 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: input.demographics.role,
           hasDisability: input.demographics.hasDisability,
           disabilityCategories: input.demographics.disabilityCategories ?? [],
-          completedAt: new Date().toISOString(),
+          // completedAt is set on the onboarding screen (first run after verify).
           fullName: input.fullName.trim(),
           email: trimmed,
         };

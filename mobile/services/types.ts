@@ -75,7 +75,8 @@ export type Demographics = {
   role: string;
   hasDisability: boolean;
   disabilityCategories: string[];
-  completedAt: string;
+  /** Set only after the onboarding screen is finished. */
+  completedAt?: string;
   fullName?: string;
   documentType?: "rsa_id" | "passport" | "asylum";
   saIdOrPassport?: string;

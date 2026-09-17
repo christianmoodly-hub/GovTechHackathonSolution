@@ -1,213 +1,574 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen } from "../../components/Screen";
-import { useAuth } from "../../contexts/AuthContext";
+import { MaterialIcon } from "../../components/MaterialIcon";
 import {
-  FUNDING_CARDS,
-  HELPLINE,
-  OFFLINE_VAULT_STATS,
-} from "../../data/staticContent";
+  KhethaBrandBar,
+  OfflineStatusBar,
+} from "../../components/KhethaBrandBar";
+import { useAuth } from "../../contexts/AuthContext";
+import { HELPLINE, LANGUAGES, OFFLINE_VAULT_STATS } from "../../data/staticContent";
+import { getHomeStrings, isHomeLocale, type HomeLocale } from "../../i18n/home";
+import { updateProfile } from "../../services/ncapData";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, profile } = useAuth();
-  const completedCount = Object.values(profile?.questionnaireResults ?? {}).filter(
-    (result) => result && Array.isArray(result.matches) && result.matches.length,
-  ).length;
-  const favouritesCount = profile?.favourites?.length ?? 0;
+  const { user, profile, refreshProfile } = useAuth();
+  const profileLanguage = profile?.demographics?.preferredLanguage;
+  const [locale, setLocale] = useState<HomeLocale>(() =>
+    isHomeLocale(profileLanguage) ? profileLanguage : "en",
+  );
+
+  useEffect(() => {
+    if (isHomeLocale(profileLanguage)) {
+      setLocale(profileLanguage);
+    }
+  }, [profileLanguage]);
+
+  const t = getHomeStrings(locale);
+  const careersCount = OFFLINE_VAULT_STATS.careersCached.toLocaleString();
+
+  const selectLanguage = (next: HomeLocale) => {
+    setLocale(next);
+    if (!user || !profile?.demographics) return;
+    void (async () => {
+      try {
+        await updateProfile(user.uid, {
+          demographics: {
+            ...profile.demographics,
+            preferredLanguage: next,
+          },
+        });
+        await refreshProfile();
+      } catch {
+        // Keep local home locale even if profile sync fails.
+      }
+    })();
+  };
 
   return (
     <Screen>
-      <Text style={styles.brand}>National Career Advice Portal</Text>
-      <Text style={styles.title}>
-        Your self-help tool for informed career and study decisions
-      </Text>
-      <Text style={styles.body}>
-        Signed in as {user?.email}. {completedCount} questionnaire
-        {completedCount === 1 ? "" : "s"} completed · {favouritesCount} saved items.
-      </Text>
+      <KhethaBrandBar />
+      <OfflineStatusBar
+        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        rightLabel={t.homeTab}
+        detail={t.offlineDetail(
+          careersCount,
+          OFFLINE_VAULT_STATS.qualificationsCached,
+          OFFLINE_VAULT_STATS.providersCached,
+        )}
+      />
 
-      <View style={styles.banner}>
-        <Text style={styles.bannerMark}>☎</Text>
-        <View style={styles.bannerBody}>
-          <Text style={styles.bannerTitle}>Free career counselling</Text>
-          <Text style={styles.bannerText}>
-            Speak to a Career Advisor ({HELPLINE.hours}) · Toll-free{" "}
-            {HELPLINE.tollFreeDisplay}
-          </Text>
-        </View>
-        <Pressable onPress={() => router.push(href("/helpline"))}>
-          <Text style={styles.link}>Open</Text>
-        </Pressable>
+      <View style={styles.officialPill}>
+        <MaterialIcon name="verified" size={16} color={colors.success} />
+        <Text style={styles.officialText}>{t.officialPill}</Text>
       </View>
 
-      <Text style={styles.section}>Core decision gateways</Text>
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>{t.heroTitle}</Text>
+        <Text style={styles.heroBody}>{t.heroBody}</Text>
+        <Text style={styles.voiceLabel}>{t.voiceLabel}</Text>
+        <View style={styles.langRow}>
+          {LANGUAGES.map((lang) => {
+            const active = locale === lang.id;
+            return (
+              <Pressable
+                key={lang.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                onPress={() => selectLanguage(lang.id as HomeLocale)}
+                style={[styles.langChip, active && styles.langChipActive]}
+              >
+                <Text
+                  style={[styles.langText, active && styles.langTextActive]}
+                >
+                  {lang.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.counselCard}>
+        <View style={styles.counselTop}>
+          <View style={styles.counselLeft}>
+            <MaterialIcon name="support_agent" size={20} color={colors.secondary} />
+            <Text style={styles.counselKicker}>{t.counselKicker}</Text>
+          </View>
+          <View style={styles.freePill}>
+            <Text style={styles.freeText}>{t.free}</Text>
+          </View>
+        </View>
+        <Text style={styles.counselBody}>{t.counselBody(HELPLINE.hours)}</Text>
+        <View style={styles.counselActions}>
+          <Pressable
+            style={styles.counselBtn}
+            onPress={() => void Linking.openURL(`tel:${HELPLINE.tollFree}`)}
+          >
+            <MaterialIcon name="call" size={16} color={colors.primary} />
+            <View>
+              <Text style={styles.counselBtnTitle}>{HELPLINE.tollFreeDisplay}</Text>
+              <Text style={styles.counselBtnMeta}>{t.tollFree}</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            style={styles.counselBtn}
+            onPress={() =>
+              void Linking.openURL(`https://wa.me/27${HELPLINE.whatsapp.slice(1)}`)
+            }
+          >
+            <MaterialIcon name="whatsapp" size={16} color={colors.success} />
+            <View>
+              <Text style={styles.counselBtnTitle}>
+                {HELPLINE.whatsappDisplay}
+              </Text>
+              <Text style={styles.counselBtnMeta}>{t.whatsapp}</Text>
+            </View>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.sectionHead}>
+        <Text style={styles.section}>{t.gatewaysTitle}</Text>
+        <Text style={styles.sectionSub}>{t.gatewaysSub}</Text>
+      </View>
+
       <GatewayCard
-        mark="1"
-        title="Subject Choice"
-        body="Find Grade 10–12 subjects that keep tertiary doors open."
-        cta="Explore subjects"
+        accent={colors.secondary}
+        icon="account_tree"
+        tag={t.subjectTag}
+        title={t.subjectTitle}
+        body={t.subjectBody}
+        metaIcon="rule"
+        meta={t.subjectMeta}
+        cta={t.subjectCta}
         onPress={() => router.push(href("/questionnaires/subject-chooser"))}
       />
       <GatewayCard
-        mark="2"
-        title="Career Choice Questionnaire"
-        body="Discover occupations aligned with your interests and personality."
-        cta="Start assessment"
+        accent={colors.primary}
+        icon="psychology"
+        tag={t.careerTag}
+        title={t.careerTitle}
+        body={t.careerBody}
+        metaIcon="data_saver_on"
+        meta={t.careerMeta}
+        cta={t.careerCta}
         onPress={() => router.push(href("/questionnaires/career-choice"))}
       />
       <GatewayCard
-        mark="3"
-        title="Job Fit Questionnaire"
-        body="Match working style and technical skills with TVET and workplace roles."
-        cta="Check job fit"
+        accent={colors.ochre}
+        icon="work_history"
+        tag={t.jobFitTag}
+        title={t.jobFitTitle}
+        body={t.jobFitBody}
+        metaIcon="handyman"
+        meta={t.jobFitMeta}
+        cta={t.jobFitCta}
         onPress={() => router.push(href("/questionnaires/job-fit"))}
       />
 
-      <Text style={styles.section}>Explore directory</Text>
-      <Pressable style={styles.dirRow} onPress={() => router.push(href("/directory"))}>
-        <Text style={styles.dirTitle}>Careers directory</Text>
-        <Text style={styles.dirMeta}>
-          {OFFLINE_VAULT_STATS.careersCached.toLocaleString()} occupations
-        </Text>
-      </Pressable>
-      <Pressable
-        style={styles.dirRow}
-        onPress={() => router.push(href("/directory/qualifications"))}
-      >
-        <Text style={styles.dirTitle}>What to study</Text>
-        <Text style={styles.dirMeta}>
-          {OFFLINE_VAULT_STATS.qualificationsCached.toLocaleString()} qualifications
-        </Text>
-      </Pressable>
-      <Pressable
-        style={styles.dirRow}
-        onPress={() => router.push(href("/directory/providers"))}
-      >
-        <Text style={styles.dirTitle}>Where to study</Text>
-        <Text style={styles.dirMeta}>
-          {OFFLINE_VAULT_STATS.providersCached.toLocaleString()} providers
-        </Text>
-      </Pressable>
+      <View style={styles.sectionHead}>
+        <Text style={styles.section}>{t.directoryTitle}</Text>
+        <Text style={styles.sectionSub}>{t.directorySub}</Text>
+      </View>
 
-      <Text style={styles.section}>Funding & NSFAS</Text>
-      {FUNDING_CARDS.map((card) => (
-        <View key={card.id} style={styles.fundCard}>
-          <Text style={styles.fundTitle}>{card.title}</Text>
-          <Text style={styles.fundBody}>{card.body}</Text>
+      <View style={styles.dirGrid}>
+        <DirTile
+          icon="engineering"
+          iconBg={colors.primaryMuted}
+          iconColor={colors.primary}
+          title={t.careersDirTitle}
+          body={t.careersDirBody(careersCount)}
+          cta={t.careersDirCta}
+          onPress={() => router.push(href("/directory"))}
+        />
+        <DirTile
+          icon="school"
+          iconBg={colors.secondarySubtle}
+          iconColor={colors.secondary}
+          title={t.whatStudyTitle}
+          body={t.whatStudyBody(OFFLINE_VAULT_STATS.qualificationsCached)}
+          cta={t.whatStudyCta}
+          onPress={() => router.push(href("/directory/qualifications"))}
+        />
+        <DirTile
+          icon="location_on"
+          iconBg="#EFF6FF"
+          iconColor={colors.secondary}
+          title={t.whereStudyTitle}
+          body={t.whereStudyBody}
+          cta={t.whereStudyCta}
+          onPress={() => router.push(href("/directory/providers"))}
+        />
+        <DirTile
+          icon="payments"
+          iconBg="#FFF4E5"
+          iconColor={colors.ochre}
+          title={t.fundingTitle}
+          body={t.fundingBody}
+          cta={t.fundingCta}
+          onPress={() => router.push(href("/helpline"))}
+        />
+      </View>
+
+      <View style={styles.demandHead}>
+        <View style={styles.demandTitleRow}>
+          <MaterialIcon
+            name="local_fire_department"
+            size={20}
+            color={colors.ochre}
+          />
+          <Text style={styles.section}>{t.demandTitle}</Text>
         </View>
+        <Pressable onPress={() => router.push(href("/directory"))}>
+          <View style={styles.gazetted}>
+            <Text style={styles.gazettedText}>{t.gazetted}</Text>
+          </View>
+        </Pressable>
+      </View>
+      <Text style={styles.sectionSub}>{t.demandSub}</Text>
+
+      {(
+        [
+          {
+            id: "solar",
+            title: t.solarTitle,
+            meta: t.solarMeta,
+            icon: "wb_sunny",
+            tone: "#C2611A",
+          },
+          {
+            id: "software",
+            title: t.softwareTitle,
+            meta: t.softwareMeta,
+            icon: "code",
+            tone: "#2B6CB0",
+          },
+          {
+            id: "millwright",
+            title: t.millwrightTitle,
+            meta: t.millwrightMeta,
+            icon: "precision_manufacturing",
+            tone: "#15803D",
+          },
+        ] as const
+      ).map((item) => (
+        <Pressable
+          key={item.id}
+          style={styles.demandRow}
+          onPress={() => router.push(href("/directory"))}
+        >
+          <View style={[styles.demandIcon, { backgroundColor: `${item.tone}22` }]}>
+            <MaterialIcon name={item.icon} size={22} color={item.tone} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.demandTitle}>{item.title}</Text>
+            <Text style={styles.demandMeta}>{item.meta}</Text>
+          </View>
+          <MaterialIcon name="chevron_right" size={20} color={colors.textMuted} />
+        </Pressable>
       ))}
 
-      <View style={styles.vault}>
-        <Text style={styles.fundTitle}>Offline vault</Text>
-        <Text style={styles.fundBody}>
-          {OFFLINE_VAULT_STATS.storageLabel} · {OFFLINE_VAULT_STATS.note}
-        </Text>
+      <View style={styles.policy}>
+        <MaterialIcon name="policy" size={18} color={colors.secondary} />
+        <Text style={styles.policyText}>{t.policy}</Text>
+      </View>
+
+      <View style={styles.quoteBox}>
+        <MaterialIcon name="format_quote" size={28} color={colors.gold} />
+        <Text style={styles.quote}>{t.quote}</Text>
+        <Text style={styles.quoteAttr}>{t.quoteAttr}</Text>
+        <Text style={styles.version}>{t.version}</Text>
       </View>
     </Screen>
   );
 }
 
 function GatewayCard({
-  mark,
+  accent,
+  icon,
+  tag,
+  title,
+  body,
+  metaIcon,
+  meta,
+  cta,
+  onPress,
+}: {
+  accent: string;
+  icon: string;
+  tag: string;
+  title: string;
+  body: string;
+  metaIcon: string;
+  meta: string;
+  cta: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.gateway} onPress={onPress}>
+      <View style={[styles.gatewayAccent, { backgroundColor: accent }]} />
+      <View style={styles.gatewayInner}>
+        <View style={styles.gatewayTop}>
+          <View style={[styles.gatewayIcon, { backgroundColor: `${accent}18` }]}>
+            <MaterialIcon name={icon} size={22} color={accent} />
+          </View>
+          <Text style={[styles.gatewayTag, { color: accent }]}>{tag}</Text>
+        </View>
+        <Text style={styles.gatewayTitle}>{title}</Text>
+        <Text style={styles.gatewayBody}>{body}</Text>
+        <View style={styles.gatewayMeta}>
+          <MaterialIcon name={metaIcon} size={14} color={colors.textMuted} />
+          <Text style={styles.gatewayMetaText}>{meta}</Text>
+        </View>
+        <View style={[styles.gatewayCta, { backgroundColor: accent }]}>
+          <Text style={styles.gatewayCtaText}>{cta}</Text>
+          <MaterialIcon name="arrow_forward" size={16} color={colors.onPrimary} />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function DirTile({
+  icon,
+  iconBg,
+  iconColor,
   title,
   body,
   cta,
   onPress,
 }: {
-  mark: string;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
   title: string;
   body: string;
   cta: string;
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.gateway} onPress={onPress}>
-      <View style={styles.mark}>
-        <Text style={styles.markText}>{mark}</Text>
+    <Pressable style={styles.dirTile} onPress={onPress}>
+      <View style={[styles.dirIcon, { backgroundColor: iconBg }]}>
+        <MaterialIcon name={icon} size={22} color={iconColor} />
       </View>
-      <View style={styles.gatewayBody}>
-        <Text style={styles.gatewayTitle}>{title}</Text>
-        <Text style={styles.gatewayText}>{body}</Text>
-        <Text style={styles.link}>{cta} →</Text>
+      <Text style={styles.dirTitle}>{title}</Text>
+      <Text style={styles.dirBody}>{body}</Text>
+      <View style={styles.dirCtaRow}>
+        <Text style={[styles.dirCta, { color: iconColor }]}>{cta}</Text>
+        <MaterialIcon name="chevron_right" size={16} color={iconColor} />
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  brand: {
-    ...typography.labelMd,
-    color: colors.primary,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  title: { ...typography.headlineLg, color: colors.text },
-  body: { ...typography.bodyMd, color: colors.textSecondary },
-  section: { ...typography.headlineSm, color: colors.text, marginTop: spacing.sm },
-  banner: {
-    backgroundColor: colors.secondarySubtle,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
+  officialPill: {
+    alignSelf: "flex-start",
     flexDirection: "row",
-    gap: spacing.md,
     alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  bannerMark: { fontSize: 22, color: colors.secondary },
-  bannerBody: { flex: 1, gap: 2 },
-  bannerTitle: { ...typography.labelLg, color: colors.text },
-  bannerText: { ...typography.bodySm, color: colors.textSecondary },
-  link: { ...typography.labelLg, color: colors.primary },
-  gateway: {
-    backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    flexDirection: "row",
-    gap: spacing.md,
+  officialText: { ...typography.caption, color: colors.success, fontWeight: "700" },
+  hero: {
+    backgroundColor: colors.primaryDark,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    gap: spacing.sm,
     ...shadows.card,
   },
-  mark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primaryMuted,
+  heroTitle: { ...typography.headlineLg, color: colors.gold },
+  heroBody: { ...typography.bodySm, color: "rgba(255,255,255,0.9)" },
+  voiceLabel: {
+    ...typography.caption,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: spacing.xs,
+  },
+  langRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  langChip: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  langChipActive: { backgroundColor: colors.card },
+  langText: { ...typography.caption, color: colors.onPrimary, fontWeight: "700" },
+  langTextActive: { color: colors.primaryDark },
+  counselCard: {
+    backgroundColor: colors.secondarySubtle,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  counselTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  counselLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  counselKicker: {
+    ...typography.labelMd,
+    color: colors.secondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  freePill: {
+    backgroundColor: colors.success,
+    borderRadius: radii.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  freeText: { ...typography.caption, color: colors.onPrimary, fontWeight: "800" },
+  counselBody: { ...typography.bodySm, color: colors.textSecondary },
+  counselActions: { flexDirection: "row", gap: spacing.sm },
+  counselBtn: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  counselBtnTitle: { ...typography.labelMd, color: colors.text },
+  counselBtnMeta: { ...typography.caption, color: colors.textMuted },
+  sectionHead: { gap: 4, marginTop: spacing.xs },
+  section: { ...typography.headlineSm, color: colors.text },
+  sectionSub: { ...typography.bodySm, color: colors.textSecondary },
+  gateway: {
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+    flexDirection: "row",
+    ...shadows.card,
+  },
+  gatewayAccent: { width: 5 },
+  gatewayInner: { flex: 1, padding: spacing.lg, gap: spacing.sm },
+  gatewayTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  gatewayIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  markText: { ...typography.labelLg, color: colors.primary },
-  gatewayBody: { flex: 1, gap: 6 },
+  gatewayTag: { ...typography.caption, fontWeight: "700", flexShrink: 1 },
   gatewayTitle: { ...typography.headlineSm, color: colors.text },
-  gatewayText: { ...typography.bodySm, color: colors.textSecondary },
-  dirRow: {
-    backgroundColor: colors.card,
+  gatewayBody: { ...typography.bodySm, color: colors.textSecondary },
+  gatewayMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  gatewayMetaText: { ...typography.caption, color: colors.textMuted },
+  gatewayCta: {
+    marginTop: spacing.xs,
+    minHeight: 42,
     borderRadius: radii.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+  },
+  gatewayCtaText: { ...typography.labelLg, color: colors.onPrimary },
+  dirGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  dirTile: {
+    width: "47%",
+    flexGrow: 1,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
-    gap: 4,
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  dirIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dirTitle: { ...typography.labelLg, color: colors.text },
-  dirMeta: { ...typography.bodySm, color: colors.textMuted },
-  fundCard: {
-    backgroundColor: colors.muted,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: 4,
+  dirBody: { ...typography.caption, color: colors.textSecondary, minHeight: 48 },
+  dirCtaRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 4 },
+  dirCta: { ...typography.labelMd },
+  demandHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
-  fundTitle: { ...typography.labelLg, color: colors.text },
-  fundBody: { ...typography.bodySm, color: colors.textSecondary },
-  vault: {
-    borderRadius: radii.md,
+  demandTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  gazetted: {
+    backgroundColor: "#FFF4E5",
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  gazettedText: { ...typography.caption, color: colors.ochre, fontWeight: "700" },
+  demandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.border,
     padding: spacing.lg,
-    gap: 4,
-    backgroundColor: colors.primaryMuted,
   },
+  demandIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  demandTitle: { ...typography.labelLg, color: colors.text },
+  demandMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  policy: {
+    flexDirection: "row",
+    gap: spacing.md,
+    backgroundColor: colors.secondarySubtle,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+  },
+  policyText: { ...typography.bodySm, color: colors.textSecondary, flex: 1 },
+  quoteBox: {
+    backgroundColor: colors.muted,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    gap: spacing.sm,
+    alignItems: "flex-start",
+  },
+  quote: {
+    ...typography.bodyMd,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+  },
+  quoteAttr: { ...typography.labelMd, color: colors.ochre },
+  version: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
 });

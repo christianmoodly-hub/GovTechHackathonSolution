@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { MaterialIcon } from "./MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
 import { toggleFavourite } from "../services/ncapData";
 import { scheduleFavouriteReminderStub } from "../services/notifications";
@@ -11,9 +12,16 @@ type Props = {
   url: string;
   title: string;
   entityId?: string;
+  compact?: boolean;
 };
 
-export function FavouriteToggle({ type, url, title, entityId }: Props) {
+export function FavouriteToggle({
+  type,
+  url,
+  title,
+  entityId,
+  compact = false,
+}: Props) {
   const { user, profile, refreshProfile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +29,9 @@ export function FavouriteToggle({ type, url, title, entityId }: Props) {
   const favourited = (profile?.favourites ?? []).some((item) => item.url === url);
 
   if (!user) {
-    return <Text style={styles.hint}>Sign in to save favourites</Text>;
+    return compact ? null : (
+      <Text style={styles.hint}>Sign in to save favourites</Text>
+    );
   }
 
   const onToggle = async () => {
@@ -44,6 +54,29 @@ export function FavouriteToggle({ type, url, title, entityId }: Props) {
       setBusy(false);
     }
   };
+
+  if (compact) {
+    return (
+      <Pressable
+        onPress={() => void onToggle()}
+        disabled={busy}
+        style={[styles.iconBtn, favourited && styles.iconBtnActive]}
+        accessibilityRole="button"
+        accessibilityState={{ selected: favourited, busy }}
+        accessibilityLabel={favourited ? "Remove from favourites" : "Add to favourites"}
+      >
+        {busy ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : (
+          <MaterialIcon
+            name={favourited ? "bookmark" : "bookmark_border"}
+            size={22}
+            color={favourited ? colors.primary : colors.textSecondary}
+          />
+        )}
+      </Pressable>
+    );
+  }
 
   return (
     <>
@@ -98,5 +131,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     color: colors.error,
     ...typography.bodySm,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
   },
 });
