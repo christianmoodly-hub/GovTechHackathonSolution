@@ -5,6 +5,8 @@ import { colors, layout, radii, spacing, typography } from "../theme";
 type Props = {
   label: string;
   description?: string;
+  altLabel?: string;
+  emoji?: string;
   icon?: string;
   image?: ImageSourcePropType;
   selected?: boolean;
@@ -14,12 +16,54 @@ type Props = {
 export function OptionButton({
   label,
   description,
+  altLabel,
+  emoji,
   icon,
   image,
   selected,
   onPress,
 }: Props) {
-  const rich = Boolean(description || icon || image);
+  const likert = Boolean(emoji);
+  const rich = Boolean(description || icon || image) && !likert;
+
+  if (likert) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={[styles.likert, selected && styles.likertSelected]}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+      >
+        <View style={styles.likertLeft}>
+          <Text style={styles.emoji}>{emoji}</Text>
+          <View style={styles.copy}>
+            <Text
+              style={[styles.likertLabel, selected && styles.likertLabelSelected]}
+            >
+              {label}
+            </Text>
+            {altLabel ? (
+              <Text
+                style={[
+                  styles.likertAlt,
+                  selected && styles.likertAltSelected,
+                ]}
+              >
+                {altLabel}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        {selected ? (
+          <View style={styles.checkCircle}>
+            <MaterialIcon name="check" size={16} color={colors.primary} />
+          </View>
+        ) : (
+          <View style={styles.radio} />
+        )}
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -60,6 +104,9 @@ export function OptionButton({
             >
               {description}
             </Text>
+          ) : null}
+          {altLabel ? (
+            <Text style={styles.altLabel}>{altLabel}</Text>
           ) : null}
         </View>
         {selected ? (
@@ -126,7 +173,7 @@ const styles = StyleSheet.create({
   iconWrapSelected: {
     backgroundColor: "rgba(255,255,255,0.18)",
   },
-  copy: { flex: 1, gap: 4 },
+  copy: { flex: 1, gap: 2 },
   label: {
     ...typography.bodyMd,
     color: colors.text,
@@ -146,6 +193,10 @@ const styles = StyleSheet.create({
   },
   descriptionOnPrimary: {
     color: "rgba(255,255,255,0.88)",
+  },
+  altLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
   },
   radio: {
     width: 22,
@@ -170,4 +221,50 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   imageOverlayText: { ...typography.caption, color: "#fff", fontWeight: "700" },
+  likert: {
+    minHeight: 54,
+    borderRadius: radii.md,
+    backgroundColor: "#F0F3FF",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  likertSelected: {
+    backgroundColor: colors.primary,
+  },
+  likertLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  emoji: { fontSize: 22, lineHeight: 28 },
+  likertLabel: {
+    ...typography.labelLg,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  likertLabelSelected: {
+    color: colors.onPrimary,
+    fontWeight: "700",
+  },
+  likertAlt: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  likertAltSelected: {
+    color: "rgba(158,244,208,0.95)",
+    fontWeight: "500",
+  },
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

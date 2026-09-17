@@ -14,6 +14,10 @@ export type QuestionOption = {
   id: string;
   label: string;
   description?: string;
+  /** Optional isiZulu / secondary label under the main option text. */
+  altLabel?: string;
+  /** Optional emoji for Likert-style options. */
+  emoji?: string;
   icon?: string;
   /** Optional local image for rich Stitch-style option cards. */
   image?: number;
@@ -25,6 +29,12 @@ export type Question = {
   id: string;
   prompt: string;
   helpText?: string;
+  /** Domain / pathway chip shown above the question card (RIASEC). */
+  categoryLabel?: string;
+  categoryIcon?: string;
+  heroImage?: number;
+  heroTag?: string;
+  heroMeta?: string;
   options: QuestionOption[];
 };
 
@@ -32,6 +42,9 @@ export type QuestionnaireDefinition = {
   id: "subjectChooser" | "careerChoice" | "jobFit";
   title: string;
   subtitle: string;
+  /** Optional Stitch profiler title shown in the flow header. */
+  profilerTitle?: string;
+  profilerSubtitle?: string;
   questions: Question[];
 };
 

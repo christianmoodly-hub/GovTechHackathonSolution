@@ -111,6 +111,8 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   inventory_2: "inventory-2",
   lightbulb: "lightbulb",
   roofing: "roofing",
+  pause_circle: "pause-circle-filled",
+  save: "save",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {
