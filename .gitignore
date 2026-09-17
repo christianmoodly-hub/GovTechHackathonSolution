@@ -1,7 +1,11 @@
 # Secrets / local credentials
 firebase/serviceAccountKey.json
+firebase/config.json
 **/serviceAccount*.json
 .env
+.env.local
+**/.env
+!**/.env.example
 .venv/
 __pycache__/
 *.pyc

@@ -9,14 +9,33 @@ import {
 import { getFirestore, type Firestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing ${name}. Copy mobile/.env.example to mobile/.env and fill in values. Never commit API keys.`
+    );
+  }
+  return value;
+}
+
 export const firebaseConfig = {
-  apiKey: "AIzaSyDGdu31-s3g5B8DLVr87dBFxzderO8uo70",
-  authDomain: "nationalcreeradviceapp.firebaseapp.com",
-  projectId: "nationalcreeradviceapp",
-  storageBucket: "nationalcreeradviceapp.firebasestorage.app",
-  messagingSenderId: "1059931069454",
-  appId: "1:1059931069454:web:fbd7688ef75d973af8f05f",
-  measurementId: "G-LJ93RX72M7",
+  apiKey: requiredEnv("EXPO_PUBLIC_FIREBASE_API_KEY"),
+  authDomain:
+    process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ??
+    "nationalcreeradviceapp.firebaseapp.com",
+  projectId:
+    process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "nationalcreeradviceapp",
+  storageBucket:
+    process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ??
+    "nationalcreeradviceapp.firebasestorage.app",
+  messagingSenderId:
+    process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "1059931069454",
+  appId:
+    process.env.EXPO_PUBLIC_FIREBASE_APP_ID ??
+    "1:1059931069454:web:fbd7688ef75d973af8f05f",
+  measurementId:
+    process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "G-LJ93RX72M7",
 };
 
 let authInstance: Auth | null = null;
