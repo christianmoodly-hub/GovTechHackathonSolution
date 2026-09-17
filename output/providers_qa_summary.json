@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "raw_provider_url_refs": 334,
+  "unique_provider_urls": 89,
+  "total_records": 89,
+  "empty_name": 0,
+  "empty_website": 67,
+  "empty_email": 75,
+  "empty_telephone": 68,
+  "empty_street_address": 67,
+  "empty_postal_address": 67,
+  "empty_offered_qualifications": 0,
+  "total_offered_qualification_refs": 4717,
+  "fetch_failures": 0
+}

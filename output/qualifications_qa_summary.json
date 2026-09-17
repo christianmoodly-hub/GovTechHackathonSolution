@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "raw_qualification_url_refs": 1675,
+  "unique_qualification_urls": 705,
+  "total_records": 705,
+  "empty_title": 0,
+  "empty_nqf_level": 509,
+  "empty_duration": 705,
+  "empty_providers": 501,
+  "empty_saqa_url": 501,
+  "total_provider_refs": 334,
+  "providers_with_url": 334,
+  "fetch_failures": 0
+}
