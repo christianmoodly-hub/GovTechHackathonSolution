@@ -100,6 +100,17 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   account_tree: "account-tree",
   data_saver_on: "data-saver-on",
   rule: "rule",
+  folder_shared: "folder-shared",
+  cloud_done: "cloud-done",
+  psychology: "psychology",
+  bookmarks: "bookmarks",
+  task_alt: "task-alt",
+  pin_drop: "place",
+  handshake: "handshake",
+  picture_as_pdf: "picture-as-pdf",
+  inventory_2: "inventory-2",
+  lightbulb: "lightbulb",
+  roofing: "roofing",
 };
 
 const COMMUNITY_MAP: Record<string, CommunityIconName> = {

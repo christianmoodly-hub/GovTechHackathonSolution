@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { MaterialIcon } from "./MaterialIcon";
 import { colors, radii, spacing, typography } from "../theme";
+import { href } from "../utils/href";
 
 const logo = require("../assets/stitch/shared/img0.jpg");
 
@@ -11,6 +13,8 @@ type Props = {
 
 /** Stitch-style top branding strip used across core app screens. */
 export function KhethaBrandBar(_props: Props = {}) {
+  const router = useRouter();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.left}>
@@ -19,9 +23,14 @@ export function KhethaBrandBar(_props: Props = {}) {
       <View style={styles.right}>
         <Text style={styles.aaa}>AAA</Text>
         <MaterialIcon name="contrast" size={18} color={colors.textSecondary} />
-        <View style={styles.avatar}>
+        <Pressable
+          style={styles.avatar}
+          onPress={() => router.push(href("/saved"))}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile and saved items"
+        >
           <MaterialIcon name="person" size={16} color={colors.onPrimary} />
-        </View>
+        </Pressable>
       </View>
     </View>
   );
