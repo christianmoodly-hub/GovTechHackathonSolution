@@ -10,7 +10,7 @@ import {
   OfflineStatusBar,
 } from "../../../../components/KhethaBrandBar";
 import { useAuth } from "../../../../contexts/AuthContext";
-import { OFFLINE_VAULT_STATS } from "../../../../data/staticContent";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { downloadOfflineBlueprint } from "../../../../services/offlineBlueprint";
 import type { QuestionnaireId } from "../../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
@@ -21,6 +21,7 @@ export default function QuestionnaireResultsScreen() {
   const router = useRouter();
   const { questionnaireId } = useLocalSearchParams<{ questionnaireId: string }>();
   const { user, profile } = useAuth();
+  const vault = useVaultStats();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState(
     "Blueprint saved on this device. Use the share sheet to keep a copy in Files or Drive.",
@@ -96,7 +97,7 @@ export default function QuestionnaireResultsScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         fromCache
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}

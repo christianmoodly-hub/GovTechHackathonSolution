@@ -18,8 +18,13 @@ import {
   OfflineStatusBar,
 } from "./KhethaBrandBar";
 import { useAuth } from "../contexts/AuthContext";
-import { OFFLINE_VAULT_STATS } from "../data/staticContent";
+import { useVaultStats } from "../hooks/useVaultStats";
 import { getOccupationSummaries, updateProfile } from "../services/ncapData";
+import {
+  clearQuestionnaireDraft,
+  getQuestionnaireDraft,
+  saveQuestionnaireDraft,
+} from "../services/offlineProfile";
 import type {
   QuestionnaireId,
   QuestionnaireResult,
@@ -37,7 +42,8 @@ type Props = {
 
 export function QuestionnaireScreen({ definition, resultKey }: Props) {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const vault = useVaultStats();
   const isCareerChoice = resultKey === "careerChoice";
 
   const existing = profile?.questionnaireResults?.[resultKey] as
@@ -53,12 +59,28 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   useEffect(() => {
     if (existing?.answers) {
       setAnswers(existing.answers);
     }
   }, [existing?.completedAt]);
+
+  useEffect(() => {
+    if (!user?.uid || existing?.matches?.length) return;
+    let alive = true;
+    void getQuestionnaireDraft(user.uid, resultKey).then((draft) => {
+      if (!alive || !draft) return;
+      setAnswers(draft.answers ?? {});
+      setStep(draft.step ?? 0);
+      setPhase("questions");
+      setDraftRestored(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user?.uid, resultKey, existing?.matches?.length]);
 
   const question = definition.questions[step];
   const total = definition.questions.length;
@@ -70,6 +92,10 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
     setStep(0);
     setError(null);
     setPhase("questions");
+    setDraftRestored(false);
+    if (user?.uid) {
+      void clearQuestionnaireDraft(user.uid, resultKey);
+    }
   };
 
   const onSelect = (optionId: string) => {
@@ -78,6 +104,14 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
   };
 
   const saveAndExit = () => {
+    if (user?.uid) {
+      void saveQuestionnaireDraft(user.uid, {
+        questionnaireId: definition.id,
+        resultKey,
+        answers,
+        step,
+      });
+    }
     router.replace(href("/questionnaires"));
   };
 
@@ -85,7 +119,17 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
     if (!question || !selected) return;
 
     if (step < total - 1) {
+      const nextAnswers = { ...answers, [question.id]: selected };
+      setAnswers(nextAnswers);
       setStep((value) => value + 1);
+      if (user?.uid) {
+        void saveQuestionnaireDraft(user.uid, {
+          questionnaireId: definition.id,
+          resultKey,
+          answers: nextAnswers,
+          step: step + 1,
+        });
+      }
       return;
     }
 
@@ -116,7 +160,11 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
         [resultKey]: nextResult,
       };
 
-      await updateProfile(user.uid, { questionnaireResults: nextMap });
+      const nextProfile = await updateProfile(user.uid, {
+        questionnaireResults: nextMap,
+      });
+      applyLocalProfile(nextProfile);
+      await clearQuestionnaireDraft(user.uid, resultKey);
       await refreshProfile();
       router.replace(href(`/questionnaires/results/${resultKey}`));
     } catch (err) {
@@ -133,7 +181,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
       <KhethaBrandBar />
       {isCareerChoice ? (
         <OfflineStatusBar
-          cachedCount={OFFLINE_VAULT_STATS.careersCached}
+          cachedCount={vault.careersCached}
           rightLabel="Decisions"
           onRightPress={() => router.push(href("/questionnaires"))}
         />
@@ -147,7 +195,11 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
           <Text style={styles.crumbCurrent}>{definition.title}</Text>
         </View>
       )}
-
+      {draftRestored ? (
+        <Text style={styles.draftHint}>
+          Restored your saved progress on this device.
+        </Text>
+      ) : null}
       {phase === "intro" ? (
         <View style={styles.card}>
           <View style={styles.moduleBanner}>
@@ -530,6 +582,11 @@ const styles = StyleSheet.create({
   crumbText: { ...typography.labelLg, color: colors.primary },
   crumbSep: { ...typography.bodySm, color: colors.textMuted },
   crumbCurrent: { ...typography.labelLg, color: colors.text },
+  draftHint: {
+    ...typography.caption,
+    color: colors.success,
+    marginBottom: spacing.sm,
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: radii.xl,

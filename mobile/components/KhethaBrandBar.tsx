@@ -2,6 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcon } from "./MaterialIcon";
 import { useAccessibility } from "../contexts/AccessibilityContext";
+import { useConnectivity } from "../contexts/ConnectivityContext";
 import { useLocale } from "../contexts/LocaleContext";
 import { radii, spacing, typography } from "../theme";
 import { href } from "../utils/href";
@@ -134,12 +135,13 @@ export function KhethaBrandBar(_props: Props = {}) {
 
 export function OfflineStatusBar({
   cachedCount,
-  fromCache,
+  fromCache: _fromCache,
   rightLabel,
   onRightPress,
   detail,
 }: {
   cachedCount: number;
+  /** @deprecated ConnectivityContext drives online/offline label now. */
   fromCache?: boolean;
   rightLabel?: string;
   onRightPress?: () => void;
@@ -147,6 +149,10 @@ export function OfflineStatusBar({
 }) {
   const { colors, highContrast } = useAccessibility();
   const { common } = useLocale();
+  const { canSync } = useConnectivity();
+  const statusLabel = canSync ? common.online : common.offline;
+  const statusColor = canSync ? colors.success : colors.ochre;
+
   return (
     <View style={styles.statusWrap}>
       <View
@@ -160,10 +166,9 @@ export function OfflineStatusBar({
         ]}
       >
         <View style={styles.statusLeft}>
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.statusText, { color: colors.success }]}>
-            {fromCache ? common.offlineReady : common.online} ·{" "}
-            {cachedCount.toLocaleString()} Cached
+          <View style={[styles.dot, { backgroundColor: statusColor }]} />
+          <Text style={[styles.statusText, { color: statusColor }]}>
+            {statusLabel} · {cachedCount.toLocaleString()} Cached
           </Text>
         </View>
         {rightLabel ? (
@@ -187,7 +192,9 @@ export function OfflineStatusBar({
         <MaterialIcon name="offline_pin" size={14} color={colors.onPrimary} />
         <Text style={[styles.dbText, { color: colors.onPrimary }]}>
           {detail ??
-            `Offline Database Active · ${cachedCount.toLocaleString()} Occupations Available`}
+            (canSync
+              ? `Directory cache · ${cachedCount.toLocaleString()} items`
+              : `Offline mode · ${cachedCount.toLocaleString()} items on device`)}
         </Text>
       </View>
     </View>

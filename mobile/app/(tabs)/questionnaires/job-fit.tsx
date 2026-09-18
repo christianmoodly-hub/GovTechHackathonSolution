@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -16,7 +16,7 @@ import {
 } from "../../../components/KhethaBrandBar";
 import { PrimaryButton } from "../../../components/PrimaryButton";
 import { useAuth } from "../../../contexts/AuthContext";
-import { OFFLINE_VAULT_STATS } from "../../../data/staticContent";
+import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   JOB_FIT_DEMAND,
   JOB_FIT_ENVIRONMENTS,
@@ -26,6 +26,11 @@ import {
 } from "../../../questionnaires/jobFitData";
 import { matchOccupations } from "../../../questionnaires/scoring";
 import { getOccupationSummaries, updateProfile } from "../../../services/ncapData";
+import {
+  clearQuestionnaireDraft,
+  getQuestionnaireDraft,
+  saveQuestionnaireDraft,
+} from "../../../services/offlineProfile";
 import type {
   QuestionnaireResult,
   QuestionnaireResultsMap,
@@ -41,9 +46,12 @@ type Answers = {
   schedule?: string;
 };
 
+const DRAFT_KEY = "jobFit";
+
 export default function JobFitRoute() {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const vault = useVaultStats();
   const existing = profile?.questionnaireResults?.jobFit;
 
   const [phase, setPhase] = useState<"intro" | "questions">(
@@ -58,6 +66,22 @@ export default function JobFitRoute() {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid || existing?.matches?.length) return;
+    let alive = true;
+    void getQuestionnaireDraft(user.uid, DRAFT_KEY).then((draft) => {
+      if (!alive || !draft) return;
+      setAnswers((draft.answers as Answers) ?? {});
+      setStep(draft.step ?? 0);
+      setPhase("questions");
+      setDraftRestored(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user?.uid, existing?.matches?.length]);
 
   const total = JOB_FIT_TOTAL_STEPS;
   const progressPct = Math.round(((step + 1) / total) * 100);
@@ -75,9 +99,25 @@ export default function JobFitRoute() {
     setStep(0);
     setError(null);
     setPhase("questions");
+    setDraftRestored(false);
+    if (user?.uid) void clearQuestionnaireDraft(user.uid, DRAFT_KEY);
   };
 
   const saveAndExit = () => {
+    if (user?.uid) {
+      void saveQuestionnaireDraft(user.uid, {
+        questionnaireId: "jobFit",
+        resultKey: DRAFT_KEY,
+        answers: {
+          environment: answers.environment ?? "",
+          physical: answers.physical ?? "",
+          interaction: answers.interaction ?? "",
+          structure: answers.structure ?? "",
+          schedule: answers.schedule ?? "",
+        },
+        step,
+      });
+    }
     router.replace(href("/questionnaires"));
   };
 
@@ -109,7 +149,11 @@ export default function JobFitRoute() {
         ...(profile?.questionnaireResults ?? {}),
         jobFit: nextResult,
       };
-      await updateProfile(user.uid, { questionnaireResults: nextMap });
+      const nextProfile = await updateProfile(user.uid, {
+        questionnaireResults: nextMap,
+      });
+      applyLocalProfile(nextProfile);
+      await clearQuestionnaireDraft(user.uid, DRAFT_KEY);
       await refreshProfile();
       router.replace(href("/questionnaires/results/jobFit"));
     } catch (err) {
@@ -124,7 +168,22 @@ export default function JobFitRoute() {
   const onNext = () => {
     if (!canAdvance) return;
     if (step < total - 1) {
-      setStep((value) => value + 1);
+      const nextStep = step + 1;
+      setStep(nextStep);
+      if (user?.uid) {
+        void saveQuestionnaireDraft(user.uid, {
+          questionnaireId: "jobFit",
+          resultKey: DRAFT_KEY,
+          answers: {
+            environment: answers.environment ?? "",
+            physical: answers.physical ?? "",
+            interaction: answers.interaction ?? "",
+            structure: answers.structure ?? "",
+            schedule: answers.schedule ?? "",
+          },
+          step: nextStep,
+        });
+      }
       return;
     }
     void finish();
@@ -134,11 +193,15 @@ export default function JobFitRoute() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
       />
-
+      {draftRestored ? (
+        <Text style={{ ...typography.caption, color: colors.success, marginBottom: 8 }}>
+          Restored your saved progress on this device.
+        </Text>
+      ) : null}
       {phase === "intro" ? (
         <View style={styles.introCard}>
           <View style={styles.modulePill}>
@@ -208,7 +271,7 @@ export default function JobFitRoute() {
             <View style={styles.autoSaveLeft}>
               <MaterialIcon name="offline_pin" size={16} color={colors.success} />
               <Text style={styles.autoSaveText}>
-                Answers saved locally to device cache · Zero data cost
+                Answers saved on this device when you pause · syncs when online
               </Text>
             </View>
             <View style={styles.autoSaveBadge}>

@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { AccessibilityProvider } from "../contexts/AccessibilityContext";
+import { ConnectivityProvider } from "../contexts/ConnectivityContext";
+import { ConnectivitySync } from "../contexts/ConnectivitySync";
 import { LocaleProvider } from "../contexts/LocaleContext";
 import { LocaleProfileSync } from "../contexts/LocaleProfileSync";
 import { colors } from "../theme";
@@ -94,15 +96,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <AccessibilityProvider>
-      <AuthProvider>
-        <LocaleProvider>
-          <LocaleProfileSync />
-          <StatusBar style="dark" />
-          <AuthGate>
-            <Stack screenOptions={{ headerShown: false }} />
-          </AuthGate>
-        </LocaleProvider>
-      </AuthProvider>
+      <ConnectivityProvider>
+        <AuthProvider>
+          <LocaleProvider>
+            <LocaleProfileSync />
+            <ConnectivitySync />
+            <StatusBar style="dark" />
+            <AuthGate>
+              <Stack screenOptions={{ headerShown: false }} />
+            </AuthGate>
+          </LocaleProvider>
+        </AuthProvider>
+      </ConnectivityProvider>
     </AccessibilityProvider>
   );
 }

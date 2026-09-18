@@ -11,9 +11,19 @@ import {
   serverTimestamp,
   setDoc,
   type DocumentData,
+  type Query,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { getDb } from "../firebase/client";
+import {
+  applyProfilePatch,
+  clearOutbox,
+  enqueueProfileOutbox,
+  readOutbox,
+  readProfileMirror,
+  removeOutboxOps,
+  writeProfileMirror,
+} from "./offlineProfile";
 import type {
   FavouriteRef,
   FavouriteType,
@@ -34,11 +44,40 @@ const PROFILES = "profiles";
 const OCCUPATIONS = "occupations";
 const QUALIFICATIONS = "qualifications";
 const PROVIDERS = "providers";
-const OCC_INDEX_CACHE_KEY = "ncap.occupationSummaries.v1";
-const QUAL_PAGE_CACHE_KEY = "ncap.qualificationPage.v1";
-const PROVIDER_PAGE_CACHE_KEY = "ncap.providerPage.v1";
+export const OCC_INDEX_CACHE_KEY = "ncap.occupationSummaries.v1";
+export const QUAL_PAGE_CACHE_KEY = "ncap.qualificationPage.v1";
+export const PROVIDER_PAGE_CACHE_KEY = "ncap.providerPage.v1";
+export const QUAL_INDEX_CACHE_KEY = "ncap.qualificationIndex.v1";
+export const PROVIDER_INDEX_CACHE_KEY = "ncap.providerIndex.v1";
 const PAGE_SIZE = 100;
 const DIRECTORY_PAGE_SIZE = 40;
+/** Cap offline pack indexes to keep low-data downloads reasonable. */
+const OFFLINE_INDEX_CAP = 300;
+
+function entityCacheKey(
+  type: "occupation" | "qualification" | "provider",
+  id: string,
+): string {
+  return `ncap.entity.${type}.${id}.v1`;
+}
+
+async function readEntityCache<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function writeEntityCache(key: string, value: unknown): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore cache write failures
+  }
+}
 
 export class NcapDataError extends Error {
   readonly code: string;
@@ -135,17 +174,48 @@ function toSummary(occupation: Occupation): OccupationSummary {
   };
 }
 
+function emptyLocalProfile(uid: string): UserProfile {
+  return {
+    id: uid,
+    questionnaireResults: {},
+    favourites: [],
+    demographics: null,
+    pushToken: null,
+  };
+}
+
+async function fetchProfileRemote(uid: string): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(getDb(), PROFILES, uid));
+  if (!snap.exists()) return null;
+  return mapProfile(snap.id, snap.data());
+}
+
+/**
+ * Load profile: prefer local mirror when outbox has pending writes;
+ * otherwise fetch Firestore and refresh the mirror. Falls back to mirror offline.
+ */
 export async function getProfile(uid: string): Promise<UserProfile | null> {
   const trimmed = uid.trim();
   if (!trimmed) {
     throw new NcapDataError("invalid-argument", "Profile uid is required");
   }
 
+  const pending = await readOutbox(trimmed);
+  if (pending.length) {
+    const mirror = await readProfileMirror(trimmed);
+    if (mirror) return mirror;
+  }
+
   try {
-    const snap = await getDoc(doc(getDb(), PROFILES, trimmed));
-    if (!snap.exists()) return null;
-    return mapProfile(snap.id, snap.data());
+    const remote = await fetchProfileRemote(trimmed);
+    if (remote) {
+      await writeProfileMirror(trimmed, remote);
+      return remote;
+    }
+    return await readProfileMirror(trimmed);
   } catch (err) {
+    const mirror = await readProfileMirror(trimmed);
+    if (mirror) return mirror;
     throw new NcapDataError(
       "get-profile-failed",
       `Failed to load profile ${trimmed}`,
@@ -154,20 +224,36 @@ export async function getProfile(uid: string): Promise<UserProfile | null> {
   }
 }
 
-/** Create profiles/{uid} once on first sign-in if missing. */
+/** Create profiles/{uid} once on first sign-in if missing. Offline → local mirror. */
 export async function ensureProfile(uid: string): Promise<UserProfile> {
-  const existing = await getProfile(uid);
-  if (existing) return existing;
-
-  const ref = doc(getDb(), PROFILES, uid);
-  const payload: DocumentData = {
-    questionnaireResults: {},
-    favourites: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
+  const trimmed = uid.trim();
+  if (!trimmed) {
+    throw new NcapDataError("invalid-argument", "Profile uid is required");
+  }
 
   try {
+    const existing = await fetchProfileRemote(trimmed);
+    if (existing) {
+      const pending = await readOutbox(trimmed);
+      if (pending.length) {
+        const local = pending.reduce(
+          (acc, op) => applyProfilePatch(acc, op.patch),
+          existing,
+        );
+        await writeProfileMirror(trimmed, local);
+        return local;
+      }
+      await writeProfileMirror(trimmed, existing);
+      return existing;
+    }
+
+    const ref = doc(getDb(), PROFILES, trimmed);
+    const payload: DocumentData = {
+      questionnaireResults: {},
+      favourites: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
     await setDoc(ref, payload, { merge: true });
     const snap = await getDoc(ref);
     if (!snap.exists()) {
@@ -176,18 +262,70 @@ export async function ensureProfile(uid: string): Promise<UserProfile> {
         "Profile bootstrap succeeded but document is missing",
       );
     }
-    return mapProfile(snap.id, snap.data());
+    const created = mapProfile(snap.id, snap.data());
+    await writeProfileMirror(trimmed, created);
+    return created;
   } catch (err) {
-    if (err instanceof NcapDataError) throw err;
-    console.error("[ncapData] ensureProfile failed", uid, err);
-    throw new NcapDataError(
-      "ensure-profile-failed",
-      `Failed to create profile: ${firestoreErrorMessage(err)}`,
-      { cause: err },
-    );
+    if (err instanceof NcapDataError && err.code === "profile-missing-after-write") {
+      throw err;
+    }
+    const mirror = await readProfileMirror(trimmed);
+    if (mirror) return mirror;
+    const local = emptyLocalProfile(trimmed);
+    await writeProfileMirror(trimmed, local);
+    console.warn("[ncapData] ensureProfile offline fallback", trimmed, err);
+    return local;
   }
 }
 
+async function writeProfileRemote(
+  uid: string,
+  data: ProfileUpdate,
+  base: UserProfile,
+): Promise<UserProfile> {
+  const ref = doc(getDb(), PROFILES, uid);
+  const payload: DocumentData = {
+    questionnaireResults:
+      data.questionnaireResults !== undefined
+        ? data.questionnaireResults
+        : (base.questionnaireResults ?? {}),
+    favourites:
+      data.favourites !== undefined ? data.favourites : (base.favourites ?? []),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.demographics !== undefined) {
+    payload.demographics =
+      data.demographics === null ? null : stripUndefinedDeep(data.demographics);
+  } else if (base.demographics !== undefined) {
+    payload.demographics =
+      base.demographics === null
+        ? null
+        : stripUndefinedDeep(base.demographics);
+  }
+  if (data.pushToken !== undefined) {
+    payload.pushToken = data.pushToken;
+  } else if (base.pushToken !== undefined) {
+    payload.pushToken = base.pushToken;
+  }
+
+  payload.createdAt = base.createdAt ?? serverTimestamp();
+
+  await setDoc(ref, payload, { merge: true });
+  const refreshed = await getDoc(ref);
+  if (!refreshed.exists()) {
+    throw new NcapDataError(
+      "profile-missing-after-write",
+      "Profile write succeeded but document is missing",
+    );
+  }
+  return mapProfile(refreshed.id, refreshed.data());
+}
+
+/**
+ * Local-first profile update: mirror + Auth UI update immediately;
+ * Firestore write or outbox enqueue when offline / failed.
+ */
 export async function updateProfile(
   uid: string,
   data: ProfileUpdate,
@@ -197,56 +335,51 @@ export async function updateProfile(
     throw new NcapDataError("invalid-argument", "Profile uid is required");
   }
 
+  const mirror =
+    (await readProfileMirror(trimmed)) ?? emptyLocalProfile(trimmed);
+  const local = applyProfilePatch(mirror, data);
+  await writeProfileMirror(trimmed, local);
+
   try {
-    const ref = doc(getDb(), PROFILES, trimmed);
-    const existing = await getDoc(ref);
-    const existingData = existing.exists() ? existing.data() : {};
-
-    // Always send required keys so security rules' hasAll() passes even on merge writes.
-    const payload: DocumentData = {
-      questionnaireResults:
-        data.questionnaireResults !== undefined
-          ? data.questionnaireResults
-          : (existingData.questionnaireResults ?? {}),
-      favourites:
-        data.favourites !== undefined
-          ? data.favourites
-          : (existingData.favourites ?? []),
-      updatedAt: serverTimestamp(),
-    };
-
-    if (data.demographics !== undefined) {
-      payload.demographics =
-        data.demographics === null
-          ? null
-          : stripUndefinedDeep(data.demographics);
-    }
-    if (data.pushToken !== undefined) {
-      payload.pushToken = data.pushToken;
-    }
-
-    if (!existing.exists()) {
-      payload.createdAt = serverTimestamp();
-    }
-
-    await setDoc(ref, payload, { merge: true });
-    const refreshed = await getDoc(ref);
-    if (!refreshed.exists()) {
-      throw new NcapDataError(
-        "profile-missing-after-write",
-        "Profile write succeeded but document is missing",
-      );
-    }
-    return mapProfile(refreshed.id, refreshed.data());
+    const remote = await writeProfileRemote(trimmed, data, local);
+    await writeProfileMirror(trimmed, remote);
+    return remote;
   } catch (err) {
-    if (err instanceof NcapDataError) throw err;
-    console.error("[ncapData] updateProfile failed", trimmed, err);
-    throw new NcapDataError(
-      "update-profile-failed",
-      `Failed to update profile: ${firestoreErrorMessage(err)}`,
-      { cause: err },
-    );
+    console.warn("[ncapData] updateProfile queued for sync", trimmed, err);
+    await enqueueProfileOutbox(trimmed, data);
+    return local;
   }
+}
+
+/** Push pending profile outbox ops to Firestore. Returns number flushed. */
+export async function flushProfileOutbox(uid: string): Promise<number> {
+  const trimmed = uid.trim();
+  if (!trimmed) return 0;
+  const ops = await readOutbox(trimmed);
+  if (!ops.length) return 0;
+
+  let base =
+    (await readProfileMirror(trimmed)) ?? emptyLocalProfile(trimmed);
+  const flushed: string[] = [];
+
+  for (const op of ops) {
+    try {
+      base = applyProfilePatch(base, op.patch);
+      base = await writeProfileRemote(trimmed, op.patch, base);
+      flushed.push(op.id);
+    } catch (err) {
+      console.warn("[ncapData] flushProfileOutbox stopped", op.id, err);
+      break;
+    }
+  }
+
+  if (flushed.length === ops.length) {
+    await clearOutbox(trimmed);
+  } else if (flushed.length) {
+    await removeOutboxOps(trimmed, flushed);
+  }
+  await writeProfileMirror(trimmed, base);
+  return flushed.length;
 }
 
 export async function getOccupation(code: string): Promise<Occupation | null> {
@@ -255,11 +388,16 @@ export async function getOccupation(code: string): Promise<Occupation | null> {
     throw new NcapDataError("invalid-argument", "Occupation code is required");
   }
 
+  const cacheKey = entityCacheKey("occupation", trimmed);
   try {
     const snap = await getDoc(doc(getDb(), OCCUPATIONS, trimmed));
     if (!snap.exists()) return null;
-    return mapOccupation(snap.id, snap.data());
+    const occupation = mapOccupation(snap.id, snap.data());
+    await writeEntityCache(cacheKey, occupation);
+    return occupation;
   } catch (err) {
+    const cached = await readEntityCache<Occupation>(cacheKey);
+    if (cached) return cached;
     throw new NcapDataError(
       "get-occupation-failed",
       `Failed to load occupation ${trimmed}`,
@@ -301,7 +439,7 @@ export async function getOccupationSummaries(options?: {
     let lastDoc: QueryDocumentSnapshot | null = null;
 
     for (;;) {
-      const pageQuery = lastDoc
+      const pageQuery: Query = lastDoc
         ? query(
             collection(getDb(), OCCUPATIONS),
             orderBy("title"),
@@ -400,11 +538,16 @@ export async function getQualification(
   if (!trimmed) {
     throw new NcapDataError("invalid-argument", "Qualification id is required");
   }
+  const cacheKey = entityCacheKey("qualification", trimmed);
   try {
     const snap = await getDoc(doc(getDb(), QUALIFICATIONS, trimmed));
     if (!snap.exists()) return null;
-    return mapQualification(snap.id, snap.data());
+    const qualification = mapQualification(snap.id, snap.data());
+    await writeEntityCache(cacheKey, qualification);
+    return qualification;
   } catch (err) {
+    const cached = await readEntityCache<Qualification>(cacheKey);
+    if (cached) return cached;
     throw new NcapDataError(
       "get-qualification-failed",
       `Failed to load qualification ${trimmed}`,
@@ -418,11 +561,16 @@ export async function getProvider(id: string): Promise<Provider | null> {
   if (!trimmed) {
     throw new NcapDataError("invalid-argument", "Provider id is required");
   }
+  const cacheKey = entityCacheKey("provider", trimmed);
   try {
     const snap = await getDoc(doc(getDb(), PROVIDERS, trimmed));
     if (!snap.exists()) return null;
-    return mapProvider(snap.id, snap.data());
+    const provider = mapProvider(snap.id, snap.data());
+    await writeEntityCache(cacheKey, provider);
+    return provider;
   } catch (err) {
+    const cached = await readEntityCache<Provider>(cacheKey);
+    if (cached) return cached;
     throw new NcapDataError(
       "get-provider-failed",
       `Failed to load provider ${trimmed}`,
@@ -439,8 +587,7 @@ export function isFavourited(
 }
 
 /**
- * Toggle a favourite on the profile. Returns the updated favourites array
- * and whether the item was added (true) or removed (false).
+ * Toggle a favourite on the profile. Prefetches entity detail when adding.
  */
 export async function toggleFavourite(
   uid: string,
@@ -461,6 +608,20 @@ export async function toggleFavourite(
       ];
 
   await updateProfile(uid, { favourites });
+
+  if (!exists && item.entityId) {
+    void (async () => {
+      try {
+        if (item.type === "occupation") await getOccupation(item.entityId!);
+        else if (item.type === "qualification")
+          await getQualification(item.entityId!);
+        else await getProvider(item.entityId!);
+      } catch {
+        // Best-effort prefetch
+      }
+    })();
+  }
+
   return { favourites, added: !exists };
 }
 
@@ -521,6 +682,19 @@ export async function getQualificationPage(options?: {
   const cursor = options?.cursor ?? null;
 
   if (!cursor && !options?.forceRefresh) {
+    const index = await readPageCache<QualificationSummary>(QUAL_INDEX_CACHE_KEY);
+    if (index?.items?.length) {
+      const page = index.items.slice(0, pageSize);
+      const last = page[page.length - 1];
+      return {
+        items: page,
+        nextCursor:
+          index.items.length > pageSize && last
+            ? { sortValue: last.title, id: last.id }
+            : null,
+        fromCache: true,
+      };
+    }
     const cached = await readPageCache<QualificationSummary>(QUAL_PAGE_CACHE_KEY);
     if (cached?.items?.length) {
       return {
@@ -574,6 +748,14 @@ export async function getQualificationPage(options?: {
     };
   } catch (err) {
     if (!cursor) {
+      const index = await readPageCache<QualificationSummary>(QUAL_INDEX_CACHE_KEY);
+      if (index?.items?.length) {
+        return {
+          items: index.items.slice(0, pageSize),
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
       const cached = await readPageCache<QualificationSummary>(QUAL_PAGE_CACHE_KEY);
       if (cached?.items?.length) {
         return {
@@ -600,6 +782,19 @@ export async function getProviderPage(options?: {
   const cursor = options?.cursor ?? null;
 
   if (!cursor && !options?.forceRefresh) {
+    const index = await readPageCache<ProviderSummary>(PROVIDER_INDEX_CACHE_KEY);
+    if (index?.items?.length) {
+      const page = index.items.slice(0, pageSize);
+      const last = page[page.length - 1];
+      return {
+        items: page,
+        nextCursor:
+          index.items.length > pageSize && last
+            ? { sortValue: last.name, id: last.id }
+            : null,
+        fromCache: true,
+      };
+    }
     const cached = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
     if (cached?.items?.length) {
       return {
@@ -653,6 +848,14 @@ export async function getProviderPage(options?: {
     };
   } catch (err) {
     if (!cursor) {
+      const index = await readPageCache<ProviderSummary>(PROVIDER_INDEX_CACHE_KEY);
+      if (index?.items?.length) {
+        return {
+          items: index.items.slice(0, pageSize),
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
       const cached = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
       if (cached?.items?.length) {
         return {
@@ -668,4 +871,115 @@ export async function getProviderPage(options?: {
       { cause: err },
     );
   }
+}
+
+/** Prefetch up to OFFLINE_INDEX_CAP qualifications into the offline index. */
+export async function prefetchQualificationIndex(options?: {
+  cap?: number;
+}): Promise<{ count: number; cachedAt: string }> {
+  const cap = options?.cap ?? OFFLINE_INDEX_CAP;
+  const items: QualificationSummary[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+
+  while (items.length < cap) {
+    const take = Math.min(PAGE_SIZE, cap - items.length);
+    const pageQuery: Query = lastDoc
+      ? query(
+          collection(getDb(), QUALIFICATIONS),
+          orderBy("title"),
+          startAfter(lastDoc),
+          limit(take),
+        )
+      : query(
+          collection(getDb(), QUALIFICATIONS),
+          orderBy("title"),
+          limit(take),
+        );
+    const snap = await getDocs(pageQuery);
+    if (snap.empty) break;
+    for (const docSnap of snap.docs) {
+      items.push(toQualificationSummary(mapQualification(docSnap.id, docSnap.data())));
+    }
+    lastDoc = snap.docs[snap.docs.length - 1] ?? null;
+    if (snap.size < take) break;
+  }
+
+  const cachedAt = new Date().toISOString();
+  await AsyncStorage.setItem(
+    QUAL_INDEX_CACHE_KEY,
+    JSON.stringify({ cachedAt, items }),
+  );
+  await AsyncStorage.setItem(
+    QUAL_PAGE_CACHE_KEY,
+    JSON.stringify({ cachedAt, items: items.slice(0, DIRECTORY_PAGE_SIZE) }),
+  );
+  return { count: items.length, cachedAt };
+}
+
+/** Prefetch up to OFFLINE_INDEX_CAP providers into the offline index. */
+export async function prefetchProviderIndex(options?: {
+  cap?: number;
+}): Promise<{ count: number; cachedAt: string }> {
+  const cap = options?.cap ?? OFFLINE_INDEX_CAP;
+  const items: ProviderSummary[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+
+  while (items.length < cap) {
+    const take = Math.min(PAGE_SIZE, cap - items.length);
+    const pageQuery: Query = lastDoc
+      ? query(
+          collection(getDb(), PROVIDERS),
+          orderBy("name"),
+          startAfter(lastDoc),
+          limit(take),
+        )
+      : query(
+          collection(getDb(), PROVIDERS),
+          orderBy("name"),
+          limit(take),
+        );
+    const snap = await getDocs(pageQuery);
+    if (snap.empty) break;
+    for (const docSnap of snap.docs) {
+      items.push(toProviderSummary(mapProvider(docSnap.id, docSnap.data())));
+    }
+    lastDoc = snap.docs[snap.docs.length - 1] ?? null;
+    if (snap.size < take) break;
+  }
+
+  const cachedAt = new Date().toISOString();
+  await AsyncStorage.setItem(
+    PROVIDER_INDEX_CACHE_KEY,
+    JSON.stringify({ cachedAt, items }),
+  );
+  await AsyncStorage.setItem(
+    PROVIDER_PAGE_CACHE_KEY,
+    JSON.stringify({ cachedAt, items: items.slice(0, DIRECTORY_PAGE_SIZE) }),
+  );
+  return { count: items.length, cachedAt };
+}
+
+export async function readCachedOccupationCount(): Promise<number> {
+  const cached = await AsyncStorage.getItem(OCC_INDEX_CACHE_KEY);
+  if (!cached) return 0;
+  try {
+    const parsed = JSON.parse(cached) as { summaries?: unknown[] };
+    return parsed.summaries?.length ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function readCachedQualificationCount(): Promise<number> {
+  const index = await readPageCache<QualificationSummary>(QUAL_INDEX_CACHE_KEY);
+  if (index?.items?.length) return index.items.length;
+  const page = await readPageCache<QualificationSummary>(QUAL_PAGE_CACHE_KEY);
+  return page?.items?.length ?? 0;
+}
+
+export async function readCachedProviderCount(): Promise<number> {
+  const index = await readPageCache<ProviderSummary>(PROVIDER_INDEX_CACHE_KEY);
+  if (index?.items?.length) return index.items.length;
+  const page = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
+  return page?.items?.length ?? 0;
 }

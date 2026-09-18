@@ -171,11 +171,11 @@ export const FUNDING_CARDS = [
 ] as const;
 
 export const OFFLINE_VAULT_STATS = {
-  careersCached: 1432,
-  qualificationsCached: 705,
-  providersCached: 89,
-  storageLabel: "14.2 / 50 MB",
-  note: "Presentation stats from the design mock. Live offline packaging is not wired yet.",
+  careersCached: 0,
+  qualificationsCached: 0,
+  providersCached: 0,
+  storageLabel: "0 MB cached",
+  note: "Deprecated mock — use getOfflineVaultStats / useVaultStats for live counts.",
 } as const;
 
 export const PROVINCES = [

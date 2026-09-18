@@ -19,10 +19,11 @@ import {
   DIGITAL_CHANNELS,
   GUIDANCE_TOPICS,
   HELPLINE,
-  OFFLINE_VAULT_STATS,
   PROVINCES,
   WALK_IN_CENTRES,
 } from "../../data/staticContent";
+import { useVaultStats } from "../../hooks/useVaultStats";
+import { enqueueHelplineSubmission } from "../../services/offlineProfile";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
 import { useRouter } from "expo-router";
@@ -43,6 +44,7 @@ const CITY_FILTERS = [
 
 export default function HelplineScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
   const [fullName, setFullName] = useState("");
   const [province, setProvince] = useState("");
   const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]["id"]>("learner");
@@ -70,13 +72,22 @@ export default function HelplineScreen() {
 
   const onSubmit = () => {
     if (!canSubmit) return;
-    setSubmitted(true);
-    setFullName("");
-    setProvince("");
-    setTopic("");
-    setMessage("");
-    setRole("learner");
-    setConfidential(true);
+    void (async () => {
+      await enqueueHelplineSubmission({
+        name: fullName.trim(),
+        contact: fullName.trim(),
+        province,
+        topic: `${role}: ${topic}`,
+        message: message.trim(),
+      });
+      setSubmitted(true);
+      setFullName("");
+      setProvince("");
+      setTopic("");
+      setMessage("");
+      setRole("learner");
+      setConfidential(true);
+    })();
   };
 
   const openMaps = (query: string) => {
@@ -89,11 +100,10 @@ export default function HelplineScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
-        fromCache
+        cachedCount={vault.careersCached}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail="Zero-Rated Support · Official DHET CDS Channels"
+        detail="Official DHET CDS Channels · Form queues offline"
       />
 
       <View style={styles.kickerRow}>
@@ -234,8 +244,8 @@ export default function HelplineScreen() {
           <Text style={styles.cardTitle}>Send an Enquiry or Callback</Text>
         </View>
         <Text style={styles.cardBody}>
-          Complete this secure form. Requests are saved offline if you lose
-          connectivity and synchronised automatically.
+          Complete this form. If you are offline, your request is saved on this
+          device and sent when you reconnect.
         </Text>
 
         {submitted ? (
@@ -246,8 +256,7 @@ export default function HelplineScreen() {
               color={colors.success}
             />
             <Text style={styles.successText}>
-              Your advisory request was registered! Reference #CDS-9824. An
-              advisor will contact you shortly.
+              Request saved on this device. It will sync when you are online.
             </Text>
           </View>
         ) : null}
@@ -353,7 +362,7 @@ export default function HelplineScreen() {
         <View style={styles.offlineHint}>
           <MaterialIcon name="cloud_sync" size={16} color={colors.secondary} />
           <Text style={styles.offlineHintText}>
-            Queues locally if your network disconnects.
+            Saved on device when offline · syncs when you reconnect.
           </Text>
         </View>
 

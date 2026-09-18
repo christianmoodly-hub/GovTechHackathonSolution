@@ -19,7 +19,7 @@ import {
 import { getQualification } from "../../../../services/ncapData";
 import { stableUrlId } from "../../../../services/ids";
 import type { Qualification } from "../../../../services/types";
-import { OFFLINE_VAULT_STATS } from "../../../../data/staticContent";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
 import {
@@ -51,6 +51,7 @@ const CAMPUS_BADGES = [
 
 export default function QualificationDetailScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [qualification, setQualification] = useState<Qualification | null>(
     null,
@@ -174,7 +175,7 @@ export default function QualificationDetailScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.qualificationsCached}
+        cachedCount={vault.qualificationsCached}
         fromCache
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}

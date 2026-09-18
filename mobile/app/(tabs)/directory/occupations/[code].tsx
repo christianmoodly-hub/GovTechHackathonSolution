@@ -20,7 +20,8 @@ import {
 import { getOccupation } from "../../../../services/ncapData";
 import { stableUrlId } from "../../../../services/ids";
 import type { Occupation } from "../../../../services/types";
-import { HELPLINE, OFFLINE_VAULT_STATS } from "../../../../data/staticContent";
+import { HELPLINE } from "../../../../data/staticContent";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
 import {
@@ -133,6 +134,7 @@ function buildDescription(occupation: Occupation): string {
 
 export default function OccupationDetailScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
   const { code } = useLocalSearchParams<{ code: string }>();
   const [occupation, setOccupation] = useState<Occupation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -221,7 +223,7 @@ export default function OccupationDetailScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         fromCache
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
@@ -677,7 +679,7 @@ export default function OccupationDetailScreen() {
             <View style={styles.toast}>
               <MaterialIcon name="check_circle" size={18} color={colors.success} />
               <Text style={styles.toastText}>
-                Career saved to your offline profile!
+                Career saved to your profile (syncs when online)
               </Text>
             </View>
           ) : null}

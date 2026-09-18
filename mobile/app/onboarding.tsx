@@ -278,10 +278,10 @@ export default function OnboardingScreen() {
       <View style={styles.infoBanner}>
         <MaterialIcon name="check_circle" size={20} color={colors.secondary} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.infoTitle}>Offline Ready · Zero Data Charges</Text>
+          <Text style={styles.infoTitle}>Works offline after first sync</Text>
           <Text style={styles.infoBody}>
-            All questionnaires and guides run completely offline once loaded.
-            Zero data charges on supported networks.
+            Browse cached careers and continue questionnaires without signal.
+            Favourites and results save on device and sync when you reconnect.
           </Text>
         </View>
       </View>

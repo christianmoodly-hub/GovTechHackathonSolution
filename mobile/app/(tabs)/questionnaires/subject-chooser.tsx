@@ -17,7 +17,8 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
-import { HELPLINE, OFFLINE_VAULT_STATS } from "../../../data/staticContent";
+import { HELPLINE } from "../../../data/staticContent";
+import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   ELECTIVES,
   estimateUnlockedCount,
@@ -43,7 +44,8 @@ const MAX_ELECTIVES = 3;
 
 export default function SubjectChooserRoute() {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const vault = useVaultStats();
 
   const [grade, setGrade] = useState<GradeStage>("grade9");
   const [homeLanguage, setHomeLanguage] = useState<string>(HOME_LANGUAGES[0]);
@@ -118,7 +120,10 @@ export default function SubjectChooserRoute() {
         ...(profile?.questionnaireResults ?? {}),
         subjectChooser: nextResult,
       };
-      await updateProfile(user.uid, { questionnaireResults: nextMap });
+      const nextProfile = await updateProfile(user.uid, {
+        questionnaireResults: nextMap,
+      });
+      applyLocalProfile(nextProfile);
       await refreshProfile();
       router.replace(href("/questionnaires/results/subjectChooser"));
     } catch (err) {
@@ -134,7 +139,7 @@ export default function SubjectChooserRoute() {
     <Screen scroll={false} contentStyle={styles.fill}>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
       />

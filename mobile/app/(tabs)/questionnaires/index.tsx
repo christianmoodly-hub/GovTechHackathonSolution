@@ -16,7 +16,8 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
-import { HELPLINE, OFFLINE_VAULT_STATS } from "../../../data/staticContent";
+import { HELPLINE } from "../../../data/staticContent";
+import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   FIELD_PATHS,
   QUESTIONNAIRE_PATH_IMAGES,
@@ -213,6 +214,7 @@ function badgeColors(tone: Pathway["badgeTone"]) {
 export default function QuestionnairesHub() {
   const router = useRouter();
   const { profile } = useAuth();
+  const vault = useVaultStats();
   const [faqOpen, setFaqOpen] = useState<number | null>(1);
 
   const statuses = useMemo(() => {
@@ -238,16 +240,17 @@ export default function QuestionnairesHub() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
-        fromCache
+        cachedCount={vault.careersCached}
         rightLabel="Decisions"
-        detail="DHET National Guidance Engine · Offline Ready · Cached"
+        detail="DHET National Guidance Engine · Device cache"
       />
 
       <View style={styles.enginePill}>
         <MaterialIcon name="verified" size={16} color={colors.success} />
         <Text style={styles.engineText}>DHET National Guidance Engine</Text>
-        <Text style={styles.engineMuted}>Offline Ready · Cached</Text>
+        <Text style={styles.engineMuted}>
+          {vault.careersCached.toLocaleString()} careers cached
+        </Text>
       </View>
 
       <View style={styles.hero}>

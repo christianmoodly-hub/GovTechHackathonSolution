@@ -21,16 +21,21 @@ import { FavouriteToggle } from "../../components/FavouriteToggle";
 import { LanguagePicker } from "../../components/LanguagePicker";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAccessibility } from "../../contexts/AccessibilityContext";
+import { useConnectivity } from "../../contexts/ConnectivityContext";
 import { useLocale } from "../../contexts/LocaleContext";
 import {
   LANGUAGES,
   LEARNER_ROLES,
-  OFFLINE_VAULT_STATS,
 } from "../../data/staticContent";
+import { useVaultStats } from "../../hooks/useVaultStats";
 import {
   listOfflineBlueprints,
   type OfflineBlueprint,
 } from "../../services/offlineBlueprint";
+import {
+  prepareOfflinePack,
+  syncVault,
+} from "../../services/offlineVault";
 import { stableUrlId } from "../../services/ids";
 import type {
   FavouriteRef,
@@ -58,12 +63,16 @@ type VaultFilter = "all" | FavouriteType;
 
 export default function SavedScreen() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, syncPending, profileFromCache, refreshProfile } =
+    useAuth();
+  const { canSync } = useConnectivity();
+  const vault = useVaultStats();
   const { highContrast, setHighContrast, textScale, zoomLabel } =
     useAccessibility();
   const { locale, home, tabs, common } = useLocale();
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [blueprints, setBlueprints] = useState<OfflineBlueprint[]>([]);
+  const [vaultBusy, setVaultBusy] = useState(false);
   const [personaMode, setPersonaMode] = useState<"learner" | "seeker">(() =>
     profile?.demographics?.role === "work_seeker" ? "seeker" : "learner",
   );
@@ -118,11 +127,68 @@ export default function SavedScreen() {
       void listOfflineBlueprints().then((items) => {
         if (alive) setBlueprints(items);
       });
+      vault.refresh();
       return () => {
         alive = false;
       };
-    }, []),
+    }, [vault.refresh]),
   );
+
+  const onPrepareOfflinePack = async () => {
+    if (!canSync) {
+      Alert.alert(
+        "Connect to prepare",
+        "You need an internet connection once to download the offline pack.",
+      );
+      return;
+    }
+    setVaultBusy(true);
+    try {
+      const result = await prepareOfflinePack({
+        uid: user?.uid,
+        favourites: profile?.favourites ?? [],
+      });
+      vault.refresh();
+      Alert.alert(
+        "Offline pack ready",
+        `${result.careers.toLocaleString()} careers, ${result.qualifications} qualifications, ${result.providers} campuses, and ${result.favouritesCached} favourites cached on this device.`,
+      );
+    } catch (err) {
+      Alert.alert(
+        "Could not prepare offline pack",
+        err instanceof Error ? err.message : "Try again when online.",
+      );
+    } finally {
+      setVaultBusy(false);
+    }
+  };
+
+  const onSyncVault = async () => {
+    if (!canSync) {
+      Alert.alert(
+        "Offline",
+        "Connect to the internet to sync favourites, results, and helpline requests.",
+      );
+      return;
+    }
+    setVaultBusy(true);
+    try {
+      const result = await syncVault({ uid: user?.uid, online: true });
+      await refreshProfile();
+      vault.refresh();
+      Alert.alert(
+        "Vault synced",
+        `Synced ${result.profileFlushed} profile change(s) and ${result.helplineFlushed} helpline request(s). Careers cache: ${result.refreshedCareers.toLocaleString()}.`,
+      );
+    } catch (err) {
+      Alert.alert(
+        "Sync failed",
+        err instanceof Error ? err.message : "Try again shortly.",
+      );
+    } finally {
+      setVaultBusy(false);
+    }
+  };
 
   const openBlueprint = async (item: OfflineBlueprint) => {
     try {
@@ -171,15 +237,28 @@ export default function SavedScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
         detail={home.offlineDetail(
-          OFFLINE_VAULT_STATS.careersCached.toLocaleString(),
-          OFFLINE_VAULT_STATS.qualificationsCached,
-          OFFLINE_VAULT_STATS.providersCached,
+          vault.careersCached.toLocaleString(),
+          vault.qualificationsCached,
+          vault.providersCached,
         )}
       />
+      {profileFromCache || syncPending || vault.pendingProfileWrites > 0 ? (
+        <Text
+          style={{
+            ...typography.caption,
+            color: colors.ochre,
+            marginBottom: spacing.sm,
+          }}
+        >
+          {syncPending || vault.pendingProfileWrites > 0
+            ? "Showing saved profile · sync pending when online"
+            : "Showing profile saved on this device"}
+        </Text>
+      ) : null}
 
       {/* Title + language */}
       <View style={styles.titleRow}>
@@ -323,47 +402,49 @@ export default function SavedScreen() {
           </View>
           <View style={styles.storagePill}>
             <Text style={styles.storagePillText}>
-              {OFFLINE_VAULT_STATS.storageLabel}
+              {vault.storageLabel}
             </Text>
           </View>
         </View>
 
         <View style={styles.meterTrack}>
-          <View style={[styles.meterFill, { width: "28%" }]} />
+          <View
+            style={[
+              styles.meterFill,
+              { width: `${Math.max(4, vault.meterPercent)}%` },
+            ]}
+          />
         </View>
         <View style={styles.meterMeta}>
           <View style={styles.meterMetaLeft}>
             <View style={styles.dot} />
             <Text style={styles.meterMetaText}>
-              {OFFLINE_VAULT_STATS.careersCached.toLocaleString()} Careers &{" "}
-              {OFFLINE_VAULT_STATS.qualificationsCached} TVET Diplomas Cached
+              {vault.careersCached.toLocaleString()} Careers &{" "}
+              {vault.qualificationsCached} Qualifications Cached
+              {vault.pendingProfileWrites > 0
+                ? ` · ${vault.pendingProfileWrites} pending sync`
+                : ""}
             </Text>
           </View>
-          <Text style={styles.meterPct}>28% full</Text>
+          <Text style={styles.meterPct}>{vault.meterPercent}% full</Text>
         </View>
 
         <Pressable
-          style={styles.vaultPrimary}
-          onPress={() =>
-            Alert.alert(
-              "Offline guidebook",
-              "Full offline career guidebook packaging will be available in a later release.",
-            )
-          }
+          style={[styles.vaultPrimary, vaultBusy && { opacity: 0.7 }]}
+          disabled={vaultBusy}
+          onPress={() => void onPrepareOfflinePack()}
         >
           <MaterialIcon name="download" size={18} color={colors.onPrimary} />
           <Text style={styles.vaultPrimaryText}>
-            Download Full Offline Career Guidebook (PDF 2.4 MB)
+            {vaultBusy
+              ? "Working…"
+              : "Prepare offline pack (careers, quals, campuses)"}
           </Text>
         </Pressable>
         <Pressable
-          style={styles.vaultSecondary}
-          onPress={() =>
-            Alert.alert(
-              "Sync vault",
-              "Vault sync with the national database will be wired when live packaging is ready.",
-            )
-          }
+          style={[styles.vaultSecondary, vaultBusy && { opacity: 0.7 }]}
+          disabled={vaultBusy}
+          onPress={() => void onSyncVault()}
         >
           <MaterialIcon name="sync" size={18} color={colors.primary} />
           <Text style={styles.vaultSecondaryText}>

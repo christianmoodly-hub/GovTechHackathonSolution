@@ -5,6 +5,7 @@ type CommonStrings = {
   voiceLabel: string;
   preferredLanguage: string;
   online: string;
+  offline: string;
   offlineReady: string;
   loading: string;
   resetAccessibility: string;
@@ -15,6 +16,7 @@ const en: CommonStrings = {
   voiceLabel: "Choose your language:",
   preferredLanguage: "Preferred language",
   online: "Online",
+  offline: "Offline",
   offlineReady: "Offline Ready",
   loading: "Loading…",
   resetAccessibility: "Tap to reset accessibility",
@@ -25,6 +27,7 @@ const zu: CommonStrings = {
   voiceLabel: "Khetha ulimi lwakho:",
   preferredLanguage: "Ulimi olukhethayo",
   online: "Ku-inthanethi",
+  offline: "Ngaphandle kwe-inthanethi",
   offlineReady: "Kulungele Ngaphandle Kwe-inthanethi",
   loading: "Iyalayisha…",
   resetAccessibility: "Thepha ukuze usethe kabusha ukufinyeleleka",
@@ -35,6 +38,7 @@ const xh: CommonStrings = {
   voiceLabel: "Khetha ulwimi lwakho:",
   preferredLanguage: "Ulwimi olukhethiweyo",
   online: "Kwi-intanethi",
+  offline: "Ngaphandle kwe-intanethi",
   offlineReady: "Kulungele ngaphandle kwe-intanethi",
   loading: "Iyalayisha…",
   resetAccessibility: "Cofa ukuseta kwakhona ufikelelo",
@@ -45,6 +49,7 @@ const af: CommonStrings = {
   voiceLabel: "Kies jou taal:",
   preferredLanguage: "Voorkeurtaal",
   online: "Aanlyn",
+  offline: "Aflyn",
   offlineReady: "Aflyn gereed",
   loading: "Laai…",
   resetAccessibility: "Tik om toeganklikheid terug te stel",

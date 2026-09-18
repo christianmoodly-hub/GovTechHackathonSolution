@@ -28,6 +28,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { getFirebaseAuth } from "../firebase/client";
 import { ensureProfile, getProfile, updateProfile } from "../services/ncapData";
+import {
+  outboxPendingCount,
+  readProfileMirror,
+} from "../services/offlineProfile";
 import { registerForPushNotificationsAsync } from "../services/notifications";
 import type { Demographics, UserProfile } from "../services/types";
 
@@ -53,6 +57,10 @@ type AuthContextValue = {
   isSignedIn: boolean;
   isLoading: boolean;
   error: string | null;
+  /** True when profile came from device mirror (offline / sync pending). */
+  profileFromCache: boolean;
+  /** Pending profile writes waiting to sync. */
+  syncPending: boolean;
   emailVerificationRequired: boolean;
   sendSignInLink: (email: string) => Promise<void>;
   completeSignInFromLink: (url: string) => Promise<void>;
@@ -65,6 +73,7 @@ type AuthContextValue = {
   continueAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  applyLocalProfile: (next: UserProfile) => void;
   clearError: () => void;
 };
 
@@ -125,34 +134,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Bumps when Firebase mutates User in place (e.g. after reload) so context recomputes. */
   const [userRevision, setUserRevision] = useState(0);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileFromCache, setProfileFromCache] = useState(false);
+  const [syncPending, setSyncPending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const handlingLink = useRef(false);
 
-  const bootstrapProfile = useCallback(async (nextUser: User) => {
-    let nextProfile = await ensureProfile(nextUser.uid);
-
+  const refreshSyncFlags = useCallback(async (uid: string) => {
     try {
-      const token = await registerForPushNotificationsAsync();
-      if (token && token !== nextProfile.pushToken) {
-        nextProfile = await updateProfile(nextUser.uid, { pushToken: token });
-      }
-    } catch (err) {
-      console.warn("[notifications] Push token registration failed", err);
+      const pending = await outboxPendingCount(uid);
+      setSyncPending(pending > 0);
+    } catch {
+      setSyncPending(false);
     }
-
-    setProfile(nextProfile);
   }, []);
+
+  const bootstrapProfile = useCallback(async (nextUser: User) => {
+    try {
+      let nextProfile = await ensureProfile(nextUser.uid);
+
+      try {
+        const token = await registerForPushNotificationsAsync();
+        if (token && token !== nextProfile.pushToken) {
+          nextProfile = await updateProfile(nextUser.uid, { pushToken: token });
+        }
+      } catch (err) {
+        console.warn("[notifications] Push token registration failed", err);
+      }
+
+      setProfile(nextProfile);
+      setProfileFromCache(false);
+      await refreshSyncFlags(nextUser.uid);
+    } catch (err) {
+      const mirror = await readProfileMirror(nextUser.uid);
+      if (mirror) {
+        console.warn("[auth] Using offline profile mirror", err);
+        setProfile(mirror);
+        setProfileFromCache(true);
+        await refreshSyncFlags(nextUser.uid);
+        return;
+      }
+      throw err;
+    }
+  }, [refreshSyncFlags]);
 
   const refreshProfile = useCallback(async () => {
     const auth = getFirebaseAuth();
     const current = auth.currentUser;
     if (!current) {
       setProfile(null);
+      setProfileFromCache(false);
+      setSyncPending(false);
       return;
     }
-    const nextProfile = await getProfile(current.uid);
-    setProfile(nextProfile);
+    try {
+      const nextProfile = await getProfile(current.uid);
+      setProfile(nextProfile);
+      setProfileFromCache(false);
+      await refreshSyncFlags(current.uid);
+    } catch {
+      const mirror = await readProfileMirror(current.uid);
+      if (mirror) {
+        setProfile(mirror);
+        setProfileFromCache(true);
+      }
+      await refreshSyncFlags(current.uid);
+    }
+  }, [refreshSyncFlags]);
+
+  const applyLocalProfile = useCallback((next: UserProfile) => {
+    setProfile(next);
   }, []);
 
   const completeSignInFromLink = useCallback(
@@ -481,6 +532,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSignedIn: !!user,
       isLoading,
       error,
+      profileFromCache,
+      syncPending,
       emailVerificationRequired: requiresEmailVerification(user),
       sendSignInLink,
       completeSignInFromLink,
@@ -493,6 +546,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       signOut,
       refreshProfile,
+      applyLocalProfile,
       clearError: () => setError(null),
     }),
     [
@@ -501,6 +555,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       isLoading,
       error,
+      profileFromCache,
+      syncPending,
       sendSignInLink,
       completeSignInFromLink,
       signInWithPassword,
@@ -512,6 +568,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       signOut,
       refreshProfile,
+      applyLocalProfile,
     ],
   );
 

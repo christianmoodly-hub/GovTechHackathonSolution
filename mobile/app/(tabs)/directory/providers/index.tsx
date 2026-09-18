@@ -23,8 +23,9 @@ import {
 } from "../../../../components/KhethaBrandBar";
 import {
   HELPLINE,
-  OFFLINE_VAULT_STATS,
 } from "../../../../data/staticContent";
+import { useConnectivity } from "../../../../contexts/ConnectivityContext";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { getProviderPage } from "../../../../services/ncapData";
 import {
   formatDistanceKm,
@@ -65,6 +66,8 @@ const NEAR_ME_SHOW = 10;
 
 export default function ProvidersDirectoryScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
+  const { canSync } = useConnectivity();
   const [items, setItems] = useState<ProviderSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
   const [query, setQuery] = useState("");
@@ -112,7 +115,7 @@ export default function ProvidersDirectoryScreen() {
   );
 
   useEffect(() => {
-    void load({ refresh: true });
+    void load();
   }, [load]);
 
   const filtered = useMemo(() => {
@@ -134,6 +137,15 @@ export default function ProvidersDirectoryScreen() {
     setNearMeError(null);
     setNearMeProgress("Getting your location…");
     try {
+      if (!canSync) {
+        setNearMeError(
+          "Near Me needs a network connection to map new campuses. Connect online once to cache locations near you.",
+        );
+        setNearMeProgress(null);
+        setNearby([]);
+        return;
+      }
+
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
         setNearMeError(
@@ -180,7 +192,7 @@ export default function ProvidersDirectoryScreen() {
     } finally {
       setNearMeLoading(false);
     }
-  }, [filtered, items]);
+  }, [filtered, items, canSync]);
 
   useEffect(() => {
     if (viewMode === "map" && !nearby.length && !nearMeLoading && !nearMeError) {
@@ -190,7 +202,7 @@ export default function ProvidersDirectoryScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
-  const totalCached = OFFLINE_VAULT_STATS.providersCached;
+  const totalCached = Math.max(vault.providersCached, items.length);
   const typeFilters = providerTypeFilterDefs();
   const provinceShort =
     PROVINCE_OPTIONS.find((p) => p.id === province)?.short ?? "All Provinces";
@@ -530,11 +542,11 @@ export default function ProvidersDirectoryScreen() {
     <Screen scroll={false} contentStyle={styles.fill}>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={items.length}
+        cachedCount={totalCached}
         fromCache={fromCache}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail={`Offline Database Active · ${totalCached} Providers · Updated yesterday`}
+        detail={`${fromCache ? "Cached" : "Live"} · ${totalCached} providers on device`}
       />
 
       <FlatList

@@ -21,9 +21,9 @@ import {
 } from "../../../../components/KhethaBrandBar";
 import {
   HELPLINE,
-  OFFLINE_VAULT_STATS,
 } from "../../../../data/staticContent";
 import { parseQualTypeParam } from "../../../../data/learningPaths";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { getQualificationPage } from "../../../../services/ncapData";
 import type {
   PageCursor,
@@ -54,6 +54,7 @@ const PAGE_SIZE = 20;
 
 export default function QualificationsDirectoryScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
   const params = useLocalSearchParams<{ type?: string | string[]; aps?: string | string[] }>();
   const [items, setItems] = useState<QualificationSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
@@ -105,7 +106,7 @@ export default function QualificationsDirectoryScreen() {
   );
 
   useEffect(() => {
-    void load({ refresh: true });
+    void load();
   }, [load]);
 
   const filtered = useMemo(() => {
@@ -118,7 +119,7 @@ export default function QualificationsDirectoryScreen() {
     });
   }, [items, query, typeFilter, apsFilter]);
 
-  const totalCached = OFFLINE_VAULT_STATS.qualificationsCached;
+  const totalCached = Math.max(vault.qualificationsCached, items.length);
   const typeFilters = qualTypeFilterDefs();
   const apsShort =
     APS_OPTIONS.find((o) => o.id === apsFilter)?.short ?? "Any APS";
@@ -220,11 +221,11 @@ export default function QualificationsDirectoryScreen() {
     <Screen scroll={false} contentStyle={styles.fill}>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={items.length}
+        cachedCount={totalCached}
         fromCache={fromCache}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail={`Offline Database Active · ${totalCached} Qualifications · Updated yesterday`}
+        detail={`${fromCache ? "Cached" : "Live"} · ${totalCached} qualifications on device`}
       />
 
       <FlatList

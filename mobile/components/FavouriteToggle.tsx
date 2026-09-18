@@ -22,10 +22,9 @@ export function FavouriteToggle({
   entityId,
   compact = false,
 }: Props) {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const favourited = (profile?.favourites ?? []).some((item) => item.url === url);
 
   if (!user) {
@@ -39,12 +38,16 @@ export function FavouriteToggle({
     setBusy(true);
     setError(null);
     try {
-      const { added } = await toggleFavourite(
+      const { favourites, added } = await toggleFavourite(
         user.uid,
         { type, url, title, entityId },
         profile?.favourites ?? [],
       );
-      await refreshProfile();
+      if (profile) {
+        applyLocalProfile({ ...profile, favourites });
+      } else {
+        await refreshProfile();
+      }
       if (added) {
         await scheduleFavouriteReminderStub(title);
       }

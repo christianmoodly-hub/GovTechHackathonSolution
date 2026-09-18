@@ -15,7 +15,7 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
-import { OFFLINE_VAULT_STATS } from "../../../data/staticContent";
+import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   ELECTIVES,
   FAL_LANGUAGES,
@@ -65,7 +65,8 @@ export default function ApsCalculatorScreen() {
     electives?: string | string[];
     grade?: string | string[];
   }>();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const vault = useVaultStats();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,7 +209,10 @@ export default function ApsCalculatorScreen() {
         ...(profile?.questionnaireResults ?? {}),
         subjectChooser: nextResult,
       };
-      await updateProfile(user.uid, { questionnaireResults: nextMap });
+      const nextProfile = await updateProfile(user.uid, {
+        questionnaireResults: nextMap,
+      });
+      applyLocalProfile(nextProfile);
       await refreshProfile();
       return true;
     } catch (err) {
@@ -266,7 +270,7 @@ export default function ApsCalculatorScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
       />

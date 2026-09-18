@@ -16,26 +16,28 @@ import {
 } from "../../components/KhethaBrandBar";
 import { LanguagePicker } from "../../components/LanguagePicker";
 import { useLocale } from "../../contexts/LocaleContext";
-import { HELPLINE, OFFLINE_VAULT_STATS } from "../../data/staticContent";
+import { HELPLINE } from "../../data/staticContent";
 import { QUESTIONNAIRE_PATH_IMAGES } from "../../data/learningPaths";
+import { useVaultStats } from "../../hooks/useVaultStats";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { home: t } = useLocale();
-  const careersCount = OFFLINE_VAULT_STATS.careersCached.toLocaleString();
+  const vault = useVaultStats();
+  const careersCount = vault.careersCached.toLocaleString();
 
   return (
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.careersCached}
+        cachedCount={vault.careersCached}
         rightLabel={t.homeTab}
         detail={t.offlineDetail(
           careersCount,
-          OFFLINE_VAULT_STATS.qualificationsCached,
-          OFFLINE_VAULT_STATS.providersCached,
+          vault.qualificationsCached,
+          vault.providersCached,
         )}
       />
 
@@ -154,7 +156,7 @@ export default function HomeScreen() {
           iconBg={colors.secondarySubtle}
           iconColor={colors.secondary}
           title={t.whatStudyTitle}
-          body={t.whatStudyBody(OFFLINE_VAULT_STATS.qualificationsCached)}
+          body={t.whatStudyBody(vault.qualificationsCached)}
           cta={t.whatStudyCta}
           onPress={() => router.push(href("/directory/qualifications"))}
         />

@@ -19,7 +19,7 @@ import {
 import { getProvider } from "../../../../services/ncapData";
 import { stableUrlId } from "../../../../services/ids";
 import type { Provider } from "../../../../services/types";
-import { OFFLINE_VAULT_STATS } from "../../../../data/staticContent";
+import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
 import {
@@ -40,6 +40,7 @@ const NSFAS_URL = "https://www.nsfas.org.za/";
 
 export default function ProviderDetailScreen() {
   const router = useRouter();
+  const vault = useVaultStats();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +151,7 @@ export default function ProviderDetailScreen() {
     <Screen>
       <KhethaBrandBar />
       <OfflineStatusBar
-        cachedCount={OFFLINE_VAULT_STATS.providersCached}
+        cachedCount={vault.providersCached}
         fromCache
         rightLabel="Decisions"
         onRightPress={() => router.push(href("/questionnaires"))}
