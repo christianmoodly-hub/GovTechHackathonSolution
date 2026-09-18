@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Seed Firestore with NCAP scraper output.
+Seed Firestore with NCAP + bursary scraper output.
 
 Doc IDs:
   occupations     -> occupation_code
   qualifications  -> stable hash of qualification URL
   providers       -> stable hash of provider URL
+  bursaries       -> stable hash of bursary URL
 
 Auth (first match wins):
   1) --credentials path/to/serviceAccount.json
@@ -31,6 +32,15 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from firestore_schema import (  # noqa: E402
+    EXPECTED_BURSARIES,
+    EXPECTED_OCCUPATIONS,
+    EXPECTED_PROVIDERS,
+    EXPECTED_QUALIFICATIONS,
+)
+
 DEFAULT_CREDENTIALS = ROOT / "firebase" / "serviceAccountKey.json"
 CONFIG_PATH = ROOT / "firebase" / "config.json"
 OUTPUT_DIR = ROOT / "output"
@@ -45,6 +55,7 @@ FIREBASE_CLI_CLIENT_ID = (
 FIREBASE_CLI_CLIENT_SECRET = "j9iVZfS8kkCEFUPaAeJV0sAi"
 
 BATCH_LIMIT = 500  # Firestore max writes per batch
+CLOSING_SORT_OPEN = "9999-12-31"
 
 
 def load_json(path: Path) -> Any:
@@ -125,6 +136,36 @@ def provider_doc(record: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
   return stable_url_id(url), doc
 
 
+def bursary_doc(record: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+  url = record["url"]
+  closing_iso = record.get("closing_date_iso")
+  closing_sort = closing_iso if closing_iso else CLOSING_SORT_OPEN
+  doc = {
+      "title": record.get("title"),
+      "url": url,
+      "pageId": record.get("page_id"),
+      "fieldSlug": record.get("field_slug"),
+      "fieldLabel": record.get("field_label"),
+      "providerName": record.get("provider_name"),
+      "description": record.get("description"),
+      "eligibility": record.get("eligibility") or [],
+      "closingDate": record.get("closing_date"),
+      "closingDateIso": closing_iso,
+      "openAllYear": bool(record.get("open_all_year")),
+      "requiredDocuments": record.get("required_documents") or [],
+      "applicationSteps": record.get("application_steps") or [],
+      "applicationLink": record.get("application_link"),
+      "contactInfo": record.get("contact_info"),
+      "contactEmail": record.get("contact_email"),
+      "contactPhone": record.get("contact_phone"),
+      "wpModified": record.get("wp_modified"),
+      "schemaVersion": record.get("schema_version"),
+      "scrapedAt": record.get("scraped_at"),
+      "closingSortKey": closing_sort,
+  }
+  return stable_url_id(url), doc
+
+
 def chunked(items: List[Any], size: int) -> Iterable[List[Any]]:
   for i in range(0, len(items), size):
     yield items[i : i + size]
@@ -177,8 +218,6 @@ def init_firestore_cli_user():
       client_secret=FIREBASE_CLI_CLIENT_SECRET,
       scopes=[
           "https://www.googleapis.com/auth/cloud-platform",
-          "https://www.googleapis.com/auth/datastore",
-          "https://www.googleapis.com/auth/firebase",
       ],
   )
   import time as _time
@@ -255,33 +294,41 @@ def batch_write(
 
 
 def seed(credentials: Optional[Path], dry_run: bool = False) -> int:
-  occ_path = OUTPUT_DIR / "occupation_details.json"
-  qual_path = OUTPUT_DIR / "qualifications.json"
-  prov_path = OUTPUT_DIR / "providers.json"
+  sources = {
+      "occupations": OUTPUT_DIR / "occupation_details.json",
+      "qualifications": OUTPUT_DIR / "qualifications.json",
+      "providers": OUTPUT_DIR / "providers.json",
+      "bursaries": OUTPUT_DIR / "bursaries.json",
+  }
 
-  for path in (occ_path, qual_path, prov_path):
+  loaded: Dict[str, List[Any]] = {}
+  for name, path in sources.items():
     if not path.exists():
-      print(f"[-] Missing {path}")
-      return 1
+      print(f"[-] Missing {path} (skipping {name})")
+      continue
+    loaded[name] = load_json(path)
 
-  occupations = load_json(occ_path)
-  qualifications = load_json(qual_path)
-  providers = load_json(prov_path)
+  if not loaded:
+    print("[-] No scraper JSON found under output/")
+    return 1
 
   print(
-      f"[-] Loaded JSON: occupations={len(occupations)}, "
-      f"qualifications={len(qualifications)}, providers={len(providers)}"
+      "[-] Loaded JSON: "
+      + ", ".join(f"{k}={len(v)}" for k, v in loaded.items())
   )
 
-  occ_docs = [occupation_doc(r) for r in occupations]
-  qual_docs = [qualification_doc(r) for r in qualifications]
-  prov_docs = [provider_doc(r) for r in providers]
+  builders = {
+      "occupations": occupation_doc,
+      "qualifications": qualification_doc,
+      "providers": provider_doc,
+      "bursaries": bursary_doc,
+  }
 
-  for label, docs in (
-      ("occupations", occ_docs),
-      ("qualifications", qual_docs),
-      ("providers", prov_docs),
-  ):
+  collection_docs: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
+  for name, records in loaded.items():
+    collection_docs[name] = [builders[name](r) for r in records]
+
+  for label, docs in collection_docs.items():
     ids = [doc_id for doc_id, _ in docs]
     if len(ids) != len(set(ids)):
       print(f"[-] Duplicate doc IDs detected in {label}")
@@ -292,11 +339,7 @@ def seed(credentials: Optional[Path], dry_run: bool = False) -> int:
   all_failures: List[str] = []
   summary = {}
 
-  for collection, docs in (
-      ("occupations", occ_docs),
-      ("qualifications", qual_docs),
-      ("providers", prov_docs),
-  ):
+  for collection, docs in collection_docs.items():
     print(f"[-] Seeding {collection} ({len(docs)} docs)...")
     written, failures = batch_write(db, collection, docs, dry_run=dry_run)
     summary[collection] = {
@@ -319,13 +362,17 @@ def seed(credentials: Optional[Path], dry_run: bool = False) -> int:
     )
 
   expected = {
-      "occupations": 1432,
-      "qualifications": 705,
-      "providers": 89,
+      "occupations": EXPECTED_OCCUPATIONS,
+      "qualifications": EXPECTED_QUALIFICATIONS,
+      "providers": EXPECTED_PROVIDERS,
+      "bursaries": EXPECTED_BURSARIES,
   }
   print("\n=== Count check vs targets ===")
   matches = True
   for collection, target in expected.items():
+    if collection not in summary:
+      print(f"  {collection}: skipped (no JSON) [SKIP]")
+      continue
     actual = summary[collection]["written"]
     ok = actual == target
     matches = matches and ok

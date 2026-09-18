@@ -17,14 +17,17 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useLocale } from "../../../contexts/LocaleContext";
 import { HELPLINE } from "../../../data/staticContent";
 import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   ELECTIVES,
   estimateUnlockedCount,
-  FAL_LANGUAGES,
+  FAL_LANGUAGE_OPTIONS,
   GRADE_STAGES,
-  HOME_LANGUAGES,
+  HOME_LANGUAGE_OPTIONS,
+  normalizeFalLanguageToId,
+  normalizeHomeLanguageToId,
   previewCareerChips,
   scoreSubjectPackage,
   type ElectiveId,
@@ -45,20 +48,82 @@ const MAX_ELECTIVES = 3;
 export default function SubjectChooserRoute() {
   const router = useRouter();
   const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const { strings, tabs } = useLocale();
+  const t = strings.questionnaires.subjectChooser;
+  const chrome = strings.questionnaires.chrome;
   const vault = useVaultStats();
 
-  const [grade, setGrade] = useState<GradeStage>("grade9");
-  const [homeLanguage, setHomeLanguage] = useState<string>(HOME_LANGUAGES[0]);
-  const [falLanguage, setFalLanguage] = useState<string>(FAL_LANGUAGES[0]);
-  const [math, setMath] = useState<MathStream>("pure");
-  const [electives, setElectives] = useState<ElectiveId[]>([
-    "phys-sci",
-    "life-sci",
-    "it",
-  ]);
+  const savedAnswers = profile?.questionnaireResults?.subjectChooser?.answers;
+
+  const [grade, setGrade] = useState<GradeStage>(
+    (savedAnswers?.grade as GradeStage) || "grade9",
+  );
+  const [homeLanguage, setHomeLanguage] = useState<string>(() =>
+    normalizeHomeLanguageToId(
+      savedAnswers?.homeLanguage || HOME_LANGUAGE_OPTIONS[0].id,
+    ),
+  );
+  const [falLanguage, setFalLanguage] = useState<string>(() =>
+    normalizeFalLanguageToId(
+      savedAnswers?.falLanguage || FAL_LANGUAGE_OPTIONS[0].id,
+    ),
+  );
+  const [math, setMath] = useState<MathStream>(
+    savedAnswers?.math === "lit" ? "lit" : "pure",
+  );
+  const [electives, setElectives] = useState<ElectiveId[]>(() => {
+    const fromSaved = (savedAnswers?.electives ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id): id is ElectiveId =>
+        ELECTIVES.some((e) => e.id === id),
+      );
+    return fromSaved.length === MAX_ELECTIVES
+      ? fromSaved
+      : ["phys-sci", "life-sci", "it"];
+  });
   const [openPicker, setOpenPicker] = useState<"hl" | "fal" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const homeOptions = useMemo(
+    () =>
+      HOME_LANGUAGE_OPTIONS.map((opt) => ({
+        id: opt.id,
+        label: t.homeLanguages[opt.id] ?? opt.label,
+      })),
+    [t.homeLanguages],
+  );
+  const falOptions = useMemo(
+    () =>
+      FAL_LANGUAGE_OPTIONS.map((opt) => ({
+        id: opt.id,
+        label: t.falLanguages[opt.id] ?? opt.label,
+      })),
+    [t.falLanguages],
+  );
+  const gradeOptions = useMemo(
+    () =>
+      GRADE_STAGES.map((item) => ({
+        id: item.id,
+        label: t.grades[item.id]?.label ?? item.label,
+        detail: t.grades[item.id]?.detail ?? item.detail,
+      })),
+    [t.grades],
+  );
+  const electiveOptions = useMemo(
+    () =>
+      ELECTIVES.map((item) => {
+        const loc = t.electives[item.id];
+        return {
+          ...item,
+          title: loc?.title ?? item.title,
+          category: loc?.category ?? item.category,
+          body: loc?.body ?? item.body,
+        };
+      }),
+    [t.electives],
+  );
 
   const unlockedCount = estimateUnlockedCount(math, electives.length);
   const chips = useMemo(
@@ -74,10 +139,7 @@ export default function SubjectChooserRoute() {
     setElectives((prev) => {
       if (prev.includes(id)) return prev.filter((item) => item !== id);
       if (prev.length >= MAX_ELECTIVES) {
-        Alert.alert(
-          "Elective limit",
-          "Please pick exactly 3 elective subjects to fit your standard 7-subject NSC package.",
-        );
+        Alert.alert(t.selectThree, t.electivesHint);
         return prev;
       }
       return [...prev, id];
@@ -90,10 +152,7 @@ export default function SubjectChooserRoute() {
       return;
     }
     if (electives.length !== MAX_ELECTIVES) {
-      Alert.alert(
-        "Choose 3 electives",
-        "Select exactly 3 elective subjects before viewing unlocked careers.",
-      );
+      Alert.alert(t.selectThree, t.electivesHint);
       return;
     }
 
@@ -140,7 +199,7 @@ export default function SubjectChooserRoute() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={vault.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
       />
 
@@ -151,18 +210,18 @@ export default function SubjectChooserRoute() {
       >
         <View style={styles.crumbRow}>
           <Pressable onPress={() => router.push(href("/"))}>
-            <Text style={styles.crumbMuted}>Home</Text>
+            <Text style={styles.crumbMuted}>{tabs.home}</Text>
           </Pressable>
           <MaterialIcon name="chevron_right" size={14} color={colors.textMuted} />
-          <Text style={styles.crumbActive}>Subject Chooser</Text>
+          <Text style={styles.crumbActive}>{t.title}</Text>
         </View>
 
         <View style={styles.progressHead}>
           <View style={styles.progressMeta}>
-            <Text style={styles.stepLabel}>Step 2 of 3</Text>
-            <Text style={styles.pctLabel}>66% Completed</Text>
+            <Text style={styles.stepLabel}>{chrome.questionOf(2, 3)}</Text>
+            <Text style={styles.pctLabel}>{chrome.progressComplete(66)}</Text>
           </View>
-          <Text style={styles.title}>Select Your Subject Package</Text>
+          <Text style={styles.title}>{t.screenTitle}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: "66%" }]}>
               <View style={styles.progressDot} />
@@ -170,13 +229,13 @@ export default function SubjectChooserRoute() {
           </View>
         </View>
 
-        <Text style={styles.stageLabel}>Your Current Stage</Text>
+        <Text style={styles.stageLabel}>{t.gradeLabel}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.gradeRow}
         >
-          {GRADE_STAGES.map((item) => {
+          {gradeOptions.map((item) => {
             const active = grade === item.id;
             return (
               <Pressable
@@ -236,10 +295,10 @@ export default function SubjectChooserRoute() {
           </View>
 
           <LanguageField
-            label="Subject 1: Home Language (HL)"
+            label={t.homeLanguageLabel}
             credits="20 Credits"
             value={homeLanguage}
-            options={[...HOME_LANGUAGES]}
+            options={homeOptions}
             open={openPicker === "hl"}
             onToggle={() =>
               setOpenPicker((prev) => (prev === "hl" ? null : "hl"))
@@ -251,10 +310,10 @@ export default function SubjectChooserRoute() {
           />
 
           <LanguageField
-            label="Subject 2: First Additional Language (FAL)"
+            label={t.falLanguageLabel}
             credits="20 Credits"
             value={falLanguage}
-            options={[...FAL_LANGUAGES]}
+            options={falOptions}
             open={openPicker === "fal"}
             onToggle={() =>
               setOpenPicker((prev) => (prev === "fal" ? null : "fal"))
@@ -269,9 +328,7 @@ export default function SubjectChooserRoute() {
             <View style={styles.fieldTop}>
               <View style={styles.fieldLabelRow}>
                 <MaterialIcon name="lock" size={14} color={colors.success} />
-                <Text style={styles.fieldLabel}>
-                  Subject 3: Mathematics Stream Choice
-                </Text>
+                <Text style={styles.fieldLabel}>{t.mathLabel}</Text>
               </View>
               <Text style={styles.credits}>20 Credits</Text>
             </View>
@@ -289,7 +346,7 @@ export default function SubjectChooserRoute() {
                     math === "pure" && styles.mathBtnTitleActive,
                   ]}
                 >
-                  Mathematics
+                  {t.pureMath}
                 </Text>
                 <Text
                   style={[
@@ -310,7 +367,7 @@ export default function SubjectChooserRoute() {
                     math === "lit" && styles.mathBtnTitleActive,
                   ]}
                 >
-                  Mathematical Literacy
+                  {t.mathLit}
                 </Text>
                 <Text
                   style={[
@@ -360,10 +417,8 @@ export default function SubjectChooserRoute() {
         {/* Electives */}
         <View style={styles.electiveHead}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Choose 3 Elective Subjects</Text>
-            <Text style={styles.cardSub}>
-              Tailor your profile for university, TVET, or workforce readiness
-            </Text>
+            <Text style={styles.cardTitle}>{t.electivesLabel}</Text>
+            <Text style={styles.cardSub}>{t.electivesHint}</Text>
           </View>
           <View
             style={[
@@ -377,7 +432,7 @@ export default function SubjectChooserRoute() {
           </View>
         </View>
 
-        {ELECTIVES.map((item) => {
+        {electiveOptions.map((item) => {
           const selected = electives.includes(item.id);
           return (
             <Pressable
@@ -407,7 +462,7 @@ export default function SubjectChooserRoute() {
                 {item.requiresPureMath ? (
                   <View style={styles.prereqRow}>
                     <MaterialIcon name="info" size={14} color={colors.secondary} />
-                    <Text style={styles.prereqText}>Requires Pure Mathematics</Text>
+                    <Text style={styles.prereqText}>{t.pureMath}</Text>
                   </View>
                 ) : null}
               </View>
@@ -493,10 +548,7 @@ export default function SubjectChooserRoute() {
             style={styles.secondaryBtn}
             onPress={() => {
               if (electives.length !== MAX_ELECTIVES) {
-                Alert.alert(
-                  "Choose 3 electives",
-                  "Select exactly 3 elective subjects before calculating APS.",
-                );
+                Alert.alert(t.selectThree, t.electivesHint);
                 return;
               }
               const qs = new URLSearchParams({
@@ -512,9 +564,7 @@ export default function SubjectChooserRoute() {
             }}
           >
             <MaterialIcon name="calculate" size={18} color={colors.primary} />
-            <Text style={styles.secondaryBtnText}>
-              Calculate Admission Point Score (APS)
-            </Text>
+            <Text style={styles.secondaryBtnText}>{t.continueAps}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -534,11 +584,14 @@ function LanguageField({
   label: string;
   credits: string;
   value: string;
-  options: string[];
+  options: { id: string; label: string }[];
   open: boolean;
   onToggle: () => void;
   onSelect: (value: string) => void;
 }) {
+  const selectedLabel =
+    options.find((option) => option.id === value)?.label ?? value;
+
   return (
     <View style={styles.langBlock}>
       <View style={styles.fieldTop}>
@@ -549,7 +602,7 @@ function LanguageField({
         <Text style={styles.credits}>{credits}</Text>
       </View>
       <Pressable style={styles.select} onPress={onToggle}>
-        <Text style={styles.selectValue}>{value}</Text>
+        <Text style={styles.selectValue}>{selectedLabel}</Text>
         <MaterialIcon
           name={open ? "expand_more" : "arrow_drop_down"}
           size={22}
@@ -559,20 +612,20 @@ function LanguageField({
       {open
         ? options.map((option) => (
             <Pressable
-              key={option}
+              key={option.id}
               style={[
                 styles.selectOption,
-                option === value && styles.selectOptionActive,
+                option.id === value && styles.selectOptionActive,
               ]}
-              onPress={() => onSelect(option)}
+              onPress={() => onSelect(option.id)}
             >
               <Text
                 style={[
                   styles.selectOptionText,
-                  option === value && styles.selectOptionTextActive,
+                  option.id === value && styles.selectOptionTextActive,
                 ]}
               >
-                {option}
+                {option.label}
               </Text>
             </Pressable>
           ))

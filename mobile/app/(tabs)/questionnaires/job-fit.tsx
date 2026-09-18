@@ -16,14 +16,10 @@ import {
 } from "../../../components/KhethaBrandBar";
 import { PrimaryButton } from "../../../components/PrimaryButton";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useLocale } from "../../../contexts/LocaleContext";
 import { useVaultStats } from "../../../hooks/useVaultStats";
-import {
-  JOB_FIT_DEMAND,
-  JOB_FIT_ENVIRONMENTS,
-  JOB_FIT_FOLLOW_UPS,
-  JOB_FIT_TOTAL_STEPS,
-  scoreJobFitAnswers,
-} from "../../../questionnaires/jobFitData";
+import { JOB_FIT_TOTAL_STEPS, scoreJobFitAnswers } from "../../../questionnaires/jobFitData";
+import { resolveJobFitData } from "../../../questionnaires/resolveJobFit";
 import { matchOccupations } from "../../../questionnaires/scoring";
 import { getOccupationSummaries, updateProfile } from "../../../services/ncapData";
 import {
@@ -51,6 +47,9 @@ const DRAFT_KEY = "jobFit";
 export default function JobFitRoute() {
   const router = useRouter();
   const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const { locale, strings, tabs } = useLocale();
+  const chrome = strings.questionnaires.chrome;
+  const data = useMemo(() => resolveJobFitData(locale), [locale]);
   const vault = useVaultStats();
   const existing = profile?.questionnaireResults?.jobFit;
 
@@ -86,7 +85,7 @@ export default function JobFitRoute() {
   const total = JOB_FIT_TOTAL_STEPS;
   const progressPct = Math.round(((step + 1) / total) * 100);
   const minsLeft = Math.max(1, Math.ceil(((total - step) * 60) / 60));
-  const followUp = step > 0 ? JOB_FIT_FOLLOW_UPS[step - 1] : null;
+  const followUp = step > 0 ? data.followUps[step - 1] : null;
 
   const canAdvance = useMemo(() => {
     if (step === 0) return Boolean(answers.environment && answers.physical);
@@ -194,12 +193,12 @@ export default function JobFitRoute() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={vault.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
       />
       {draftRestored ? (
         <Text style={{ ...typography.caption, color: colors.success, marginBottom: 8 }}>
-          Restored your saved progress on this device.
+          {chrome.draftRestored}
         </Text>
       ) : null}
       {phase === "intro" ? (
@@ -210,27 +209,24 @@ export default function JobFitRoute() {
               Module 2: Work Environment & Task Aptitude
             </Text>
           </View>
-          <Text style={styles.introTitle}>Job Fit Diagnostic</Text>
-          <Text style={styles.introBody}>
-            Match your preferred work environment, physical demand, and working
-            style with TVET trades and modern workplace roles.
-          </Text>
+          <Text style={styles.introTitle}>{data.title}</Text>
+          <Text style={styles.introBody}>{data.subtitle}</Text>
           {existing?.matches?.length ? (
             <>
               <PrimaryButton
-                label="View past results"
+                label={chrome.seeResults}
                 onPress={() =>
                   router.push(href("/questionnaires/results/jobFit"))
                 }
               />
               <PrimaryButton
-                label="Retake diagnostic"
+                label={chrome.retake}
                 variant="secondary"
                 onPress={startFresh}
               />
             </>
           ) : (
-            <PrimaryButton label="Start diagnostic" onPress={startFresh} />
+            <PrimaryButton label={chrome.startDiagnostic} onPress={startFresh} />
           )}
         </View>
       ) : null}
@@ -248,18 +244,20 @@ export default function JobFitRoute() {
                   size={18}
                   color={colors.primary}
                 />
-                <Text style={styles.crumbPrimary}>Decisions</Text>
+                <Text style={styles.crumbPrimary}>{tabs.decisions}</Text>
               </Pressable>
               <Text style={styles.crumbSep}>/</Text>
-              <Text style={styles.crumbCurrent}>Job Fit Diagnostic</Text>
+              <Text style={styles.crumbCurrent}>{data.title}</Text>
               <View style={styles.stepPill}>
                 <Text style={styles.stepPillText}>
-                  Step {step + 1} of {total}
+                  {chrome.questionOf(step + 1, total)}
                 </Text>
               </View>
             </View>
             <View style={styles.progressMeta}>
-              <Text style={styles.pctLabel}>{progressPct}% Complete</Text>
+              <Text style={styles.pctLabel}>
+                {chrome.progressComplete(progressPct)}
+              </Text>
               <Text style={styles.eta}>Estimated {minsLeft} mins remaining</Text>
             </View>
             <View style={styles.progressTrack}>
@@ -270,9 +268,7 @@ export default function JobFitRoute() {
           <View style={styles.autoSave}>
             <View style={styles.autoSaveLeft}>
               <MaterialIcon name="offline_pin" size={16} color={colors.success} />
-              <Text style={styles.autoSaveText}>
-                Answers saved on this device when you pause · syncs when online
-              </Text>
+              <Text style={styles.autoSaveText}>{chrome.autoSaveHint}</Text>
             </View>
             <View style={styles.autoSaveBadge}>
               <Text style={styles.autoSaveBadgeText}>Auto-Save</Text>
@@ -293,6 +289,12 @@ export default function JobFitRoute() {
 
           {step === 0 ? (
             <EnvironmentStep
+              envPrompt={data.envPrompt}
+              envHelp={data.envHelp}
+              physicalPrompt={data.physicalPrompt}
+              physicalHelp={data.physicalHelp}
+              environments={data.environments}
+              demand={data.demand}
               environment={answers.environment}
               physical={answers.physical}
               onSelectEnv={(id) =>
@@ -336,7 +338,7 @@ export default function JobFitRoute() {
               onPress={() => setStep((value) => Math.max(0, value - 1))}
             >
               <MaterialIcon name="chevron_left" size={20} color={colors.text} />
-              <Text style={styles.prevText}>Previous</Text>
+              <Text style={styles.prevText}>{chrome.back}</Text>
             </Pressable>
             <Pressable
               style={[
@@ -351,7 +353,9 @@ export default function JobFitRoute() {
               ) : (
                 <>
                   <Text style={styles.nextText}>
-                    {step === total - 1 ? "See results" : "Next Question"}
+                    {step === total - 1
+                      ? chrome.seeResults
+                      : chrome.nextQuestion}
                   </Text>
                   <MaterialIcon
                     name="arrow_forward"
@@ -365,9 +369,7 @@ export default function JobFitRoute() {
 
           <Pressable style={styles.saveLater} onPress={saveAndExit}>
             <MaterialIcon name="cloud_sync" size={16} color={colors.secondary} />
-            <Text style={styles.saveLaterText}>
-              Save Progress & Finish Later (Offline Friendly)
-            </Text>
+            <Text style={styles.saveLaterText}>{chrome.saveProgressLater}</Text>
           </Pressable>
           <Text style={styles.footerNote}>
             Department of Higher Education & Training · National Career Advice
@@ -380,11 +382,23 @@ export default function JobFitRoute() {
 }
 
 function EnvironmentStep({
+  envPrompt,
+  envHelp,
+  physicalPrompt,
+  physicalHelp,
+  environments,
+  demand,
   environment,
   physical,
   onSelectEnv,
   onSelectPhysical,
 }: {
+  envPrompt: string;
+  envHelp: string;
+  physicalPrompt: string;
+  physicalHelp: string;
+  environments: ReturnType<typeof resolveJobFitData>["environments"];
+  demand: ReturnType<typeof resolveJobFitData>["demand"];
   environment?: string;
   physical?: string;
   onSelectEnv: (id: string) => void;
@@ -397,25 +411,12 @@ function EnvironmentStep({
           <View style={styles.qBadge}>
             <Text style={styles.qBadgeText}>Q1</Text>
           </View>
-          <Text style={styles.questionTitle}>
-            Which type of work environment would you be most comfortable working
-            in every day?
-          </Text>
+          <Text style={styles.questionTitle}>{envPrompt}</Text>
         </View>
-        <View style={styles.zuluBox}>
-          <MaterialIcon name="translate" size={18} color={colors.secondary} />
-          <Text style={styles.zuluText}>
-            “Yiluphi uhlobo lwesimo sokusebenza ongaxola kakhulu ukusebenza kulo
-            nsuku zonke?”
-          </Text>
-        </View>
-        <Text style={styles.hint}>
-          Select the setting that best reflects where your energy and natural
-          attention thrive.
-        </Text>
+        <Text style={styles.hint}>{envHelp}</Text>
       </View>
 
-      {JOB_FIT_ENVIRONMENTS.map((option) => {
+      {environments.map((option) => {
         const selected = environment === option.id;
         return (
           <Pressable
@@ -501,12 +502,9 @@ function EnvironmentStep({
             <Text style={styles.selfPillText}>Self-Assessment</Text>
           </View>
         </View>
-        <Text style={styles.demandPrompt}>
-          How much daily physical exertion, lifting, or prolonged standing feels
-          comfortable for you?
-        </Text>
+        <Text style={styles.demandPrompt}>{physicalPrompt}</Text>
         <View style={styles.demandRow}>
-          {JOB_FIT_DEMAND.map((option) => {
+          {demand.map((option) => {
             const selected = physical === option.id;
             return (
               <Pressable
@@ -539,10 +537,7 @@ function EnvironmentStep({
         </View>
         <View style={styles.accommodation}>
           <MaterialIcon name="check_circle" size={14} color={colors.success} />
-          <Text style={styles.accommodationText}>
-            Accommodations for varying mobility and physical abilities will be
-            factored into TVET & University matching.
-          </Text>
+          <Text style={styles.accommodationText}>{physicalHelp}</Text>
         </View>
       </View>
     </>

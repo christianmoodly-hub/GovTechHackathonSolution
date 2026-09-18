@@ -13,11 +13,14 @@ import { AuthFooter } from "../components/auth/AuthFooter";
 import { AuthHeader } from "../components/auth/AuthHeader";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { colors, layout, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
+  const { strings } = useLocale();
+  const t = strings.auth;
   const {
     user,
     profile,
@@ -42,9 +45,7 @@ export default function VerifyEmailScreen() {
         const verified = await refreshEmailVerification();
         if (!verified) {
           if (!opts?.silent) {
-            setLocalError(
-              "Email not verified yet. Open the link in your inbox, then try again.",
-            );
+            setLocalError(t.errNotVerified);
           }
           return false;
         }
@@ -54,9 +55,7 @@ export default function VerifyEmailScreen() {
       } catch (err) {
         if (!opts?.silent) {
           setLocalError(
-            err instanceof Error
-              ? err.message
-              : "Could not refresh verification status.",
+            err instanceof Error ? err.message : t.errRefreshVerification,
           );
         }
         return false;
@@ -69,6 +68,8 @@ export default function VerifyEmailScreen() {
       profile?.demographics?.completedAt,
       refreshEmailVerification,
       router,
+      t.errNotVerified,
+      t.errRefreshVerification,
     ],
   );
 
@@ -91,7 +92,7 @@ export default function VerifyEmailScreen() {
       setResent(true);
     } catch (err) {
       setLocalError(
-        err instanceof Error ? err.message : "Could not resend verification email.",
+        err instanceof Error ? err.message : t.errResendVerification,
       );
     } finally {
       setBusy(false);
@@ -100,21 +101,23 @@ export default function VerifyEmailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <AuthHeader title="Verify Email" showBack={false} />
+      <AuthHeader title={t.verifyTitle} showBack={false} />
       <View style={styles.content}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
             <MaterialIcon name="mail" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Confirm your email</Text>
+          <Text style={styles.title}>{t.confirmEmail}</Text>
           <Text style={styles.body}>
-            We sent a Firebase verification link to{" "}
-            <Text style={styles.emphasis}>{user?.email ?? "your email"}</Text>.
-            Open it on this device or any browser, then come back here.
+            {t.verifyBodyPrefix}{" "}
+            <Text style={styles.emphasis}>
+              {user?.email ?? t.yourEmail}
+            </Text>
+            {t.verifyBodySuffix}
           </Text>
 
           {resent ? (
-            <Text style={styles.success}>Another verification email was sent.</Text>
+            <Text style={styles.success}>{t.resentSuccess}</Text>
           ) : null}
           {message ? <Text style={styles.error}>{message}</Text> : null}
 
@@ -128,7 +131,7 @@ export default function VerifyEmailScreen() {
             ) : (
               <>
                 <MaterialIcon name="check_circle" size={20} color={colors.onPrimary} />
-                <Text style={styles.primaryText}>I&apos;ve verified — continue</Text>
+                <Text style={styles.primaryText}>{t.iveVerified}</Text>
               </>
             )}
           </Pressable>
@@ -139,7 +142,7 @@ export default function VerifyEmailScreen() {
             onPress={() => void onResend()}
           >
             <MaterialIcon name="mail" size={18} color={colors.primary} />
-            <Text style={styles.secondaryText}>Resend verification email</Text>
+            <Text style={styles.secondaryText}>{t.resendVerification}</Text>
           </Pressable>
 
           <Pressable
@@ -147,7 +150,7 @@ export default function VerifyEmailScreen() {
             disabled={busy}
             style={styles.signOut}
           >
-            <Text style={styles.signOutText}>Use a different account</Text>
+            <Text style={styles.signOutText}>{t.useDifferentAccount}</Text>
           </Pressable>
         </View>
       </View>

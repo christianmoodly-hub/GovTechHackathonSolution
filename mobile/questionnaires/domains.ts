@@ -14,7 +14,7 @@ export type QuestionOption = {
   id: string;
   label: string;
   description?: string;
-  /** Optional isiZulu / secondary label under the main option text. */
+  /** Optional secondary label (unused — prefer single localized label). */
   altLabel?: string;
   /** Optional emoji for Likert-style options. */
   emoji?: string;

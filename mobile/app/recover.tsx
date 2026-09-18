@@ -18,6 +18,7 @@ import { AuthFooter } from "../components/auth/AuthFooter";
 import { AuthHeader } from "../components/auth/AuthHeader";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { HELPLINE } from "../data/staticContent";
 import { colors, layout, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
@@ -27,14 +28,16 @@ type Channel = "sms" | "email";
 const OTP_LENGTH = 6;
 const OTP_SECONDS = 5 * 60;
 
-function maskPhone(value: string): string {
+function maskPhone(value: string, fallback: string): string {
   const digits = value.replace(/\D/g, "");
-  if (digits.length < 6) return value.trim() || "your number";
+  if (digits.length < 6) return value.trim() || fallback;
   return `${digits.slice(0, 3)} *** ${digits.slice(-3)}`;
 }
 
 export default function RecoverScreen() {
   const router = useRouter();
+  const { strings } = useLocale();
+  const t = strings.auth;
   const { sendPasswordReset, clearError, error } = useAuth();
   const [channel, setChannel] = useState<Channel>("sms");
   const [identifier, setIdentifier] = useState("");
@@ -81,7 +84,7 @@ export default function RecoverScreen() {
     clearError();
     const value = identifier.trim();
     if (!value) {
-      setLocalError("Enter your ID, cellphone, or email to continue.");
+      setLocalError(t.errEnterIdentifier);
       return;
     }
 
@@ -95,7 +98,7 @@ export default function RecoverScreen() {
         setLocalError(
           err instanceof Error
             ? err.message
-            : "Could not send reset instructions.",
+            : t.errCouldNotSendReset,
         );
       } finally {
         setBusy(false);
@@ -165,11 +168,11 @@ export default function RecoverScreen() {
       return;
     }
     if (!otpComplete) {
-      setLocalError("Enter the 6-digit verification code from your SMS.");
+      setLocalError(t.errEnterOtp);
       return;
     }
     if (!pinsMatch) {
-      setLocalError("PINs must match and be at least 4 digits.");
+      setLocalError(t.errPinsMustMatch);
       return;
     }
     setSuccess(true);
@@ -177,7 +180,7 @@ export default function RecoverScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <AuthHeader title="Reset Password" />
+      <AuthHeader title={t.resetTitle} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -193,11 +196,11 @@ export default function RecoverScreen() {
               onPress={() => router.replace(href("/sign-in"))}
             >
               <MaterialIcon name="arrow_back" size={18} color={colors.primary} />
-              <Text style={styles.backLinkText}>Back to Sign In</Text>
+              <Text style={styles.backLinkText}>{t.backToSignIn}</Text>
             </Pressable>
             <View style={styles.livePill}>
               <View style={styles.liveDot} />
-              <Text style={styles.liveText}>Live Zero-Rated Line</Text>
+              <Text style={styles.liveText}>{t.liveZeroRated}</Text>
             </View>
           </View>
 
@@ -207,14 +210,12 @@ export default function RecoverScreen() {
                 <MaterialIcon name="lock_reset" size={24} color={colors.primary} />
               </View>
               <View style={styles.introCopy}>
-                <Text style={styles.introTitle}>Reset Your Password or PIN</Text>
+                <Text style={styles.introTitle}>{t.resetHeadline}</Text>
                 <Text style={styles.introAlt}>
-                  Setha kabusha iphasiwedi yakho · Khetha NCAP Citizen Access
+                  {t.resetAlt}
                 </Text>
                 <Text style={styles.introBody}>
-                  Enter your registered South African ID Number or Mobile Phone.
-                  We will send a free zero-rated SMS verification code to safely
-                  reset your login credentials.
+                  {t.resetBody}
                 </Text>
               </View>
             </View>
@@ -225,7 +226,7 @@ export default function RecoverScreen() {
                 color={colors.secondary}
               />
               <Text style={styles.popiaText}>
-                POPIA Protected – Zero Airtime or Mobile Data Required
+                {t.popiaBar}
               </Text>
             </View>
           </View>
@@ -252,7 +253,7 @@ export default function RecoverScreen() {
                     step === 1 ? styles.stepLabelOn : styles.stepLabelMuted,
                   ]}
                 >
-                  Verify Identity
+                  {t.stepVerifyIdentity}
                 </Text>
               </View>
               <View style={styles.stepLine} />
@@ -272,7 +273,7 @@ export default function RecoverScreen() {
                     step === 2 ? styles.stepLabelOn : styles.stepLabelMuted,
                   ]}
                 >
-                  Create New PIN
+                  {t.stepCreatePin}
                 </Text>
               </View>
             </View>
@@ -280,8 +281,8 @@ export default function RecoverScreen() {
             <View style={styles.channelTrack}>
               {(
                 [
-                  ["sms", "Via SMS (Free)", "sms"],
-                  ["email", "Via Email", "mail"],
+                  ["sms", t.viaSms, "sms"],
+                  ["email", t.viaEmail, "mail"],
                 ] as const
               ).map(([id, label, icon]) => {
                 const on = channel === id;
@@ -316,19 +317,19 @@ export default function RecoverScreen() {
             <AuthField
               label={
                 channel === "email"
-                  ? "Registered Email Address *"
-                  : "SA National ID (13 digits) or Cellphone Number *"
+                  ? t.emailFieldLabel
+                  : t.idOrPhoneLabel
               }
               leadingIcon={channel === "email" ? "mail" : "badge"}
               placeholder={
                 channel === "email"
-                  ? "e.g. learner@matric.dhet.gov.za"
-                  : "e.g. 020514 5821 088 or 072 000 0000"
+                  ? t.emailFieldPlaceholder
+                  : t.idOrPhonePlaceholder
               }
               hint={
                 channel === "email"
-                  ? "We’ll email a secure Firebase password-reset link."
-                  : "Free carrier lookup for Vodacom, MTN, Telkom, Cell C & Rain"
+                  ? t.emailFieldHint
+                  : t.idOrPhoneHint
               }
               value={identifier}
               onChangeText={setIdentifier}
@@ -361,8 +362,8 @@ export default function RecoverScreen() {
                   />
                   <Text style={styles.primaryText} numberOfLines={2}>
                     {channel === "email"
-                      ? "Send Free Verification / Reset Link"
-                      : "Send Free Verification Code (OTP)"}
+                      ? t.sendResetLink
+                      : t.sendOtp}
                   </Text>
                 </>
               )}
@@ -374,31 +375,31 @@ export default function RecoverScreen() {
                   <View style={styles.step2TitleRow}>
                     <MaterialIcon name="lock" size={18} color={colors.primary} />
                     <Text style={styles.step2Title}>
-                      Step 2: Enter OTP & Create New PIN
+                      {t.step2Title}
                     </Text>
                   </View>
                   <View style={styles.sentPill}>
                     <Text style={styles.sentPillText}>
                       {channel === "email"
-                        ? "Reset email sent"
-                        : "Zero-Rated SMS Sent"}
+                        ? t.resetEmailSent
+                        : t.smsSent}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.step2Body}>
                   {channel === "email" ? (
                     <>
-                      We sent password-reset instructions to{" "}
+                      {t.emailSentBodyPrefix}{" "}
                       <Text style={styles.emphasis}>
                         {identifier.trim().toLowerCase()}
                       </Text>
-                      . Open the link to set a new password, then sign in.
+                      {t.emailSentBodySuffix}
                     </>
                   ) : (
                     <>
-                      We dispatched a free one-time token to{" "}
+                      {t.smsSentBodyPrefix}{" "}
                       <Text style={styles.emphasis}>
-                        {maskPhone(identifier)}
+                        {maskPhone(identifier, t.maskYourNumber)}
                       </Text>
                       .
                     </>
@@ -408,7 +409,7 @@ export default function RecoverScreen() {
                 {channel === "sms" ? (
                   <>
                     <Text style={styles.fieldLabel}>
-                      6-Digit Verification Code (OTP)
+                      {t.otpLabel}
                     </Text>
                     <View style={styles.otpRow}>
                       {otp.map((digit, index) => (
@@ -434,19 +435,19 @@ export default function RecoverScreen() {
                     <View style={styles.timerRow}>
                       <MaterialIcon name="timer" size={16} color={colors.error} />
                       <Text style={styles.timerText}>
-                        Code expires in {mm}:{ss}
+                        {t.codeExpires} {mm}:{ss}
                       </Text>
                       <Pressable onPress={onResend} disabled={success}>
                         <Text style={styles.resend}>
-                          Resend Free SMS (Toll-Free)
+                          {t.resendSms}
                         </Text>
                       </Pressable>
                     </View>
 
                     <AuthField
-                      label="Set New 6-Digit PIN / Password"
+                      label={t.setNewPin}
                       leadingIcon="pin"
-                      placeholder="e.g. 582914"
+                      placeholder={t.setNewPinPlaceholder}
                       value={newPin}
                       onChangeText={setNewPin}
                       secureTextEntry={!showPin}
@@ -467,9 +468,9 @@ export default function RecoverScreen() {
                       }
                     />
                     <AuthField
-                      label="Confirm New 6-Digit PIN"
+                      label={t.confirmNewPin}
                       leadingIcon="lock_reset"
-                      placeholder="Re-type 6-digit PIN"
+                      placeholder={t.confirmNewPinPlaceholder}
                       value={confirmPin}
                       onChangeText={setConfirmPin}
                       secureTextEntry={!showConfirm}
@@ -509,7 +510,7 @@ export default function RecoverScreen() {
                     color={colors.text}
                   />
                   <Text style={styles.goldBtnText} numberOfLines={1}>
-                    Update Password & Sign In
+                    {t.updatePasswordCta}
                   </Text>
                 </Pressable>
               </View>
@@ -526,10 +527,9 @@ export default function RecoverScreen() {
                 />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.successTitle}>PIN Updated Successfully!</Text>
+                <Text style={styles.successTitle}>{t.pinUpdated}</Text>
                 <Text style={styles.successBody}>
-                  Redirecting to your Khetha NCAP Career Dashboard in 3
-                  seconds...
+                  {t.redirecting}
                 </Text>
               </View>
             </View>
@@ -543,12 +543,11 @@ export default function RecoverScreen() {
                 color={colors.gold}
               />
               <Text style={styles.helpTitle}>
-                Can&apos;t access your registered phone?
+                {t.cantAccessPhone}
               </Text>
             </View>
             <Text style={styles.helpBody}>
-              If your cellphone number has been lost, stolen, or expired, verify
-              your identity directly with our dedicated DHET advisors.
+              {t.cantAccessPhoneBody}
             </Text>
             <Pressable
               style={styles.helpRow}
@@ -556,7 +555,7 @@ export default function RecoverScreen() {
             >
               <MaterialIcon name="call" size={20} color={colors.primary} />
               <Text style={styles.helpRowText}>
-                {HELPLINE.tollFreeDisplay} – Toll-Free Helpline
+                {HELPLINE.tollFreeDisplay} {t.tollFreeHelpline}
               </Text>
               <MaterialIcon
                 name="chevron_right"
@@ -574,7 +573,7 @@ export default function RecoverScreen() {
             >
               <MaterialIcon name="chat" size={20} color={colors.success} />
               <Text style={styles.helpRowText}>
-                {HELPLINE.whatsappDisplay} – WhatsApp Callback
+                {HELPLINE.whatsappDisplay} {t.whatsappCallback}
               </Text>
               <MaterialIcon
                 name="open_in_new"
@@ -585,8 +584,7 @@ export default function RecoverScreen() {
           </View>
 
           <Text style={styles.langHint}>
-            Udinga usizo ngolimi lwakho? · Udinga uncedo ngolwimi lwakho? · Hulp
-            nodig in jou taal?
+            {t.langHint}
           </Text>
         </ScrollView>
         <AuthFooter />

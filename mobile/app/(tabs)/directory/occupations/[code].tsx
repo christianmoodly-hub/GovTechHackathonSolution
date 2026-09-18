@@ -17,9 +17,9 @@ import {
   KhethaBrandBar,
   OfflineStatusBar,
 } from "../../../../components/KhethaBrandBar";
-import { getOccupation } from "../../../../services/ncapData";
+import { getBursariesByField, getOccupation } from "../../../../services/ncapData";
 import { stableUrlId } from "../../../../services/ids";
-import type { Occupation } from "../../../../services/types";
+import type { BursarySummary, Occupation } from "../../../../services/types";
 import { HELPLINE } from "../../../../data/staticContent";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
@@ -33,6 +33,10 @@ import {
   occupationTags,
   tagToneColors,
 } from "../../../../utils/occupationPresentation";
+import {
+  closingUrgency,
+  occupationBursaryFields,
+} from "../../../../utils/bursaryPresentation";
 
 type AccordionId = "tasks" | "pathways" | "funding";
 
@@ -81,19 +85,6 @@ const PATHWAYS = [
   },
 ];
 
-const FUNDING = [
-  {
-    icon: "verified_user",
-    title: "NSFAS TVET College Bursary Scheme",
-    body: "Qualifying South African citizens with household income under R350,000/year receive 100% free tuition, personal care allowances, transport, and accommodation support for NATED engineering courses.",
-  },
-  {
-    icon: "handshake",
-    title: "EWSETA & Chieta Discretionary Grants",
-    body: "Sector Education & Training Authorities disburse annual grants for apprentice stipends and toolsets for accredited green skills apprenticeships.",
-  },
-];
-
 const CAMPUSES = [
   {
     province: "Gauteng",
@@ -137,6 +128,10 @@ export default function OccupationDetailScreen() {
   const vault = useVaultStats();
   const { code } = useLocalSearchParams<{ code: string }>();
   const [occupation, setOccupation] = useState<Occupation | null>(null);
+  const [relatedBursaries, setRelatedBursaries] = useState<BursarySummary[]>(
+    [],
+  );
+  const [bursariesLoading, setBursariesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Record<AccordionId, boolean>>({
@@ -170,6 +165,38 @@ export default function OccupationDetailScreen() {
       alive = false;
     };
   }, [code]);
+
+  useEffect(() => {
+    if (!occupation) return;
+    let alive = true;
+    const fields = occupationBursaryFields(occupation);
+    setBursariesLoading(true);
+    (async () => {
+      try {
+        const batches = await Promise.all(
+          fields.map((slug) => getBursariesByField(slug, { limit: 6 })),
+        );
+        if (!alive) return;
+        const seen = new Set<string>();
+        const merged: BursarySummary[] = [];
+        for (const batch of batches) {
+          for (const item of batch) {
+            if (seen.has(item.id)) continue;
+            seen.add(item.id);
+            merged.push(item);
+          }
+        }
+        setRelatedBursaries(merged.slice(0, 8));
+      } catch {
+        if (alive) setRelatedBursaries([]);
+      } finally {
+        if (alive) setBursariesLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [occupation]);
 
   const tags = useMemo(
     () => (occupation ? occupationTags(occupation.title) : []),
@@ -545,21 +572,72 @@ export default function OccupationDetailScreen() {
           </Pressable>
           {open.funding ? (
             <View style={styles.section}>
-              {FUNDING.map((item) => (
-                <View key={item.title} style={styles.taskCard}>
-                  <View style={styles.taskIcon}>
-                    <MaterialIcon
-                      name={item.icon}
-                      size={20}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.taskTitle}>{item.title}</Text>
-                    <Text style={styles.taskBody}>{item.body}</Text>
-                  </View>
+              <Text style={styles.accordionSub}>
+                Bursaries in related fields — not a guarantee of eligibility
+              </Text>
+              {bursariesLoading ? (
+                <Text style={styles.taskBody}>Loading related bursaries…</Text>
+              ) : relatedBursaries.length ? (
+                relatedBursaries.map((item) => {
+                  const urgency = closingUrgency(
+                    item.closingDateIso,
+                    item.openAllYear,
+                    item.closingDate,
+                  );
+                  return (
+                    <Pressable
+                      key={item.id}
+                      style={styles.taskCard}
+                      onPress={() =>
+                        router.push(href(`/directory/bursaries/${item.id}`))
+                      }
+                    >
+                      <View style={styles.taskIcon}>
+                        <MaterialIcon
+                          name="account_balance_wallet"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.taskTitle}>{item.title}</Text>
+                        <Text style={styles.taskBody} numberOfLines={2}>
+                          {urgency.label}
+                          {item.providerName ? ` · ${item.providerName}` : ""}
+                        </Text>
+                      </View>
+                      <MaterialIcon
+                        name="chevron_right"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </Pressable>
+                  );
+                })
+              ) : (
+                <Text style={styles.taskBody}>
+                  No related bursaries cached yet. Browse the full directory.
+                </Text>
+              )}
+              <Pressable
+                style={styles.taskCard}
+                onPress={() => router.push(href("/directory/bursaries"))}
+              >
+                <View style={styles.taskIcon}>
+                  <MaterialIcon name="list" size={20} color={colors.ochre} />
                 </View>
-              ))}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.taskTitle}>View all bursaries</Text>
+                  <Text style={styles.taskBody}>
+                    Search by field, closing date, and sponsor
+                  </Text>
+                </View>
+                <MaterialIcon
+                  name="arrow_forward"
+                  size={18}
+                  color={colors.primary}
+                />
+              </Pressable>
             </View>
           ) : null}
 

@@ -1,739 +1,523 @@
-import { createBundle, resolveLocale } from "./createBundle";
-
-export type RoleStrings = { label: string; description: string };
+import { expandSaLocales, resolveLocale } from "./createBundle";
 
 export type OnboardingStrings = {
-  republicLabel: string;
+  govLabel: string;
   govSub: string;
-  zeroRatedPortal: string;
+  zeroRated: string;
   heroKicker: string;
   heroTitle: string;
   heroBody: string;
   whoAreYou: string;
   required: string;
+  roles: Record<
+    | "grade10"
+    | "grade11"
+    | "grade12"
+    | "below_grade10"
+    | "tertiary"
+    | "work_seeker"
+    | "parent"
+    | "teacher"
+    | "practitioner",
+    { label: string; description: string }
+  >;
   disabilityStatus: string;
   disabilityQuestion: string;
   yes: string;
   no: string;
+  disabilities: Record<"visual" | "hearing" | "physical" | "learning", string>;
   offlineTitle: string;
   offlineBody: string;
   startExploring: string;
   startExploringSub: string;
-  continueAsGuest: string;
+  continueGuest: string;
   quote: string;
   quoteAttr: string;
-  saveError: string;
-  guestError: string;
-  roles: {
-    grade10: RoleStrings;
-    grade11: RoleStrings;
-    grade12: RoleStrings;
-    below_grade10: RoleStrings;
-    tertiary: RoleStrings;
-    work_seeker: RoleStrings;
-    parent: RoleStrings;
-    teacher: RoleStrings;
-    practitioner: RoleStrings;
-  };
-  disabilityCategories: {
-    visual: string;
-    hearing: string;
-    physical: string;
-    learning: string;
-  };
+  errorSave: string;
+  errorGuest: string;
 };
 
 const en: OnboardingStrings = {
-  republicLabel: "REPUBLIC OF SOUTH AFRICA",
+  govLabel: "REPUBLIC OF SOUTH AFRICA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Zero-Rated Portal",
+  zeroRated: "Zero-Rated Portal",
   heroKicker: "NATIONAL CAREER ADVICE PORTAL",
   heroTitle: "Welcome to Khetha NCAP",
   heroBody: "Please complete below for statistics & tailored guidance.",
   whoAreYou: "Who are you? (Select your current role)",
   required: "Required",
+  roles: {
+    grade10: {
+      label: "Grade 10 Learner",
+      description: "Subject choice & future study stream"
+    },
+    grade11: {
+      label: "Grade 11 Learner",
+      description: "Early tertiary & TVET benchmark"
+    },
+    grade12: {
+      label: "Grade 12 Learner",
+      description: "Matric final prep, CAO & NSFAS"
+    },
+    below_grade10: {
+      label: "Less than Grade 10",
+      description: "Senior phase guidance & TVET access"
+    },
+    tertiary: {
+      label: "Student (Tertiary / TVET)",
+      description: "Colleges, artisan trades & diplomas"
+    },
+    work_seeker: {
+      label: "Work Seeker",
+      description: "Upskilling, learnerships & jobs"
+    },
+    parent: {
+      label: "Parent / Guardian",
+      description: "Guiding youth through career paths"
+    },
+    teacher: {
+      label: "Career Guidance Teacher",
+      description: "Life Orientation & classroom tools"
+    },
+    practitioner: {
+      label: "Career Practitioner",
+      description: "Professional advisory diagnostic tools"
+    }
+  },
   disabilityStatus: "Disability Status",
   disabilityQuestion: "Are you a person living with a disability?",
   yes: "Yes",
   no: "No",
-  offlineTitle: "Works offline after first sync",
-  offlineBody:
-    "Browse cached careers and continue questionnaires without signal. Favourites and results save on device and sync when you reconnect.",
-  startExploring: "Start Exploring / Qala",
-  startExploringSub: "Unlock personalized study pathways",
-  continueAsGuest: "Continue as Guest",
-  quote:
-    "Education is the most powerful weapon which you can use to change the world.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "Could not save your profile details.",
-  guestError: "Guest mode unavailable.",
-  roles: {
-    grade10: {
-      label: "Grade 10 Learner",
-      description: "Subject choice & future study stream",
-    },
-    grade11: {
-      label: "Grade 11 Learner",
-      description: "Early tertiary & TVET benchmark",
-    },
-    grade12: {
-      label: "Grade 12 Learner",
-      description: "Matric final prep, CAO & NSFAS",
-    },
-    below_grade10: {
-      label: "Less than Grade 10",
-      description: "Senior phase guidance & TVET access",
-    },
-    tertiary: {
-      label: "Student (Tertiary / TVET)",
-      description: "Colleges, artisan trades & diplomas",
-    },
-    work_seeker: {
-      label: "Work Seeker",
-      description: "Upskilling, learnerships & jobs",
-    },
-    parent: {
-      label: "Parent / Guardian",
-      description: "Guiding youth through career paths",
-    },
-    teacher: {
-      label: "Career Guidance Teacher",
-      description: "Life Orientation & classroom tools",
-    },
-    practitioner: {
-      label: "Career Practitioner",
-      description: "Professional advisory diagnostic tools",
-    },
-  },
-  disabilityCategories: {
+  disabilities: {
     visual: "Visual",
     hearing: "Hearing",
     physical: "Physical",
-    learning: "Learning",
+    learning: "Learning"
   },
+  offlineTitle: "Works offline after first sync",
+  offlineBody: "Browse cached careers and continue questionnaires without signal. Favourites and results save on device and sync when you reconnect.",
+  startExploring: "Start Exploring / Qala",
+  startExploringSub: "Unlock personalized study pathways",
+  continueGuest: "Continue as Guest",
+  quote: "Education is the most powerful weapon which you can use to change the world.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "Could not save your profile details.",
+  errorGuest: "Guest mode unavailable."
 };
 
 const af: OnboardingStrings = {
-  republicLabel: "REPUBLIEK VAN SUID-AFRIKA",
+  govLabel: "REPUBLIEK VAN SUID-AFRIKA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Nul-tariefportaal",
+  zeroRated: "Nul-gegradeerde portaal",
   heroKicker: "NASIONALE LOOPBAANADVIESPORTAAL",
   heroTitle: "Welkom by Khetha NCAP",
-  heroBody: "Voltooi asseblief hieronder vir statistiek en pasgemaakte leiding.",
+  heroBody: "Voltooi asseblief hieronder vir statistiek & pasgemaakte leiding.",
   whoAreYou: "Wie is jy? (Kies jou huidige rol)",
   required: "Verpligtend",
-  disabilityStatus: "Gestremdheidstatus",
-  disabilityQuestion: "Is jy ’n persoon wat met ’n gestremdheid leef?",
-  yes: "Ja",
-  no: "Nee",
-  offlineTitle: "Werk aflyn ná eerste sinkronisering",
-  offlineBody:
-    "Blaai gekasheerde loopbane en gaan voort met vraelyste sonder sein. Gunstelinge en resultate stoor op die toestel en sinkroniseer wanneer jy weer verbind.",
-  startExploring: "Begin verken / Qala",
-  startExploringSub: "Ontsluit verpersoonlikte studiemoontlikhede",
-  continueAsGuest: "Gaan voort as gas",
-  quote:
-    "Onderwys is die kragtigste wapen waarmee jy die wêreld kan verander.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "Kon nie jou profielbesonderhede stoor nie.",
-  guestError: "Gasmodus nie beskikbaar nie.",
   roles: {
     grade10: {
       label: "Graad 10-leerder",
-      description: "Vakkeuse & toekomstige studierigting",
+      description: "Vakkeuse & toekomstige studierigting"
     },
     grade11: {
       label: "Graad 11-leerder",
-      description: "Vroeë tersiêre & TVET-maatstaf",
+      description: "Vroeë tersiêre & TVET-maatstaf"
     },
     grade12: {
       label: "Graad 12-leerder",
-      description: "Matriek-eindvoorbereiding, CAO & NSFAS",
+      description: "Matriek-eindvoorbereiding, CAO & NSFAS"
     },
     below_grade10: {
-      label: "Laer as Graad 10",
-      description: "Seniorfase-leiding & TVET-toegang",
+      label: "Minder as Graad 10",
+      description: "Seniorfase-leiding & TVET-toegang"
     },
     tertiary: {
       label: "Student (Tersiêr / TVET)",
-      description: "Kolleges, ambagte & diplomas",
+      description: "Kolleges, ambagte & diplomas"
     },
     work_seeker: {
       label: "Werksoeker",
-      description: "Vaardigheidsbou, leerlingskappe & werk",
+      description: "Opgradering, leerlingskappe & werk"
     },
     parent: {
       label: "Ouer / Voog",
-      description: "Ondersteun ’n leerder se loopbaanreis",
+      description: "Lei jeug deur loopbaanpaaie"
     },
     teacher: {
-      label: "Onderwyser / LO-opvoeder",
-      description: "Lei leerders met klaskamerhulpmiddels",
+      label: "Loopbaanbegeleidingsonderwyser",
+      description: "Lewensoriëntering & klaskamerhulpmiddels"
     },
     practitioner: {
       label: "Loopbaanpraktisyn",
-      description: "CDS-adviseur & fasiliteringsondersteuning",
-    },
+      description: "Professionele adviserende diagnostiese hulpmiddels"
+    }
   },
-  disabilityCategories: {
+  disabilityStatus: "Gestremdheidstatus",
+  disabilityQuestion: "Is jy 'n persoon wat met 'n gestremdheid leef?",
+  yes: "Ja",
+  no: "Nee",
+  disabilities: {
     visual: "Visueel",
     hearing: "Gehoor",
     physical: "Fisies",
-    learning: "Leer",
+    learning: "Leer"
   },
+  offlineTitle: "Werk aflyn na eerste sinkronisering",
+  offlineBody: "Blaai deur gekaste loopbane en gaan voort met vraelyste sonder sein. Gunstelinge en resultate stoor op die toestel en sinkroniseer wanneer jy weer verbind.",
+  startExploring: "Begin Verken / Qala",
+  startExploringSub: "Ontsluit persoonlike studiepaaie",
+  continueGuest: "Gaan voort as gas",
+  quote: "Onderwys is die kragtigste wapen waarmee jy die wêreld kan verander.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "Kon nie jou profielbesonderhede stoor nie.",
+  errorGuest: "Gasmodus nie beskikbaar nie."
 };
 
 const zu: OnboardingStrings = {
-  republicLabel: "IRIPHABHULIKHI YASENINGIZIMU AFRIKA",
+  govLabel: "IRIPHABHULIKHI YASENINGIZIMU AFRIKA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Iphothali Engakhokhiswa Idatha",
-  heroKicker: "IPHOTHALI KAZWELONKE YEZELELEKO ZOMSEBENZI",
+  zeroRated: "Iphothali ye-Zero-Rated",
+  heroKicker: "IPHOTHALI YESIZWE YEZELULEKO ZOMSEBENZI",
   heroTitle: "Siyakwamukela ku-Khetha NCAP",
-  heroBody: "Sicela ugcwalise ngezansi kuzibalo nesiqondiso esiqondene nawe.",
+  heroBody: "Sicela ugcwalise ngezansi ukuze uthole izibalo nesiqondiso esenzelwe wena.",
   whoAreYou: "Ungubani? (Khetha indima yakho yamanje)",
   required: "Kuyadingeka",
+  roles: {
+    grade10: {
+      label: "Umfundi webanga le-10",
+      description: "Ukukhetha izifundo nendlela yokufunda yesikhathi esizayo"
+    },
+    grade11: {
+      label: "Umfundi webanga le-11",
+      description: "Isilinganiso sokuqala setertiary ne-TVET"
+    },
+    grade12: {
+      label: "Umfundi webanga le-12",
+      description: "Ukulungiselela umatikuletsheni, CAO & NSFAS"
+    },
+    below_grade10: {
+      label: "Ngaphansi kwebanga le-10",
+      description: "Isiqondiso sesigaba esiphakeme nokufinyelela i-TVET"
+    },
+    tertiary: {
+      label: "Umfundi (Tertiary / TVET)",
+      description: "Amakolishi, imisebenzi yobuchwepheshe namadiploma"
+    },
+    work_seeker: {
+      label: "Umfuni womsebenzi",
+      description: "Ukuthuthukisa amakhono, ukufunda nemisebenzi"
+    },
+    parent: {
+      label: "Umzali / Umqaphi",
+      description: "Ukuqondisa intsha ezindleleni zomsebenzi"
+    },
+    teacher: {
+      label: "Uthisha wesiqondiso somsebenzi",
+      description: "I-Life Orientation namathuluzi ekilasini"
+    },
+    practitioner: {
+      label: "Uchwepheshe womsebenzi",
+      description: "Amathuluzi okuhlola okwelulekayo"
+    }
+  },
   disabilityStatus: "Isimo Sokukhubazeka",
   disabilityQuestion: "Ingabe ungumuntu ophila nokukhubazeka?",
   yes: "Yebo",
   no: "Cha",
-  offlineTitle: "Iyasebenza ngaphandle kwe-inthanethi ngemva kokuvumelanisa kokuqala",
-  offlineBody:
-    "Phequlula imisebenzi egciniwe uqhubeke nohlulwemibuzo ngaphandle kwesignali. Izintandokazi nemiphumela kugcinwa kudivayisi bese kuvumelaniswa uma uphinde uxhuma.",
-  startExploring: "Qala Ukuhlola / Qala",
-  startExploringSub: "Vula izindlela zokufunda eziqondene nawe",
-  continueAsGuest: "Qhubeka njengesimenywa",
-  quote:
-    "Imfundo iyikhali enamandla kunazo zonke ongasebenzisa ukushintsha umhlaba.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "Ayikwazanga ukulondoloza imininingwane yephrofayili yakho.",
-  guestError: "Imodi yesimenywa ayitholakali.",
-  roles: {
-    grade10: {
-      label: "Umfundi Webanga 10",
-      description: "Ukukhetha izifundo nomkhakha wesikhathi esizayo",
-    },
-    grade11: {
-      label: "Umfundi Webanga 11",
-      description: "Ibhenchimakhi yezikhungo eziphakeme ne-TVET",
-    },
-    grade12: {
-      label: "Umfundi Webanga 12",
-      description: "Ukulungiselela iMatric, i-CAO ne-NSFAS",
-    },
-    below_grade10: {
-      label: "Ngaphansi Kwebanga 10",
-      description: "Isiqondiso sesigaba esiphakeme nokufinyelela i-TVET",
-    },
-    tertiary: {
-      label: "Umfundi (Ephakeme / TVET)",
-      description: "Amakolishi, imisebenzi yezandla namadiploma",
-    },
-    work_seeker: {
-      label: "Ofuna Umsebenzi",
-      description: "Ukuthuthukisa amakhono, ukufunda komsebenzi nemisebenzi",
-    },
-    parent: {
-      label: "Umzali / Umqaphi",
-      description: "Sekela uhambo lomfundi lomsebenzi",
-    },
-    teacher: {
-      label: "Uthisha / Umfundisi we-LO",
-      description: "Qondisa abafundi ngamathuluzi ekilasini",
-    },
-    practitioner: {
-      label: "Uchwepheshe Womsebenzi",
-      description: "Umeluleki we-CDS nokusekela",
-    },
-  },
-  disabilityCategories: {
+  disabilities: {
     visual: "Ukubona",
     hearing: "Ukuzwa",
     physical: "Umzimba",
-    learning: "Ukufunda",
+    learning: "Ukufunda"
   },
+  offlineTitle: "Iyasebenza ngaphandle kwe-inthanethi ngemva kokuvumelanisa kokuqala",
+  offlineBody: "Phequlula imisebenzi egciniwe uqhubeke nemibuzo ngaphandle kwesignali. Okuthandayo nemiphumela kugcinwa kudivayisi futhi kuvumelaniswa lapho uphinde uxhuma.",
+  startExploring: "Qala Ukuhlola / Qala",
+  startExploringSub: "Vula izindlela zokufunda ezenzelwe wena",
+  continueGuest: "Qhubeka njengeSivakashi",
+  quote: "Imfundo iyisikhali esinamandla kunazo zonke ongasebenzisa ngaso ukushintsha umhlaba.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "Akukwazanga ukulondoloza imininingwane yephrofayela yakho.",
+  errorGuest: "Imodi yesivakashi ayitholakali."
 };
 
 const xh: OnboardingStrings = {
-  republicLabel: "IRIPHABLIKHI YOMZANTSI AFRIKA",
+  govLabel: "IRIPHABLIKHI YOMZANTSI AFRIKA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Iphothali Engakhokhisi Datha",
-  heroKicker: "IPHOTHALI YESIZWE YEENGCEBISO ZOMSEBENZI",
+  zeroRated: "Iphothali ye-Zero-Rated",
+  heroKicker: "IPHOTHALI YESIZWE YEECEBISO ZOMSEBENZI",
   heroTitle: "Wamkelekile ku-Khetha NCAP",
-  heroBody: "Nceda ugcwalise ngezantsi kumanani nesiqondiso esilungiselelwe wena.",
+  heroBody: "Nceda ugcwalise ngezantsi ukuze ufumane izibalo nesikhokelo esenzelwe wena.",
   whoAreYou: "Ungubani? (Khetha indima yakho yangoku)",
-  required: "Kuyafuneka",
+  required: "Iyafuneka",
+  roles: {
+    grade10: {
+      label: "Umfundi webanga le-10",
+      description: "Ukukhetha izifundo nendlela yokufunda yexesha elizayo"
+    },
+    grade11: {
+      label: "Umfundi webanga le-11",
+      description: "Umlinganiselo wokuqala wetertiary ne-TVET"
+    },
+    grade12: {
+      label: "Umfundi webanga le-12",
+      description: "Ukulungiselela umatrik, CAO & NSFAS"
+    },
+    below_grade10: {
+      label: "Ngaphantsi kwebanga le-10",
+      description: "Isikhokelo sesigaba esiphezulu nokufikelela i-TVET"
+    },
+    tertiary: {
+      label: "Umfundi (Tertiary / TVET)",
+      description: "Iikholeji, imisebenzi yobuchule neediploma"
+    },
+    work_seeker: {
+      label: "Umfuni womsebenzi",
+      description: "Ukuphucula izakhono, ukufunda nemisebenzi"
+    },
+    parent: {
+      label: "Umzali / Umlondolozi",
+      description: "Ukuqondisa ulutsha kwiindlela zomsebenzi"
+    },
+    teacher: {
+      label: "Utitshala wesikhokelo somsebenzi",
+      description: "I-Life Orientation nezixhobo zeklasi"
+    },
+    practitioner: {
+      label: "Ingcali yomsebenzi",
+      description: "Izixhobo zokuhlola ezicebisayo"
+    }
+  },
   disabilityStatus: "Isimo Sokukhubazeka",
   disabilityQuestion: "Ingaba ungumntu ophila nokukhubazeka?",
   yes: "Ewe",
   no: "Hayi",
-  offlineTitle: "Iyasebenza ngaphandle kwe-intanethi emva kovumelaniso lokuqala",
-  offlineBody:
-    "Khangela imisebenzi egciniweyo uqhubeke noluhlu lwemibuzo ngaphandle kwesignali. Izintandokazi neziphumo zigcinwa kwisixhobo zize zivumelaniswe xa uphinda uqhagamshelana.",
-  startExploring: "Qala Ukuhlola / Qala",
-  startExploringSub: "Vula iindlela zokufunda ezilungiselelwe wena",
-  continueAsGuest: "Qhubeka njengendwendwe",
-  quote:
-    "Imfundo sesona sixhobo sinamandla ungasebenzisa ukutshintsha ihlabathi.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "Ayikwazi ukugcina iinkcukacha zeprofayile yakho.",
-  guestError: "Imowudi yendwendwe ayifumaneki.",
-  roles: {
-    grade10: {
-      label: "Umfundi Webanga le-10",
-      description: "Ukukhetha izifundo nomkhakha wesixa esizayo",
-    },
-    grade11: {
-      label: "Umfundi Webanga le-11",
-      description: "Ibhenchimakhi yezikhungo eziphakamileyo ne-TVET",
-    },
-    grade12: {
-      label: "Umfundi Webanga le-12",
-      description: "Ukulungiselela iMatric, i-CAO ne-NSFAS",
-    },
-    below_grade10: {
-      label: "Ngaphantsi Kwebanga le-10",
-      description: "Isiqondiso sesigaba esiphakamileyo nokufikelela i-TVET",
-    },
-    tertiary: {
-      label: "Umfundi (Ephakamileyo / TVET)",
-      description: "Iikholeji, imisebenzi yezandla neediploma",
-    },
-    work_seeker: {
-      label: "Ofuna Umsebenzi",
-      description: "Ukuphucula izakhono, ukufunda komsebenzi nemisebenzi",
-    },
-    parent: {
-      label: "Umzali / Umgcini",
-      description: "Xhasa uhambo lomfundi lomsebenzi",
-    },
-    teacher: {
-      label: "Utitshala / Umfundisi we-LO",
-      description: "Khokela abafundi ngezixhobo zeklasi",
-    },
-    practitioner: {
-      label: "Ingcali Yomsebenzi",
-      description: "Umcebisi we-CDS nenkxaso",
-    },
-  },
-  disabilityCategories: {
+  disabilities: {
     visual: "Ukubona",
     hearing: "Ukuva",
     physical: "Umzimba",
-    learning: "Ukufunda",
+    learning: "Ukufunda"
   },
-};
-
-const nr: OnboardingStrings = {
-  ...zu,
-  republicLabel: "IRIPHABHULIKHI YASENINGIZIMU AFRIKA",
-  heroTitle: "Siyakwamukela ku-Khetha NCAP",
-  whoAreYou: "Ungubani? (Khetha indima yakho yamanje)",
-  yes: "Yebo",
-  no: "Awa",
+  offlineTitle: "Iyasebenza ngaphandle kwe-intanethi emva kokuvumelanisa kokuqala",
+  offlineBody: "Khangela imisebenzi egciniweyo uqhubeke neemibuzo ngaphandle kwesignali. Izinto ozithandayo neziphumo zigcinwa kwisixhobo kwaye zivumelaniswa xa uphinda uqhagamshela.",
   startExploring: "Qala Ukuhlola / Qala",
-  continueAsGuest: "Qhubeka njengesimenywa",
-  saveError: "Ayikghani ukulondoloza imininingwane yephrofayili yakho.",
-  guestError: "Imodi yesimenywa ayitholakali.",
-  roles: {
-    ...zu.roles,
-    grade10: {
-      label: "Umfundi Webanga 10",
-      description: "Ukukhetha izifundo nomkhakha wesikhathi esizako",
-    },
-  },
-};
-
-const ss: OnboardingStrings = {
-  ...zu,
-  republicLabel: "UMBUTFO WASENINGIZIMU AFRIKA",
-  heroTitle: "Siyakwemukela ku-Khetha NCAP",
-  whoAreYou: "Ungubani? (Khetsa indima yakho yamanje)",
-  yes: "Yebo",
-  no: "Cha",
-  startExploring: "Cala Kuhlola / Qala",
-  continueAsGuest: "Chubeka njengesimenyiwa",
-  saveError: "Ayikwati kulondoloza imininingwane yephrofayili yakho.",
-  guestError: "Imodi yesimenyiwa ayitholakali.",
-  roles: {
-    grade10: {
-      label: "Umfundi Webanga 10",
-      description: "Kukhetsa tifundvo nemkhakha wesikhatsi lesitako",
-    },
-    grade11: {
-      label: "Umfundi Webanga 11",
-      description: "Ibhenchimakhi yetikhungo letiphakeme ne-TVET",
-    },
-    grade12: {
-      label: "Umfundi Webanga 12",
-      description: "Kulungiselela iMatric, i-CAO ne-NSFAS",
-    },
-    below_grade10: {
-      label: "Ngaphansi Kwebanga 10",
-      description: "Sicondziso sesigaba lesiphakeme nekufinyelela i-TVET",
-    },
-    tertiary: {
-      label: "Umfundi (Lephakeme / TVET)",
-      description: "Emakolishi, imisebenti yezandla namadiploma",
-    },
-    work_seeker: {
-      label: "Lofuna Umsebenti",
-      description: "Kutfutfukisa emakhono, kufundza umsebenti nemisebenti",
-    },
-    parent: {
-      label: "Umzal' / Umlondvoli",
-      description: "Sekela luhambo lomfundi lomsebenti",
-    },
-    teacher: {
-      label: "Uthisha / Umfundisi we-LO",
-      description: "Condza bafundzi ngematuluzi ekilasini",
-    },
-    practitioner: {
-      label: "Uchwepheshe Wemsebenti",
-      description: "Umeluleki we-CDS nekusekela",
-    },
-  },
+  startExploringSub: "Vula iindlela zokufunda ezenzelwe wena",
+  continueGuest: "Qhubeka njengoNdwendwe",
+  quote: "Imfundo sesona sixhobo sinamandla onokusebenzisa ngaso ukutshintsha ihlabathi.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "Ayikwazanga ukugcina iinkcukacha zeprofayile yakho.",
+  errorGuest: "Imowudi yondwendwe ayifumaneki."
 };
 
 const nso: OnboardingStrings = {
-  republicLabel: "REPHABLIKI YA AFRIKA BORWA",
+  govLabel: "REPHABLIKI YA AFRIKA BORWA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Phothale ye e sa Lefišego Datha",
-  heroKicker: "PHOTHALE YA BOSETŠHABA YA KELETŠO YA MOŠOMO",
+  zeroRated: "Photale ya Zero-Rated",
+  heroKicker: "PHOTALE YA NAGA YA KELETŠO YA MOŠOMO",
   heroTitle: "O amogetšwe go Khetha NCAP",
-  heroBody: "Hle tlatša ka fase bakeng sa dipalopalo le tšhupetšo ye e ikgethilego.",
+  heroBody: "Hle tlatša ka fase bakeng sa dipalo le keletšo ye e dirilwego ka wena.",
   whoAreYou: "O mang? (Kgetha karolo ya gago ya bjale)",
   required: "E a nyakega",
-  disabilityStatus: "Maemo a Bogole",
-  disabilityQuestion: "Na o motho yo a phelago le bogole?",
-  yes: "Ee",
-  no: "Aowa",
-  offlineTitle: "E šoma ntle le inthanete ka morago ga go nyalantšha ga mathomo",
-  offlineBody:
-    "Phetla mešomo ye e bolokilwego o tšwele pele ka mananeo a dipotšišo ntle le signal. Ditabatabelo le dipoelo di bolokwa sedirišweng gomme di nyalantšhwa ge o kgokaganya gape.",
-  startExploring: "Thoma go Nyakišiša / Qala",
-  startExploringSub: "Bula ditsela tša thuto tše di ikgethilego",
-  continueAsGuest: "Tšwela pele bjalo ka Moeng",
-  quote:
-    "Thuto ke sebetsa se maatla kudu seo o ka se dirišago go fetola lefase.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "Ga se ya kgona go boloka dintlha tša profili ya gago.",
-  guestError: "Mokgwa wa moeng ga o hwetšagale.",
   roles: {
     grade10: {
       label: "Moithuti wa Mphato wa 10",
-      description: "Kgetho ya dithuto le ntshelete ya thuto ya ka moso",
+      description: "Kgetho ya dithuto le tsela ya thuto ya ka moso"
     },
     grade11: {
       label: "Moithuti wa Mphato wa 11",
-      description: "Tekanyo ya thuto ye e phagamego le TVET",
+      description: "Tekanyo ya pele ya tertiary le TVET"
     },
     grade12: {
       label: "Moithuti wa Mphato wa 12",
-      description: "Iphaparatšo ya Matric, CAO le NSFAS",
+      description: "Ithokišetšo ya matekene, CAO & NSFAS"
     },
     below_grade10: {
       label: "Ka fase ga Mphato wa 10",
-      description: "Tšhupetšo ya kgato ye e phagamego le phihlelelo ya TVET",
+      description: "Keletšo ya kgato e phagamego le go fihlelela TVET"
     },
     tertiary: {
-      label: "Moithuti (Phagamego / TVET)",
-      description: "Dikholetšhe, mešomo ya diatla le diploma",
+      label: "Moithuti (Tertiary / TVET)",
+      description: "Dikholetšhe, mešomo ya botsebi le diploma"
     },
     work_seeker: {
-      label: "Monyakišiši wa Mošomo",
-      description: "Go kaonafatša bokgoni, dithuto tša mošomo le mešomo",
+      label: "Monyakišiši wa mošomo",
+      description: "Go kaonafatša mabokgoni, go ithuta le mešomo"
     },
     parent: {
       label: "Motswadi / Mohlokomedi",
-      description: "Thekga leeto la moithuti la mošomo",
+      description: "Go hlahla baswa ka ditsela tša mošomo"
     },
     teacher: {
-      label: "Morutiši / Morutiši wa LO",
-      description: "Hlahla baithuti ka didirišwa tša phapošong",
+      label: "Morutiši wa keletšo ya mošomo",
+      description: "Life Orientation le didirišwa tša phapošaborutelo"
     },
     practitioner: {
-      label: "Setsebi sa Mošomo",
-      description: "Moeletši wa CDS le thekgo",
-    },
+      label: "Setsebi sa mošomo",
+      description: "Didirišwa tša go hlahloba tša keletšo"
+    }
   },
-  disabilityCategories: {
+  disabilityStatus: "Maemo a Bogole",
+  disabilityQuestion: "Na o motho yo a phelago ka bogole?",
+  yes: "Ee",
+  no: "Aowa",
+  disabilities: {
     visual: "Go bona",
     hearing: "Go kwa",
     physical: "Mmele",
-    learning: "Go ithuta",
+    learning: "Go ithuta"
   },
-};
-
-const st: OnboardingStrings = {
-  ...nso,
-  republicLabel: "REPHABLIKI EA AFRIKA BOROA",
-  heroTitle: "U amohetsoe ho Khetha NCAP",
-  whoAreYou: "U mang? (Khetha karolo ea hau ea hona joale)",
-  yes: "E",
-  no: "Che",
-  startExploring: "Qala ho Hlahloba / Qala",
-  continueAsGuest: "Tsoela pele joalo ka Moeti",
-  saveError: "Ha ea khona ho boloka lintlha tsa profili ea hau.",
-  guestError: "Mokhoa oa moeti ha o fumanehe.",
-  roles: {
-    grade10: {
-      label: "Moithuti oa Sehlopha sa 10",
-      description: "Khetho ea lithuto le tsela ea thuto ea ka moso",
-    },
-    grade11: {
-      label: "Moithuti oa Sehlopha sa 11",
-      description: "Tekanyo ea thuto e phahameng le TVET",
-    },
-    grade12: {
-      label: "Moithuti oa Sehlopha sa 12",
-      description: "Tokisetso ea Matric, CAO le NSFAS",
-    },
-    below_grade10: {
-      label: "Ka tlase ho Sehlopha sa 10",
-      description: "Tataiso ea mohato o phahameng le phihlello ea TVET",
-    },
-    tertiary: {
-      label: "Moithuti (E phahameng / TVET)",
-      description: "Likoleche, mesebetsi ea matsoho le diploma",
-    },
-    work_seeker: {
-      label: "Monyakišiši oa Mosebetsi",
-      description: "Ho ntlafatsa bokhoni, lithuto tsa mosebetsi le mesebetsi",
-    },
-    parent: {
-      label: "Motsoali / Mohlokomeli",
-      description: "Tšehetsa leeto la moithuti la mosebetsi",
-    },
-    teacher: {
-      label: "Mosuoe / Mosuoe oa LO",
-      description: "Tataisa baithuti ka lisebelisoa tsa ka sehlopheng",
-    },
-    practitioner: {
-      label: "Setsebi sa Mosebetsi",
-      description: "Moeletsi oa CDS le tšehetso",
-    },
-  },
-  disabilityCategories: {
-    visual: "Ho bona",
-    hearing: "Ho utloa",
-    physical: "'Mele",
-    learning: "Ho ithuta",
-  },
-};
-
-const tn: OnboardingStrings = {
-  ...nso,
-  republicLabel: "REPHABOLIKI YA AFRIKA BORWA",
-  heroTitle: "O amogetswe go Khetha NCAP",
-  whoAreYou: "O mang? (Tlhopha karolo ya gago ya jaanong)",
-  yes: "Ee",
-  no: "Nnyaa",
-  startExploring: "Simolola go Batlisisa / Qala",
-  continueAsGuest: "Tswelela jaaka Moeng",
-  saveError: "Ga e a kgona go boloka dintlha tsa profili ya gago.",
-  guestError: "Mokgwa wa moeng ga o bonale.",
-  roles: {
-    grade10: {
-      label: "Moithuti wa Mphato wa 10",
-      description: "Tlhopho ya dithuto le tsela ya thuto ya isago",
-    },
-    grade11: {
-      label: "Moithuti wa Mphato wa 11",
-      description: "Tekanyo ya thuto e e phagameng le TVET",
-    },
-    grade12: {
-      label: "Moithuti wa Mphato wa 12",
-      description: "Iphaparatšo ya Matric, CAO le NSFAS",
-    },
-    below_grade10: {
-      label: "Ka fa tlase ga Mphato wa 10",
-      description: "Tshupiso ya kgato e e phagameng le phitlhelelo ya TVET",
-    },
-    tertiary: {
-      label: "Moithuti (E e Phagameng / TVET)",
-      description: "Dikholetšhe, ditiro tsa diatla le diploma",
-    },
-    work_seeker: {
-      label: "Monyakišiši wa Tiro",
-      description: "Go tokafatsa bokgoni, dithuto tsa tiro le ditiro",
-    },
-    parent: {
-      label: "Motswadi / Mothokomedi",
-      description: "Tshegetsa loeto lwa moithuti lwa tiro",
-    },
-    teacher: {
-      label: "Morutabana / Morutabana wa LO",
-      description: "Kaela baithuti ka didiriswa tsa phaposing",
-    },
-    practitioner: {
-      label: "Setsebi sa Tiro",
-      description: "Moeletši wa CDS le tshegetso",
-    },
-  },
-  disabilityCategories: {
-    visual: "Go bona",
-    hearing: "Go utlwa",
-    physical: "Mmele",
-    learning: "Go ithuta",
-  },
+  offlineTitle: "E šoma ntle le inthanete ka morago ga go swanya la mathomo",
+  offlineBody: "Hlahloba mešomo ye e bolokilwego o tšwele pele ka dipotšišo ntle le signal. Dilokwa le dipoelo di bolokwa sedirišweng gomme di swanywa ge o kgokaganya gape.",
+  startExploring: "Thoma go Hlahloba / Qala",
+  startExploringSub: "Bula ditsela tša thuto tše di dirilwego ka wena",
+  continueGuest: "Tšwela pele bjalo ka Moeng",
+  quote: "Thuto ke sebetsa se maatla kudu seo o ka se šomišago go fetoša lefase.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "Ga se ya kgona go boloka dintlha tša profaele ya gago.",
+  errorGuest: "Mokgwa wa moeng ga o hwetšagale."
 };
 
 const ve: OnboardingStrings = {
-  republicLabel: "RIPHABULIKI YA AFRIKA TSHEMBE",
+  govLabel: "RIPHABULIKI YA AFRIKA TSHIPEMBE",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Portal i sa Badeliho Datha",
-  heroKicker: "PORTAL YA LUSHAKA YA NḒIVHADZO YA MUSHUMO",
-  heroTitle: "Ni tendelwa kha Khetha NCAP",
-  heroBody: "Ni khou humbela u ḓadzisa fhasi u itela statistics na tshumisano yo ḓoweledzwaho.",
-  whoAreYou: "Ni nnyi? (Nangani mushumo wanu wa zwino)",
-  required: "Zwi a tea",
-  disabilityStatus: "Tshiimo tsha Vhukololo",
-  disabilityQuestion: "Naa ni muthu a tshi tshila na vhukololo?",
-  yes: "Ee",
-  no: "Hai",
-  offlineTitle: "I a shuma nnda ha inthanethe nga murahu ha u khwinisa ha u thoma",
-  offlineBody:
-    "Vhalani mishumo yo vhulungwaho ni bvele phanda nga miṅwalo ya mbudziso nnda ha signal. Zwo funwaho na mvelelo zwi vhulungwa kha tshishumiswa zwa khwiniswa musi ni tshi vhuedzedza u ṱumanya.",
-  startExploring: "Thomani u Ṱolisa / Qala",
-  startExploringSub: "Vulani nḓila dza u guda dzo ḓoweledzwaho",
-  continueAsGuest: "Bvelani phanda sa Mueni",
-  quote:
-    "Pfunzo ndi tshibetsa tshine tsha vha na maanḓa vhukuma tshine na nga tshi shumisa u shandukisa shango.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "A yo ngo kona u vhulunga zwidodombedzwa zwa profili yanu.",
-  guestError: "Modi ya mueni a i wanali.",
+  zeroRated: "Photale ya Zero-Rated",
+  heroKicker: "PHOTALE YA LUSHAKA YA NDAEDZO YA MUSHUMO",
+  heroTitle: "No tanganedzwa kha Khetha NCAP",
+  heroBody: "Ni khou humbela u ḓadzisa fhasi u itela nomboro na ndaedzo yo itelwaho inwi.",
+  whoAreYou: "Ni nnyi? (Nangani tshimo tshanu tsha zwino)",
+  required: "Zwi a ṱoḓea",
   roles: {
     grade10: {
-      label: "Mugudi wa Gireidi 10",
-      description: "U nanga thero na muhasho wa tshifhinga tshi ḓaho",
+      label: "Mugudi wa Gireidi ya 10",
+      description: "U nanga zwiguda na ndila ya u guda ya tshifhinga tshi ḓaho"
     },
     grade11: {
-      label: "Mugudi wa Gireidi 11",
-      description: "Tshiṱaluli tsha pfunzo ya nṱha na TVET",
+      label: "Mugudi wa Gireidi ya 11",
+      description: "Mulinganyo wa u thoma wa tertiary na TVET"
     },
     grade12: {
-      label: "Mugudi wa Gireidi 12",
-      description: "U lugisela Matric, CAO na NSFAS",
+      label: "Mugudi wa Gireidi ya 12",
+      description: "U lugisela matric, CAO & NSFAS"
     },
     below_grade10: {
-      label: "Fhasi ha Gireidi 10",
-      description: "Tshumisano ya tshiṅwe tshiṱaluli na u swikelela TVET",
+      label: "Fhasi ha Gireidi ya 10",
+      description: "Ndaedzo ya tshiteṅwa tsho phakamaho na u swikelela TVET"
     },
     tertiary: {
-      label: "Mugudi (Nṱha / TVET)",
-      description: "Zwikolo, mishumo ya zwanda na diploma",
+      label: "Mugudi (Tertiary / TVET)",
+      description: "Kholetshi, mishumo ya vhufundi na diploma"
     },
     work_seeker: {
-      label: "Muṱoḓi wa Mushumo",
-      description: "U khwinisa vhukoni, u guda mushumo na mishumo",
+      label: "Muṱoḓi wa mushumo",
+      description: "U khwinisa vhukoni, u guda na mishumo"
     },
     parent: {
-      label: "Mubebi / Mulindeli",
-      description: "Tikedzani luendo lwa mugudi lwa mushumo",
+      label: "Mubebi / Mulindi",
+      description: "U ḓivhadza vhaswa nga ndila dza mushumo"
     },
     teacher: {
-      label: "Mudededzi / Mudededzi wa LO",
-      description: "Khokhedzani vhagudi nga zwishumiswa zwa kilasini",
+      label: "Mudededzi wa ndaedzo ya mushumo",
+      description: "Life Orientation na zwishumiswa zwa kilasi"
     },
     practitioner: {
-      label: "Muṅwe wa Mushumo",
-      description: "Muéeletshedzi wa CDS na thuso",
-    },
+      label: "Mudinganyi wa mushumo",
+      description: "Zwishumiswa zwa u sedzulusa zwa ndaedzo"
+    }
   },
-  disabilityCategories: {
+  disabilityStatus: "Tshimo tsha Vhukundi",
+  disabilityQuestion: "Ni muthu ane a tshi tshila nga vhukundi?",
+  yes: "Ee",
+  no: "Hai",
+  disabilities: {
     visual: "U vhona",
     hearing: "U pfa",
     physical: "Muvhili",
-    learning: "U guda",
+    learning: "U guda"
   },
+  offlineTitle: "I shuma nnda ha inthanethe nga murahu ha u swanya ha u thoma",
+  offlineBody: "Ṱolani mishumo yo vhulungiwaho ni bvele phanda nga mibudziso nnda ha signal. Zwi funwaho na mvelelo zwi vhulungwa kha tshishumiswa nahone zwi swanywa musi ni tshi vhuedzedza.",
+  startExploring: "Thomani u Ṱola / Qala",
+  startExploringSub: "Vulani ndila dza u guda dzo itelwaho inwi",
+  continueGuest: "Bvelani phanda sa Mueni",
+  quote: "Pfunzo ndi tshishumiswa tshine tsha vha na maanḓa u fhira zwoṱhe zwine na nga shumisa ngatsho u shandukisa shango.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "A zwo ngo kona u vhulunga zwidodombedzwa zwa phrofaule yanu.",
+  errorGuest: "Modu ya mueni a i wanali."
 };
 
 const ts: OnboardingStrings = {
-  republicLabel: "RIPHABULIKI YA AFRIKA DZONGA",
+  govLabel: "RIPHABULIKI YA AFRIKA DZONGA",
   govSub: "DHET · Khetha NCAP",
-  zeroRatedPortal: "Portal leyi nga Hakeliki Datha",
-  heroKicker: "PORTAL YA RIXAKA YA SWITSUNDZUXO SWA NTIRHO",
+  zeroRated: "Photale ya Zero-Rated",
+  heroKicker: "PHOTALE YA RIXAKA YA NDZIVISO YA NTIRHO",
   heroTitle: "U amukeriwile eka Khetha NCAP",
-  heroBody: "Hi kombela u tatisa ehansi eka tinhlayo na xikombiso lexi hlawuriweke.",
-  whoAreYou: "U mani? (Hlawula ntirho wa wena wa sweswi)",
-  required: "Swa laveka",
-  disabilityStatus: "Xiyimo xa Vutsoniwa",
-  disabilityQuestion: "Xana u munhu loyi a hanya na vutsoniwa?",
-  yes: "Ina",
-  no: "E-e",
-  offlineTitle: "Yi tirha handle ka inthanete endzhaku ka ku fambisanisa ka sungula",
-  offlineBody:
-    "Hlaya mintirho leyi hlayisiweke u yisa emahlweni nxaxamelo wa swivutiso handle ka signal. Swo rhandza na mbuyelo swi hlayisiwa eka xitirhisiwa swi fambisanisiwa loko u tlhela u khoma.",
-  startExploring: "Sungula ku Lavisisa / Qala",
-  startExploringSub: "Pfula tindlela ta dyondzo leti hlawuriweke",
-  continueAsGuest: "Yisa emahlweni tanihi Muendzi",
-  quote:
-    "Dyondzo i xitlhangu lexi nga ni matimba swinene lexi u nga xi tirhisaka ku cinca misava.",
-  quoteAttr: "— Nelson Rolihlahla Mandela —",
-  saveError: "A yi swi kotanga ku hlayisa vuxokoxoko bya profili ya wena.",
-  guestError: "Modi ya muendzi a yi kumeki.",
+  heroBody: "Hi kombela u tata laha hansi leswaku u kuma tinomboro na ndziviso leyi endleriweke wena.",
+  whoAreYou: "U mani? (Hlawula xiyimo xa wena xa sweswi)",
+  required: "Ya laveka",
   roles: {
     grade10: {
-      label: "Mudyondzi wa Gireidi 10",
-      description: "Ku hlawula tidyondzo na ndlela ya dyondzo ya nkarhi lowu taka",
+      label: "Mudyondzi wa Gireyi ya 10",
+      description: "Ku hlawula swidyondzo na ndlela yo dyondza ya nkarhi lowu taka"
     },
     grade11: {
-      label: "Mudyondzi wa Gireidi 11",
-      description: "Xipimo xa dyondzo ya le henhla na TVET",
+      label: "Mudyondzi wa Gireyi ya 11",
+      description: "Mpimo wo sungula wa tertiary na TVET"
     },
     grade12: {
-      label: "Mudyondzi wa Gireidi 12",
-      description: "Ku lulungisela Matric, CAO na NSFAS",
+      label: "Mudyondzi wa Gireyi ya 12",
+      description: "Ku lulamisa matric, CAO & NSFAS"
     },
     below_grade10: {
-      label: "Ehansi ka Gireidi 10",
-      description: "Xikombiso xa xiyimo xa le henhla na ku fikelela TVET",
+      label: "Ehansi ka Gireyi ya 10",
+      description: "Ndziviso ya xiyenge xa le henhla na ku fikelela TVET"
     },
     tertiary: {
-      label: "Mudyondzi (Le Henhla / TVET)",
-      description: "Tikholeji, mintirho ya mavoko na tidiploma",
+      label: "Mudyondzi (Tertiary / TVET)",
+      description: "Tikholeji, mintirho ya vutshila na tidiploma"
     },
     work_seeker: {
-      label: "Mulavisisi wa Ntirho",
-      description: "Ku antswisa vuswikoti, dyondzo ya ntirho na mintirho",
+      label: "Mulavi wa ntirho",
+      description: "Ku antswisa vuswikoti, ku dyondza na mintirho"
     },
     parent: {
-      label: "Mutswari / Muhlayisi",
-      description: "Sekela rendzo ra mudyondzi ra ntirho",
+      label: "Mutswari / Mulondzovoti",
+      description: "Ku kongomisa vahluvukisi hi tindlela ta ntirho"
     },
     teacher: {
-      label: "Mudyondzisi / Mudyondzisi wa LO",
-      description: "Kongomisa vadyondzi hi switirho swa ekilasini",
+      label: "Mudyondzisi wa ndziviso ya ntirho",
+      description: "Life Orientation na switirhisiwa swa kilasi"
     },
     practitioner: {
-      label: "Xiyimo xa Ntirho",
-      description: "Muéletsi wa CDS na nseketelo",
-    },
+      label: "Mucekeli wa ntirho",
+      description: "Switirhisiwa swo kambela swa ndziviso"
+    }
   },
-  disabilityCategories: {
+  disabilityStatus: "Xiyimo xa Vusweti",
+  disabilityQuestion: "Xana u munhu loyi a hanya hi vusweti?",
+  yes: "Ina",
+  no: "E-e",
+  disabilities: {
     visual: "Ku vona",
     hearing: "Ku twa",
-    physical: "Miri",
-    learning: "Ku dyondza",
+    physical: "Mirhi",
+    learning: "Ku dyondza"
   },
+  offlineTitle: "Yi tirha handle ka inthanete endzhaku ka ku synca ka sungula",
+  offlineBody: "Lava mintirho leyi hlayisiweke u yisa emahlweni hi swivutiso handle ka signal. Swi rhandziwa na mbuyelo swi hlayisiwa eka xitirhisiwa naswona swi synca loko u khomisa nakambe.",
+  startExploring: "Sungula ku Lava / Qala",
+  startExploringSub: "Pfula tindlela to dyondza leti endleriweke wena",
+  continueGuest: "Yisa emahlweni tanihi Muendzi",
+  quote: "Dyondzo i xitirho xa matimba swinene lexi u nga xi tirhisaka ku cinca misava.",
+  quoteAttr: "— Nelson Rolihlahla Mandela —",
+  errorSave: "A swi kotanga ku hlayisa vuxokoxoko bya phurofayile ya wena.",
+  errorGuest: "Modu ya muendzi a yi kumi."
 };
 
-const ONBOARDING_I18N = createBundle<OnboardingStrings>({
-  en,
-  af,
-  zu,
-  xh,
-  nr,
-  ss,
-  nso,
-  st,
-  tn,
-  ve,
-  ts,
-});
+
+const BUNDLE = expandSaLocales({ en, af, zu, xh, nso, ve, ts });
 
 export function getOnboardingStrings(
   locale: string | null | undefined,
 ): OnboardingStrings {
-  return ONBOARDING_I18N[resolveLocale(locale)];
+  return BUNDLE[resolveLocale(locale)];
 }

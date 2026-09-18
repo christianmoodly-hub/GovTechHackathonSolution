@@ -21,6 +21,12 @@ providers/{urlHash}
   Doc ID: stable hash of canonical provider URL
   Fields mirror Provider
 
+bursaries/{urlHash}
+  Source: output/bursaries.json
+  Doc ID: stable hash of canonical bursary URL
+  Fields mirror BursaryDetail (camelCase), plus:
+    closingSortKey: string  # closingDateIso or "9999-12-31" for sort
+
 profiles/{authUid}
   Created by the app on first sign-in (not seeded).
   Fields:
@@ -44,12 +50,14 @@ from typing import Any, Dict, List, Optional
 OCCUPATIONS = "occupations"
 QUALIFICATIONS = "qualifications"
 PROVIDERS = "providers"
+BURSARIES = "bursaries"
 PROFILES = "profiles"
 
 # Expected seed counts (QA targets)
 EXPECTED_OCCUPATIONS = 1432
 EXPECTED_QUALIFICATIONS = 705
 EXPECTED_PROVIDERS = 89
+EXPECTED_BURSARIES = 1141
 
 
 def profile_schema_example(uid: str) -> Dict[str, Any]:

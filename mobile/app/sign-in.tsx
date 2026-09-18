@@ -18,6 +18,7 @@ import { AuthHeader } from "../components/auth/AuthHeader";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { colors, layout, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
 
@@ -26,14 +27,10 @@ const tvetImg = require("../assets/auth/feature-tvet.jpg");
 
 type Method = "sa_id" | "mobile_email" | "passport";
 
-const METHODS: { id: Method; label: string; icon: string }[] = [
-  { id: "sa_id", label: "SA ID", icon: "badge" },
-  { id: "mobile_email", label: "Mobile / Email", icon: "contact_phone" },
-  { id: "passport", label: "Passport /\nRefugee", icon: "flight" },
-];
-
 export default function SignInScreen() {
   const router = useRouter();
+  const { strings } = useLocale();
+  const t = strings.auth;
   const {
     signInWithPassword,
     sendSignInLink,
@@ -54,45 +51,57 @@ export default function SignInScreen() {
 
   const message = localError || error;
 
+  const METHODS = useMemo(
+    () =>
+      [
+        { id: "sa_id" as const, label: t.methodSaId, icon: "badge" },
+        {
+          id: "mobile_email" as const,
+          label: t.methodMobileEmail,
+          icon: "contact_phone",
+        },
+        { id: "passport" as const, label: t.methodPassport, icon: "flight" },
+      ] as const,
+    [t.methodSaId, t.methodMobileEmail, t.methodPassport],
+  );
+
   const fieldMeta = useMemo(() => {
     if (method === "sa_id") {
       return {
-        label: "South African ID Number",
-        trailing: "13 Digits",
-        placeholder: "e.g. 050112 5089 088",
-        hint: "Official 13-digit identity number as recorded in the National Population Register.",
+        label: t.saIdLabel,
+        trailing: t.saIdTrailing,
+        placeholder: t.saIdPlaceholder,
+        hint: t.saIdHint,
         keyboardType: "number-pad" as const,
         icon: "pin",
       };
     }
     if (method === "passport") {
       return {
-        label: "Passport / Refugee Document",
-        trailing: "Alphanumeric",
-        placeholder: "e.g. A01234567 or DHA-No",
-        hint: "Provide your valid Home Affairs-recognized foreign passport or asylum permit number.",
+        label: t.passportLabel,
+        trailing: t.passportTrailing,
+        placeholder: t.passportPlaceholder,
+        hint: t.passportHint,
         keyboardType: "default" as const,
         icon: "badge",
       };
     }
     return {
-      label: "Mobile Phone Number or Email",
-      trailing: "Registered",
-      placeholder: "e.g. 072 123 4567 or you@email.com",
-      hint: "Enter the cellular number or email address linked to your Khetha profile.",
+      label: t.mobileEmailLabel,
+      trailing: t.mobileEmailTrailing,
+      placeholder: t.mobileEmailPlaceholder,
+      hint: t.mobileEmailHint,
       keyboardType: "email-address" as const,
       icon: "contact_phone",
     };
-  }, [method]);
+  }, [method, t]);
 
   const onSignIn = async () => {
     setLocalError(null);
     clearError();
 
     if (method !== "mobile_email") {
-      setLocalError(
-        "SA ID and Passport sign-in UI matches the design. Switch to Mobile / Email for live Firebase auth.",
-      );
+      setLocalError(t.errSaIdPassportUi);
       return;
     }
 
@@ -100,7 +109,7 @@ export default function SignInScreen() {
     try {
       await signInWithPassword(identifier, password);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Could not sign in.");
+      setLocalError(err instanceof Error ? err.message : t.errCouldNotSignIn);
     } finally {
       setBusy(false);
     }
@@ -110,7 +119,7 @@ export default function SignInScreen() {
     setLocalError(null);
     clearError();
     if (method !== "mobile_email") {
-      setLocalError("One-time email / OTP sign-in works from the Mobile / Email tab.");
+      setLocalError(t.errOtpTab);
       return;
     }
     setBusy(true);
@@ -119,7 +128,7 @@ export default function SignInScreen() {
       setLinkSentTo(identifier.trim().toLowerCase());
     } catch (err) {
       setLocalError(
-        err instanceof Error ? err.message : "Could not send sign-in link.",
+        err instanceof Error ? err.message : t.errCouldNotSendLink,
       );
     } finally {
       setBusy(false);
@@ -133,7 +142,7 @@ export default function SignInScreen() {
     try {
       await continueAsGuest();
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Guest mode failed.");
+      setLocalError(err instanceof Error ? err.message : t.errGuestFailed);
     } finally {
       setBusy(false);
     }
@@ -141,7 +150,7 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <AuthHeader title="Sign In" showBack={false} />
+      <AuthHeader title={t.signInTitle} showBack={false} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -157,12 +166,12 @@ export default function SignInScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.ssoTitle} numberOfLines={1}>
-                  Official DHET Single Sign-On
+                  {t.ssoTitle}
                 </Text>
                 <View style={styles.ssoSubRow}>
                   <View style={styles.pulse} />
                   <Text style={styles.ssoSub} numberOfLines={1}>
-                    Zero-Rated (No Data or Airtime Needed)
+                    {t.ssoSub}
                   </Text>
                 </View>
               </View>
@@ -171,15 +180,12 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.intro}>
-            <Text style={styles.headline}>Sign In to Khetha NCAP</Text>
-            <Text style={styles.subtitle}>
-              Access your saved questionnaires, APS calculations, bursary applications,
-              and DHET career vault.
-            </Text>
+            <Text style={styles.headline}>{t.headline}</Text>
+            <Text style={styles.subtitle}>{t.subtitle}</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.methodLabel}>Choose Sign-In Method</Text>
+            <Text style={styles.methodLabel}>{t.chooseMethod}</Text>
             <View style={styles.methodTrack}>
               {METHODS.map((item) => {
                 const on = method === item.id;
@@ -207,13 +213,14 @@ export default function SignInScreen() {
 
             {linkSentTo ? (
               <View style={styles.linkSent}>
-                <Text style={styles.linkSentTitle}>Check your inbox</Text>
+                <Text style={styles.linkSentTitle}>{t.checkInbox}</Text>
                 <Text style={styles.subtitle}>
-                  A one-tap sign-in link was sent to{" "}
-                  <Text style={styles.emphasis}>{linkSentTo}</Text>. Open it on this device.
+                  {t.linkSentPrefix}{" "}
+                  <Text style={styles.emphasis}>{linkSentTo}</Text>
+                  {t.linkSentSuffix}
                 </Text>
                 <Pressable onPress={() => setLinkSentTo(null)}>
-                  <Text style={styles.forgot}>Use a different email</Text>
+                  <Text style={styles.forgot}>{t.useDifferentEmail}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -234,14 +241,14 @@ export default function SignInScreen() {
 
                 <View>
                   <View style={styles.labelRow}>
-                    <Text style={styles.fieldLabel}>Password or 5-Digit PIN</Text>
+                    <Text style={styles.fieldLabel}>{t.passwordLabel}</Text>
                     <Pressable onPress={() => router.push(href("/recover"))}>
-                      <Text style={styles.forgot}>Forgot?</Text>
+                      <Text style={styles.forgot}>{t.forgot}</Text>
                     </Pressable>
                   </View>
                   <AuthField
                     leadingIcon="lock"
-                    placeholder="Enter password or PIN"
+                    placeholder={t.passwordPlaceholder}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -251,7 +258,7 @@ export default function SignInScreen() {
                     trailing={
                       <Pressable
                         onPress={() => setShowPassword((v) => !v)}
-                        accessibilityLabel="Toggle password visibility"
+                        accessibilityLabel={t.togglePasswordA11y}
                         hitSlop={8}
                       >
                         <MaterialIcon
@@ -267,8 +274,8 @@ export default function SignInScreen() {
                 <AuthCheckbox
                   checked={rememberDevice}
                   onToggle={() => setRememberDevice((v) => !v)}
-                  title="Remember device for offline career access"
-                  body="Allows opening cached CVs, saved qualifications, and APS records without logging in each time."
+                  title={t.rememberTitle}
+                  body={t.rememberBody}
                 />
 
                 {message ? <Text style={styles.error}>{message}</Text> : null}
@@ -284,7 +291,7 @@ export default function SignInScreen() {
                     ) : (
                       <>
                         <MaterialIcon name="lock_open" size={20} color={colors.onPrimary} />
-                        <Text style={styles.primaryText}>Sign In to NCAP</Text>
+                        <Text style={styles.primaryText}>{t.signInCta}</Text>
                       </>
                     )}
                   </Pressable>
@@ -295,13 +302,13 @@ export default function SignInScreen() {
                   >
                     <MaterialIcon name="sms" size={20} color={colors.primary} />
                     <Text style={styles.secondaryText} numberOfLines={2}>
-                      Sign in with One-Time PIN (SMS)
+                      {t.otpCta}
                     </Text>
                   </Pressable>
 
                   <View style={styles.orRow}>
                     <View style={styles.orLine} />
-                    <Text style={styles.orText}>or</Text>
+                    <Text style={styles.orText}>{t.or}</Text>
                     <View style={styles.orLine} />
                   </View>
 
@@ -327,15 +334,15 @@ export default function SignInScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.bioTitle} numberOfLines={1}>
-                  Quick Biometric Sign-In
+                  {t.bioTitle}
                 </Text>
                 <Text style={styles.bioSub} numberOfLines={2}>
-                  Enable Fingerprint or Face ID for this device
+                  {t.bioSub}
                 </Text>
               </View>
             </View>
             <Pressable style={styles.enableBtn}>
-              <Text style={styles.enableText}>Enable</Text>
+              <Text style={styles.enableText}>{t.enable}</Text>
             </Pressable>
           </View>
 
@@ -343,36 +350,36 @@ export default function SignInScreen() {
             <ImageBackground source={vaultImg} style={styles.featureCard} imageStyle={styles.featureImg}>
               <View style={styles.featureOverlay}>
                 <Text style={styles.featureKickerGold} numberOfLines={1}>
-                  Career Vault
+                  {t.featureVaultKicker}
                 </Text>
                 <Text style={styles.featureTitle} numberOfLines={2}>
-                  Access Stored APS & Bursaries
+                  {t.featureVaultTitle}
                 </Text>
               </View>
             </ImageBackground>
             <ImageBackground source={tvetImg} style={styles.featureCard} imageStyle={styles.featureImg}>
               <View style={styles.featureOverlay}>
                 <Text style={styles.featureKickerGreen} numberOfLines={1}>
-                  TVET & Skills
+                  {t.featureTvetKicker}
                 </Text>
                 <Text style={styles.featureTitle} numberOfLines={2}>
-                  Track Your Artisan Progress
+                  {t.featureTvetTitle}
                 </Text>
               </View>
             </ImageBackground>
           </View>
 
           <View style={styles.registerBlock}>
-            <Text style={styles.registerPrompt}>Don&apos;t have a Khetha NCAP profile yet?</Text>
+            <Text style={styles.registerPrompt}>{t.registerPrompt}</Text>
             <Pressable
               style={styles.goldBtn}
               onPress={() => router.push(href("/register"))}
             >
               <MaterialIcon name="person_add" size={20} color={colors.text} />
-              <Text style={styles.goldBtnText}>Register / Create Free Account</Text>
+              <Text style={styles.goldBtnText}>{t.registerCta}</Text>
             </Pressable>
             <Text style={styles.caption}>
-              Free for all South African citizens and resident learners
+              {t.freeForCitizens}
             </Text>
           </View>
 
@@ -383,7 +390,7 @@ export default function SignInScreen() {
           >
             <MaterialIcon name="explore" size={18} color={colors.textSecondary} />
             <Text style={styles.guestText} numberOfLines={2}>
-              Continue as Guest / Explore Careers Without Signing In
+              {t.guestCta}
             </Text>
           </Pressable>
 

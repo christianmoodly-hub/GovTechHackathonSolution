@@ -25,6 +25,7 @@ import {
   HELPLINE,
 } from "../../../../data/staticContent";
 import { useConnectivity } from "../../../../contexts/ConnectivityContext";
+import { useLocale } from "../../../../contexts/LocaleContext";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { getProviderPage } from "../../../../services/ncapData";
 import {
@@ -68,6 +69,9 @@ export default function ProvidersDirectoryScreen() {
   const router = useRouter();
   const vault = useVaultStats();
   const { canSync } = useConnectivity();
+  const { strings, tabs, common } = useLocale();
+  const t = strings.directory;
+
   const [items, setItems] = useState<ProviderSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
   const [query, setQuery] = useState("");
@@ -103,7 +107,7 @@ export default function ProvidersDirectoryScreen() {
         setFromCache(page.fromCache);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to load providers",
+          err instanceof Error ? err.message : t.failedLoadProviders,
         );
       } finally {
         setLoading(false);
@@ -135,12 +139,10 @@ export default function ProvidersDirectoryScreen() {
   const runNearMe = useCallback(async () => {
     setNearMeLoading(true);
     setNearMeError(null);
-    setNearMeProgress("Getting your location…");
+    setNearMeProgress(t.nearMeGettingLocation);
     try {
       if (!canSync) {
-        setNearMeError(
-          "Near Me needs a network connection to map new campuses. Connect online once to cache locations near you.",
-        );
+        setNearMeError(t.nearMeNeedsNetwork);
         setNearMeProgress(null);
         setNearby([]);
         return;
@@ -148,9 +150,7 @@ export default function ProvidersDirectoryScreen() {
 
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
-        setNearMeError(
-          "Location permission is required to show institutions near you.",
-        );
+        setNearMeError(t.nearMePermission);
         return;
       }
 
@@ -166,33 +166,31 @@ export default function ProvidersDirectoryScreen() {
       if (!hasGoogleMapsApiKey()) {
         setNearby([]);
         setNearMeProgress(null);
-        setNearMeError(
-          "Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (Geocoding API) to rank providers by distance. You can still open Google Maps near you.",
-        );
+        setNearMeError(t.nearMeNeedsApiKey);
         return;
       }
 
       const pool = filtered.length ? filtered : items;
-      setNearMeProgress(`Mapping campuses (0/${Math.min(pool.length, NEAR_ME_GEOCODE_LIMIT)})…`);
+      setNearMeProgress(
+        t.nearMeMapping(0, Math.min(pool.length, NEAR_ME_GEOCODE_LIMIT)),
+      );
       const ranked = await rankProvidersByDistance(pool, origin, {
         limit: NEAR_ME_GEOCODE_LIMIT,
         onProgress: (done, total) => {
-          setNearMeProgress(`Mapping campuses (${done}/${total})…`);
+          setNearMeProgress(t.nearMeMapping(done, total));
         },
       });
       setNearby(ranked.slice(0, NEAR_ME_SHOW));
       setNearMeProgress(null);
     } catch (err) {
       setNearMeError(
-        err instanceof Error
-          ? err.message
-          : "Could not determine nearby providers.",
+        err instanceof Error ? err.message : t.nearMeFailed,
       );
       setNearMeProgress(null);
     } finally {
       setNearMeLoading(false);
     }
-  }, [filtered, items, canSync]);
+  }, [filtered, items, canSync, t]);
 
   useEffect(() => {
     if (viewMode === "map" && !nearby.length && !nearMeLoading && !nearMeError) {
@@ -205,7 +203,7 @@ export default function ProvidersDirectoryScreen() {
   const totalCached = Math.max(vault.providersCached, items.length);
   const typeFilters = providerTypeFilterDefs();
   const provinceShort =
-    PROVINCE_OPTIONS.find((p) => p.id === province)?.short ?? "All Provinces";
+    PROVINCE_OPTIONS.find((p) => p.id === province)?.short ?? t.allProvinces;
 
   const typeCounts = useMemo(() => {
     const counts: Record<ProviderTypeFilterId, number> = {
@@ -246,34 +244,33 @@ export default function ProvidersDirectoryScreen() {
           size={16}
           color={colors.textSecondary}
         />
-        <Text style={styles.registerText}>Official National Registry</Text>
+        <Text style={styles.registerText}>{t.providersRegister}</Text>
       </View>
 
-      <Text style={styles.title}>Learning Providers Directory</Text>
+      <Text style={styles.title}>{t.providersTitle}</Text>
       <Text style={styles.subtitle}>
-        Lapho Ungafunda Khona · {totalCached} Public Universities & TVET
-        Colleges across South Africa
+        {t.providersSubtitle} · {t.providersBody}
       </Text>
 
       <View style={styles.pillRow}>
         <View style={styles.accreditedPill}>
           <Text style={styles.accreditedText}>
-            {totalCached} Accredited Public Institutions
+            {totalCached} {t.accreditedInstitutions}
           </Text>
         </View>
         <View style={styles.zeroPill}>
           <MaterialIcon name="cell_wifi" size={14} color={colors.secondary} />
-          <Text style={styles.zeroText}>Zero-Rated</Text>
+          <Text style={styles.zeroText}>{t.zeroRated}</Text>
         </View>
       </View>
 
       <SearchField
         value={query}
         onChangeText={setQuery}
-        placeholder="Search by college name, city, town, province..."
+        placeholder={t.searchProviders}
       />
 
-      <Text style={styles.provinceLabel}>Geographic Region (All 9 Provinces)</Text>
+      <Text style={styles.provinceLabel}>{t.geographicRegion}</Text>
       <Pressable
         style={styles.provinceTrigger}
         onPress={() => setProvinceOpen(true)}
@@ -281,7 +278,7 @@ export default function ProvidersDirectoryScreen() {
         <MaterialIcon name="map" size={18} color={colors.primary} />
         <Text style={styles.provinceTriggerText} numberOfLines={1}>
           {province === "all"
-            ? "All 9 Provinces (South Africa)"
+            ? t.allProvinces
             : PROVINCE_OPTIONS.find((p) => p.id === province)?.label}
         </Text>
         <MaterialIcon
@@ -339,8 +336,8 @@ export default function ProvidersDirectoryScreen() {
         <View style={styles.resultsLeft}>
           <MaterialIcon name="verified" size={16} color={colors.primary} />
           <Text style={styles.resultsText}>
-            Showing{" "}
-            <Text style={styles.resultsStrong}>{filtered.length}</Text> Selected
+            {t.showingProviders}{" "}
+            <Text style={styles.resultsStrong}>{filtered.length}</Text> {t.selectedProviders}
             Providers
           </Text>
         </View>
@@ -365,7 +362,7 @@ export default function ProvidersDirectoryScreen() {
                 viewMode === "list" && styles.viewBtnTextActive,
               ]}
             >
-              List
+              {t.listView}
             </Text>
           </Pressable>
           <Pressable
@@ -388,7 +385,7 @@ export default function ProvidersDirectoryScreen() {
                 viewMode === "map" && styles.viewBtnTextActive,
               ]}
             >
-              Map
+              {t.mapView}
             </Text>
           </Pressable>
         </View>
@@ -399,16 +396,11 @@ export default function ProvidersDirectoryScreen() {
           <View style={styles.mapPanelHead}>
             <MaterialIcon name="pin_drop" size={28} color={colors.primary} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.mapTitle}>Interactive DHET GIS</Text>
-              <Text style={styles.mapBody}>
-                Nationwide public educational nodes · Near Me
-              </Text>
+              <Text style={styles.mapTitle}>{t.mapGisTitle}</Text>
+              <Text style={styles.mapBody}>{t.mapGisBody}</Text>
             </View>
           </View>
-          <Text style={styles.mapHint}>
-            Near Me uses your location and Google Maps. Distances are approximate
-            from campus addresses on the national register.
-          </Text>
+          <Text style={styles.mapHint}>{t.mapHint}</Text>
 
           <View style={styles.nearMeActions}>
             <Pressable
@@ -425,7 +417,9 @@ export default function ProvidersDirectoryScreen() {
                     size={18}
                     color={colors.onPrimary}
                   />
-                  <Text style={styles.nearMePrimaryText}>Use my location</Text>
+                  <Text style={styles.nearMePrimaryText}>
+                    {t.useMyLocation}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -441,9 +435,7 @@ export default function ProvidersDirectoryScreen() {
                   const permission =
                     await Location.requestForegroundPermissionsAsync();
                   if (!permission.granted) {
-                    setNearMeError(
-                      "Location permission is required to open Google Maps near you.",
-                    );
+                    setNearMeError(t.nearMePermissionMaps);
                     return;
                   }
                   const position = await Location.getCurrentPositionAsync({
@@ -459,7 +451,9 @@ export default function ProvidersDirectoryScreen() {
               }}
             >
               <MaterialIcon name="map" size={18} color={colors.primary} />
-              <Text style={styles.nearMeSecondaryText}>Open Google Maps</Text>
+              <Text style={styles.nearMeSecondaryText}>
+                {t.openGoogleMaps}
+              </Text>
             </Pressable>
           </View>
 
@@ -473,7 +467,7 @@ export default function ProvidersDirectoryScreen() {
           {nearby.length ? (
             <View style={styles.nearList}>
               <Text style={styles.nearListTitle}>
-                Closest from your filters ({nearby.length})
+                {t.nearMeClosest(nearby.length)}
               </Text>
               {nearby.map((item) => (
                 <Pressable
@@ -503,7 +497,7 @@ export default function ProvidersDirectoryScreen() {
                         item.coords,
                       )
                     }
-                    accessibilityLabel={`Open ${item.name} in maps`}
+                    accessibilityLabel={t.openInMapsA11y(item.name)}
                   >
                     <MaterialIcon
                       name="directions"
@@ -515,24 +509,22 @@ export default function ProvidersDirectoryScreen() {
               ))}
             </View>
           ) : !nearMeLoading && !nearMeError ? (
-            <Text style={styles.mapHint}>
-              Tap Use my location to rank campuses near you.
-            </Text>
+            <Text style={styles.mapHint}>{t.nearMeTapHint}</Text>
           ) : null}
         </View>
       ) : null}
 
-      {loading ? <LoadingState label="Loading providers…" /> : null}
+      {loading ? <LoadingState label={common.loading} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && !filtered.length ? (
         <EmptyState
-          title="No institutions found"
-          body="We couldn't find accredited colleges or universities matching your current filter criteria."
+          title={t.noInstitutionsTitle}
+          body={t.noInstitutionsBody}
         />
       ) : null}
       {!loading && !filtered.length ? (
         <Pressable style={styles.resetBtn} onPress={resetFilters}>
-          <Text style={styles.resetText}>Reset All Filters</Text>
+          <Text style={styles.resetText}>{t.reset}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -544,7 +536,7 @@ export default function ProvidersDirectoryScreen() {
       <OfflineStatusBar
         cachedCount={totalCached}
         fromCache={fromCache}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
         detail={`${fromCache ? "Cached" : "Live"} · ${totalCached} providers on device`}
       />
@@ -579,8 +571,8 @@ export default function ProvidersDirectoryScreen() {
                   <MaterialIcon name="sync" size={20} color={colors.primary} />
                   <Text style={styles.loadMoreText}>
                     {loadingMore
-                      ? "Loading…"
-                      : `Load Next ${PAGE_SIZE} Providers`}
+                      ? common.loading
+                      : `${t.loadNextOccupations} ${PAGE_SIZE}`}
                   </Text>
                 </Pressable>
               ) : null}
@@ -593,12 +585,11 @@ export default function ProvidersDirectoryScreen() {
                     color={colors.gold}
                   />
                   <Text style={styles.helpTitle}>
-                    Need Help Choosing Where to Study?
+                    {t.needHelpChoosing}
                   </Text>
                 </View>
                 <Text style={styles.helpBody}>
-                  Speak with an official DHET Khetha Career Guidance practitioner
-                  for free advisory services.
+                  {t.tollFreeAdvice}
                 </Text>
                 <View style={styles.helpActions}>
                   <Pressable

@@ -168,7 +168,7 @@ export function OfflineStatusBar({
         <View style={styles.statusLeft}>
           <View style={[styles.dot, { backgroundColor: statusColor }]} />
           <Text style={[styles.statusText, { color: statusColor }]}>
-            {statusLabel} · {cachedCount.toLocaleString()} Cached
+            {statusLabel} · {cachedCount.toLocaleString()} {common.cached}
           </Text>
         </View>
         {rightLabel ? (

@@ -10,6 +10,7 @@ import {
   OfflineStatusBar,
 } from "../../../../components/KhethaBrandBar";
 import { useAuth } from "../../../../contexts/AuthContext";
+import { useLocale } from "../../../../contexts/LocaleContext";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
 import { downloadOfflineBlueprint } from "../../../../services/offlineBlueprint";
 import type { QuestionnaireId } from "../../../../services/types";
@@ -21,10 +22,15 @@ export default function QuestionnaireResultsScreen() {
   const router = useRouter();
   const { questionnaireId } = useLocalSearchParams<{ questionnaireId: string }>();
   const { user, profile } = useAuth();
+  const { strings, tabs, common } = useLocale();
+  const chrome = strings.questionnaires.chrome;
+  const decisions = strings.questionnaires.decisions;
+  const aps = strings.questionnaires.aps;
+  const saved = strings.saved;
   const vault = useVaultStats();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState(
-    "Blueprint saved on this device. Use the share sheet to keep a copy in Files or Drive.",
+    `${saved.blueprintSavedTitle}. ${saved.blueprintSavedBody}`,
   );
   const [downloading, setDownloading] = useState(false);
 
@@ -35,7 +41,7 @@ export default function QuestionnaireResultsScreen() {
   const riasecPhrase =
     topTwo.length >= 2
       ? `${topTwo[0].label} & ${topTwo[1].label}`
-      : topTwo[0]?.label ?? "Realistic & Investigative";
+      : topTwo[0]?.label ?? saved.tradesWorkplaceFit;
   const savedAps = result?.answers?.apsTotal;
   const savedApsBand = result?.answers?.apsBand;
 
@@ -43,7 +49,7 @@ export default function QuestionnaireResultsScreen() {
     profile?.demographics?.fullName?.trim() ||
     user?.displayName?.trim() ||
     user?.email?.split("@")[0] ||
-    "Guest explorer";
+    saved.guestExplorer;
 
   const retakeHref =
     key === "subjectChooser"
@@ -56,11 +62,11 @@ export default function QuestionnaireResultsScreen() {
     return (
       <Screen>
         <EmptyState
-          title="No results yet"
-          body="Complete the questionnaire to see personalized occupation matches."
+          title={saved.noDiagnosticsTitle}
+          body={saved.noDiagnosticsBody}
         />
         <PrimaryButton
-          label="Start questionnaire"
+          label={chrome.start}
           onPress={() => router.replace(href(retakeHref))}
         />
       </Screen>
@@ -77,16 +83,14 @@ export default function QuestionnaireResultsScreen() {
         displayName,
       });
       setToastMessage(
-        "PDF saved on this device. You can reopen it anytime from Saved → Offline Blueprints.",
+        `${saved.blueprintSavedTitle}. ${saved.noBlueprintsBody}`,
       );
       setToastVisible(true);
       setTimeout(() => setToastVisible(false), 3600);
     } catch (err) {
       Alert.alert(
-        "Download failed",
-        err instanceof Error
-          ? err.message
-          : "Could not create your offline blueprint. Please try again.",
+        common.errorGeneric,
+        err instanceof Error ? err.message : saved.couldNotOpenBlueprint,
       );
     } finally {
       setDownloading(false);
@@ -99,7 +103,7 @@ export default function QuestionnaireResultsScreen() {
       <OfflineStatusBar
         cachedCount={vault.careersCached}
         fromCache
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
       />
 
@@ -108,19 +112,19 @@ export default function QuestionnaireResultsScreen() {
         <View style={styles.verifiedRow}>
           <View style={styles.verifiedPill}>
             <MaterialIcon name="verified" size={14} color={colors.text} />
-            <Text style={styles.verifiedText}>Verified Assessment</Text>
+            <Text style={styles.verifiedText}>{saved.verified}</Text>
           </View>
-          <Text style={styles.alignedText}>SAQA / DHET Aligned</Text>
+          <Text style={styles.alignedText}>{saved.dhetSaqaAccredited}</Text>
         </View>
-        <Text style={styles.heroTitle}>Your Personalized Career Blueprint</Text>
-        <Text style={styles.heroSub}>Isiqondiso Semisebenzi Yakho</Text>
+        <Text style={styles.heroTitle}>{saved.exportTitle}</Text>
+        <Text style={styles.heroSub}>{decisions.subtitle}</Text>
         <Text style={styles.heroBody}>
-          Synthesized from your{" "}
+          {saved.hollandProfiler}{" "}
           <Text style={styles.heroStrong}>
-            Holland RIASEC ({riasecPhrase})
-          </Text>{" "}
-          inventory combined with field work preferences and national labour
-          market demand data.
+            ({riasecPhrase})
+          </Text>
+          {" · "}
+          {saved.exportBody}
         </Text>
 
         <View style={styles.badgeRow}>
@@ -144,7 +148,7 @@ export default function QuestionnaireResultsScreen() {
           ))}
           <View style={styles.traitBadgeSoft}>
             <MaterialIcon name="handyman" size={15} color={colors.onPrimary} />
-            <Text style={styles.traitTextSoft}>Technical & Applied</Text>
+            <Text style={styles.traitTextSoft}>{saved.tradesWorkplaceFit}</Text>
           </View>
         </View>
       </View>
@@ -154,7 +158,7 @@ export default function QuestionnaireResultsScreen() {
         onPress={() => void onDownload()}
         disabled={downloading}
         accessibilityRole="button"
-        accessibilityLabel="Download offline blueprint PDF"
+        accessibilityLabel={saved.offlineBlueprints}
       >
         <View style={styles.downloadLeft}>
           <View style={styles.downloadIcon}>
@@ -167,11 +171,11 @@ export default function QuestionnaireResultsScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.downloadTitle}>
               {downloading
-                ? "Preparing Offline Blueprint…"
-                : "Download Offline Blueprint"}
+                ? common.loading
+                : saved.offlineBlueprints}
             </Text>
             <Text style={styles.downloadMeta}>
-              Official DHET PDF · Saved on device · Share to Files
+              {saved.zeroRatedData}
             </Text>
           </View>
         </View>
@@ -185,7 +189,7 @@ export default function QuestionnaireResultsScreen() {
           style={styles.downloadCard}
           onPress={() => router.push(href("/questionnaires/aps-calculator"))}
           accessibilityRole="button"
-          accessibilityLabel="Open APS calculator"
+          accessibilityLabel={aps.title}
         >
           <View style={styles.downloadLeft}>
             <View style={styles.downloadIcon}>
@@ -194,13 +198,13 @@ export default function QuestionnaireResultsScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.downloadTitle}>
                 {savedAps
-                  ? `Indicative APS ${savedAps}`
-                  : "Calculate Admission Point Score"}
+                  ? `${aps.totalLabel} ${savedAps}`
+                  : aps.title}
               </Text>
               <Text style={styles.downloadMeta}>
                 {savedApsBand
-                  ? `Saved band APS ${savedApsBand}+ · Tap to adjust levels`
-                  : "Use your subject package with NSC levels 1–7"}
+                  ? `${aps.bandLabel} ${savedApsBand}+`
+                  : aps.subtitle}
               </Text>
             </View>
           </View>
@@ -222,7 +226,7 @@ export default function QuestionnaireResultsScreen() {
         <View style={styles.toast}>
           <MaterialIcon name="cloud_done" size={22} color="#9EF4D0" />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.toastTitle}>Blueprint Ready Offline</Text>
+            <Text style={styles.toastTitle}>{saved.blueprintSavedTitle}</Text>
             <Text style={styles.toastBody}>{toastMessage}</Text>
           </View>
         </View>

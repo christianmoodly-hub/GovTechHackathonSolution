@@ -4,11 +4,14 @@ import {
   getOccupation,
   getQualification,
   getProvider,
+  getBursary,
   prefetchProviderIndex,
   prefetchQualificationIndex,
+  prefetchBursaryIndex,
   readCachedOccupationCount,
   readCachedProviderCount,
   readCachedQualificationCount,
+  readCachedBursaryCount,
 } from "./ncapData";
 import { listOfflineBlueprints } from "./offlineBlueprint";
 import {
@@ -22,6 +25,7 @@ export type OfflineVaultStats = {
   careersCached: number;
   qualificationsCached: number;
   providersCached: number;
+  bursariesCached: number;
   blueprintsCached: number;
   pendingProfileWrites: number;
   pendingHelplineWrites: number;
@@ -35,6 +39,7 @@ function estimateMb(stats: {
   careers: number;
   quals: number;
   providers: number;
+  bursaries: number;
   blueprints: number;
 }): number {
   // Rough JSON/PDF estimates for the status UI only
@@ -42,6 +47,7 @@ function estimateMb(stats: {
     stats.careers * 180 +
     stats.quals * 220 +
     stats.providers * 200 +
+    stats.bursaries * 260 +
     stats.blueprints * 120_000;
   return bytes / (1024 * 1024);
 }
@@ -53,6 +59,7 @@ export async function getOfflineVaultStats(
     careersCached,
     qualificationsCached,
     providersCached,
+    bursariesCached,
     blueprints,
     pendingProfileWrites,
     helpline,
@@ -60,6 +67,7 @@ export async function getOfflineVaultStats(
     readCachedOccupationCount(),
     readCachedQualificationCount(),
     readCachedProviderCount(),
+    readCachedBursaryCount(),
     listOfflineBlueprints(),
     uid ? outboxPendingCount(uid) : Promise.resolve(0),
     readHelplineOutbox(),
@@ -69,6 +77,7 @@ export async function getOfflineVaultStats(
     careers: careersCached,
     quals: qualificationsCached,
     providers: providersCached,
+    bursaries: bursariesCached,
     blueprints: blueprints.length,
   });
   const targetMb = 12;
@@ -78,6 +87,7 @@ export async function getOfflineVaultStats(
     careersCached,
     qualificationsCached,
     providersCached,
+    bursariesCached,
     blueprintsCached: blueprints.length,
     pendingProfileWrites,
     pendingHelplineWrites: helpline.length,
@@ -90,6 +100,7 @@ export type PrepareOfflinePackResult = {
   careers: number;
   qualifications: number;
   providers: number;
+  bursaries: number;
   favouritesCached: number;
 };
 
@@ -109,6 +120,9 @@ export async function prepareOfflinePack(options: {
   onProgress?.("Caching campuses…");
   const providers = await prefetchProviderIndex();
 
+  onProgress?.("Caching bursaries…");
+  const bursaries = await prefetchBursaryIndex();
+
   let favouritesCached = 0;
   const favourites = options.favourites ?? [];
   if (favourites.length) {
@@ -120,6 +134,8 @@ export async function prepareOfflinePack(options: {
           await getOccupation(fav.entityId);
         } else if (fav.type === "qualification") {
           await getQualification(fav.entityId);
+        } else if (fav.type === "bursary") {
+          await getBursary(fav.entityId);
         } else {
           await getProvider(fav.entityId);
         }
@@ -134,6 +150,7 @@ export async function prepareOfflinePack(options: {
     careers: occ.summaries.length,
     qualifications: quals.count,
     providers: providers.count,
+    bursaries: bursaries.count,
     favouritesCached,
   };
 }

@@ -17,51 +17,72 @@ import {
 } from "../../components/KhethaBrandBar";
 import {
   DIGITAL_CHANNELS,
-  GUIDANCE_TOPICS,
   HELPLINE,
   PROVINCES,
   WALK_IN_CENTRES,
 } from "../../data/staticContent";
 import { useVaultStats } from "../../hooks/useVaultStats";
+import { useLocale } from "../../contexts/LocaleContext";
 import { enqueueHelplineSubmission } from "../../services/offlineProfile";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
 import { useRouter } from "expo-router";
 
-const ROLE_OPTIONS = [
-  { id: "learner", label: "Learner (Gr 9-12)", icon: "school" },
-  { id: "tvet", label: "TVET / College", icon: "engineering" },
-  { id: "work", label: "Work Seeker", icon: "work" },
-] as const;
-
-const CITY_FILTERS = [
-  "All Cities",
-  "Pretoria",
-  "Durban",
-  "Cape Town",
-  "Bloemfontein",
-] as const;
-
 export default function HelplineScreen() {
   const router = useRouter();
   const vault = useVaultStats();
+  const { strings, tabs } = useLocale();
+  const t = strings.helpline;
+
   const [fullName, setFullName] = useState("");
   const [province, setProvince] = useState("");
-  const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]["id"]>("learner");
+  const [role, setRole] = useState<"learner" | "tvet" | "work">("learner");
   const [topic, setTopic] = useState("");
   const [message, setMessage] = useState("");
   const [confidential, setConfidential] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [cityFilter, setCityFilter] = useState<(typeof CITY_FILTERS)[number]>(
-    "All Cities",
-  );
+  const [cityFilter, setCityFilter] = useState<string>("");
   const [provinceOpen, setProvinceOpen] = useState(false);
   const [topicOpen, setTopicOpen] = useState(false);
 
+
+  const roleOptions = useMemo(
+    () => [
+      { id: "learner" as const, label: t.roleLearner, icon: "school" },
+      { id: "tvet" as const, label: t.roleTvet, icon: "engineering" },
+      { id: "work" as const, label: t.roleWork, icon: "work" },
+    ],
+    [t],
+  );
+  const cityFilters = useMemo(
+    () => [t.allCities, "Pretoria", "Durban", "Cape Town", "Bloemfontein"] as const,
+    [t.allCities],
+  );
+  const guidanceTopics = useMemo(
+    () => [
+      t.topicSubjectChoice,
+      t.topicNsfas,
+      t.topicTvetUni,
+      t.topicArtisan,
+      t.topicDisability,
+      t.topicSecondChance,
+    ],
+    [t],
+  );
+  const channelSubs: Record<string, string> = useMemo(
+    () => ({
+      email: t.channelEmailSub,
+      facebook: t.channelFacebookSub,
+      x: t.channelXSub,
+    }),
+    [t],
+  );
+
+  const activeCity = cityFilter || t.allCities;
   const centres = useMemo(() => {
-    if (cityFilter === "All Cities") return WALK_IN_CENTRES;
-    return WALK_IN_CENTRES.filter((c) => c.city === cityFilter);
-  }, [cityFilter]);
+    if (activeCity === t.allCities) return WALK_IN_CENTRES;
+    return WALK_IN_CENTRES.filter((c) => c.city === activeCity);
+  }, [activeCity, t.allCities]);
 
   const canSubmit =
     fullName.trim().length > 1 &&
@@ -101,55 +122,52 @@ export default function HelplineScreen() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={vault.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail="Official DHET CDS Channels · Form queues offline"
+        detail={t.offlineDetail}
       />
 
       <View style={styles.kickerRow}>
         <MaterialIcon name="verified" size={16} color={colors.primary} />
-        <Text style={styles.kicker}>Official DHET Service</Text>
+        <Text style={styles.kicker}>{t.officialService}</Text>
       </View>
-      <Text style={styles.title}>Career Advice Directory & Contacts</Text>
+      <Text style={styles.title}>{t.title}</Text>
       <Text style={styles.body}>
-        DHET Career Development Services (CDS) provides certified, independent,
-        and free career guidance to all citizens across South Africa.
+        {t.body}
       </Text>
 
       <View style={styles.zeroBanner}>
         <MaterialIcon name="wifi_channel" size={20} color={colors.primary} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.zeroTitle}>Zero-Rated Support:</Text>
+          <Text style={styles.zeroTitle}>{t.zeroSupportTitle}</Text>
           <Text style={styles.zeroBody}>
-            All official toll-free lines and WhatsApp helpdesks run with zero
-            data deductions on supported SA networks.
+            {t.zeroSupportBody}
           </Text>
         </View>
       </View>
 
       <View style={styles.onlineRow}>
         <View style={styles.onlineDot} />
-        <Text style={styles.onlineText}>Advisors Online Now</Text>
-        <Text style={styles.onlineMeta}>Avg. pickup &lt; 45s</Text>
+        <Text style={styles.onlineText}>{t.advisorsOnline}</Text>
+        <Text style={styles.onlineMeta}>{t.avgPickup}</Text>
       </View>
 
       <View style={styles.card}>
         <View style={styles.cardTop}>
           <View style={styles.cardTitleRow}>
             <MaterialIcon name="call" size={22} color={colors.primary} />
-            <Text style={styles.cardTitle}>Toll-Free Helpline</Text>
+            <Text style={styles.cardTitle}>{t.tollFreeHelpline}</Text>
           </View>
           <View style={styles.freePill}>
-            <Text style={styles.freePillText}>Free</Text>
+            <Text style={styles.freePillText}>{t.free}</Text>
           </View>
         </View>
         <Text style={styles.meta}>
-          {HELPLINE.hours} · National Line
+          {HELPLINE.hours} · {t.nationalLine}
         </Text>
         <Text style={styles.number}>{HELPLINE.tollFreeDisplay}</Text>
         <Text style={styles.cardBody}>
-          Free from landlines and mobile networks (Vodacom, MTN, Telkom, Cell
-          C).
+          {t.tollFreeBody}
         </Text>
         <Pressable
           style={styles.primaryBtn}
@@ -160,7 +178,7 @@ export default function HelplineScreen() {
             size={18}
             color={colors.onPrimary}
           />
-          <Text style={styles.primaryBtnText}>Call Toll-Free Now</Text>
+          <Text style={styles.primaryBtnText}>{t.callTollFreeNow}</Text>
         </Pressable>
       </View>
 
@@ -168,17 +186,16 @@ export default function HelplineScreen() {
         <View style={styles.cardTop}>
           <View style={styles.cardTitleRow}>
             <MaterialIcon name="chat" size={22} color={colors.primary} />
-            <Text style={styles.cardTitle}>WhatsApp Live Helpdesk</Text>
+            <Text style={styles.cardTitle}>{t.whatsappHelpdesk}</Text>
           </View>
           <View style={styles.popularPill}>
-            <Text style={styles.popularPillText}>Popular</Text>
+            <Text style={styles.popularPillText}>{t.popular}</Text>
           </View>
         </View>
-        <Text style={styles.meta}>Accredited Career Specialists</Text>
+        <Text style={styles.meta}>{t.accreditedSpecialists}</Text>
         <Text style={styles.number}>{HELPLINE.whatsappDisplay}</Text>
         <Text style={styles.cardBody}>
-          Text your career questions directly or initiate automated guidance
-          options anytime.
+          {t.whatsappBody}
         </Text>
         <Pressable
           style={styles.primaryBtn}
@@ -189,7 +206,7 @@ export default function HelplineScreen() {
           }
         >
           <MaterialIcon name="forum" size={18} color={colors.onPrimary} />
-          <Text style={styles.primaryBtnText}>Chat on WhatsApp</Text>
+          <Text style={styles.primaryBtnText}>{t.chatWhatsapp}</Text>
         </Pressable>
       </View>
 
@@ -197,10 +214,10 @@ export default function HelplineScreen() {
         <View style={styles.cardTop}>
           <View style={styles.cardTitleRow}>
             <MaterialIcon name="sms" size={22} color={colors.primary} />
-            <Text style={styles.cardTitle}>Free SMS / &quot;Please Call Me&quot;</Text>
+            <Text style={styles.cardTitle}>{t.freeSmsTitle}</Text>
           </View>
           <View style={styles.zeroPill}>
-            <Text style={styles.zeroPillText}>Zero airtime required</Text>
+            <Text style={styles.zeroPillText}>{t.zeroAirtime}</Text>
           </View>
         </View>
         <View style={styles.smsLine}>
@@ -210,18 +227,16 @@ export default function HelplineScreen() {
             color={colors.secondary}
           />
           <Text style={styles.smsLineText}>
-            SMS Line: {HELPLINE.whatsappDisplay}
+            {t.smsLine} {HELPLINE.whatsappDisplay}
           </Text>
         </View>
         <Text style={styles.cardBody}>
-          Simply SMS the word <Text style={styles.strong}>&quot;HELP&quot;</Text> or
-          send a free standard USSD <Text style={styles.strong}>&quot;Please Call Me&quot;</Text>{" "}
-          to {HELPLINE.whatsappDisplay}.
+          {t.smsBodyPrefix} {HELPLINE.whatsappDisplay}.
         </Text>
         <View style={styles.callbackNote}>
           <MaterialIcon name="schedule" size={16} color={colors.primary} />
           <Text style={styles.callbackText}>
-            A qualified counselor calls you back within 2 business hours.
+            {t.callbackNote}
           </Text>
         </View>
         <Pressable
@@ -230,7 +245,7 @@ export default function HelplineScreen() {
             void Linking.openURL(`sms:${HELPLINE.whatsapp}?body=HELP`)
           }
         >
-          <Text style={styles.secondaryBtnText}>Open SMS</Text>
+          <Text style={styles.secondaryBtnText}>{t.openSms}</Text>
         </Pressable>
       </View>
 
@@ -241,11 +256,10 @@ export default function HelplineScreen() {
             size={22}
             color={colors.primary}
           />
-          <Text style={styles.cardTitle}>Send an Enquiry or Callback</Text>
+          <Text style={styles.cardTitle}>{t.enquiryTitle}</Text>
         </View>
         <Text style={styles.cardBody}>
-          Complete this form. If you are offline, your request is saved on this
-          device and sent when you reconnect.
+          {t.enquiryBody}
         </Text>
 
         {submitted ? (
@@ -256,21 +270,21 @@ export default function HelplineScreen() {
               color={colors.success}
             />
             <Text style={styles.successText}>
-              Request saved on this device. It will sync when you are online.
+              {t.requestSaved}
             </Text>
           </View>
         ) : null}
 
-        <Text style={styles.fieldLabel}>Full Name & Surname *</Text>
+        <Text style={styles.fieldLabel}>{t.fullNameLabel}</Text>
         <TextInput
           value={fullName}
           onChangeText={setFullName}
-          placeholder="Enter your full name"
+          placeholder={t.fullNamePlaceholder}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
         />
 
-        <Text style={styles.fieldLabel}>Province *</Text>
+        <Text style={styles.fieldLabel}>{t.provinceLabel}</Text>
         <Pressable
           style={styles.select}
           onPress={() => setProvinceOpen(true)}
@@ -281,7 +295,7 @@ export default function HelplineScreen() {
               !province && styles.selectPlaceholder,
             ]}
           >
-            {province || "Select your province"}
+            {province || t.selectProvince}
           </Text>
           <MaterialIcon
             name="expand_more"
@@ -290,9 +304,9 @@ export default function HelplineScreen() {
           />
         </Pressable>
 
-        <Text style={styles.fieldLabel}>I am currently a: *</Text>
+        <Text style={styles.fieldLabel}>{t.iAmCurrently}</Text>
         <View style={styles.roleRow}>
-          {ROLE_OPTIONS.map((opt) => {
+          {roleOptions.map((opt) => {
             const active = role === opt.id;
             return (
               <Pressable
@@ -318,13 +332,13 @@ export default function HelplineScreen() {
           })}
         </View>
 
-        <Text style={styles.fieldLabel}>Guidance Topic *</Text>
+        <Text style={styles.fieldLabel}>{t.guidanceTopic}</Text>
         <Pressable style={styles.select} onPress={() => setTopicOpen(true)}>
           <Text
             style={[styles.selectText, !topic && styles.selectPlaceholder]}
             numberOfLines={1}
           >
-            {topic || "Select Guidance Topic"}
+            {topic || t.selectTopic}
           </Text>
           <MaterialIcon
             name="expand_more"
@@ -333,11 +347,11 @@ export default function HelplineScreen() {
           />
         </Pressable>
 
-        <Text style={styles.fieldLabel}>Your Message or Question *</Text>
+        <Text style={styles.fieldLabel}>{t.messageLabel}</Text>
         <TextInput
           value={message}
           onChangeText={(text) => setMessage(text.slice(0, 300))}
-          placeholder="Describe your question…"
+          placeholder={t.messagePlaceholder}
           placeholderTextColor={colors.textMuted}
           style={[styles.input, styles.textarea]}
           multiline
@@ -356,13 +370,13 @@ export default function HelplineScreen() {
               <MaterialIcon name="check" size={14} color={colors.onPrimary} />
             ) : null}
           </View>
-          <Text style={styles.checkText}>Always keep my data confidential.</Text>
+          <Text style={styles.checkText}>{t.keepConfidential}</Text>
         </Pressable>
 
         <View style={styles.offlineHint}>
           <MaterialIcon name="cloud_sync" size={16} color={colors.secondary} />
           <Text style={styles.offlineHintText}>
-            Saved on device when offline · syncs when you reconnect.
+            {t.offlineHint}
           </Text>
         </View>
 
@@ -373,20 +387,20 @@ export default function HelplineScreen() {
         >
           <MaterialIcon name="send" size={18} color={colors.text} />
           <Text style={styles.submitBtnText}>
-            Submit Free Advisory Request
+            {t.submitRequest}
           </Text>
         </Pressable>
       </View>
 
       <View style={styles.centresHead}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.sectionTitle}>Walk-in CDS Centres</Text>
+          <Text style={styles.sectionTitle}>{t.walkInTitle}</Text>
           <Text style={styles.sectionBody}>
-            Visit an accredited DHET practitioner in person
+            {t.walkInSub}
           </Text>
         </View>
         <View style={styles.centresCount}>
-          <Text style={styles.centresCountText}>52 Centres</Text>
+          <Text style={styles.centresCountText}>{t.centresCount}</Text>
         </View>
       </View>
 
@@ -395,8 +409,8 @@ export default function HelplineScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cityRow}
       >
-        {CITY_FILTERS.map((city) => {
-          const active = cityFilter === city;
+        {cityFilters.map((city) => {
+          const active = activeCity === city;
           return (
             <Pressable
               key={city}
@@ -454,7 +468,7 @@ export default function HelplineScreen() {
                 size={18}
                 color={colors.secondary}
               />
-              <Text style={styles.directionsText}>Get Directions</Text>
+              <Text style={styles.directionsText}>{t.getDirections}</Text>
             </Pressable>
             <Pressable
               style={styles.callIconBtn}
@@ -466,10 +480,9 @@ export default function HelplineScreen() {
         </View>
       ))}
 
-      <Text style={styles.sectionTitle}>Official Digital Channels</Text>
+      <Text style={styles.sectionTitle}>{t.digitalChannels}</Text>
       <Text style={styles.sectionBody}>
-        Connect for daily bursary postings, career fairs, and apprenticeship
-        updates.
+        {t.digitalChannelsSub}
       </Text>
 
       {DIGITAL_CHANNELS.map((channel) => (
@@ -489,7 +502,7 @@ export default function HelplineScreen() {
             <Text style={styles.channelLabel} numberOfLines={1}>
               {channel.label}
             </Text>
-            <Text style={styles.channelSub}>{channel.subtitle}</Text>
+            <Text style={styles.channelSub}>{channelSubs[channel.id] ?? channel.subtitle}</Text>
           </View>
           <MaterialIcon
             name={channel.id === "email" ? "chevron_right" : "open_in_new"}
@@ -502,19 +515,18 @@ export default function HelplineScreen() {
       <View style={styles.quoteCard}>
         <MaterialIcon name="format_quote" size={24} color={colors.gold} />
         <Text style={styles.quoteText}>
-          “An investment in knowledge pays the best interest.”
+          {t.quote}
         </Text>
         <Text style={styles.quoteAttr}>
-          — Benjamin Franklin · Adopted by Khetha CDS
+          {t.quoteAttr}
         </Text>
       </View>
 
       <Text style={styles.footerBrand}>
-        Department of Higher Education and Training · Republic of South Africa
+        {t.footerBrand}
       </Text>
       <Text style={styles.footerNote}>
-        Free, impartial, and accessible to learners, students, and citizens of
-        all abilities.
+        {t.footerNote}
       </Text>
 
       <Modal
@@ -531,7 +543,7 @@ export default function HelplineScreen() {
             style={styles.modalSheet}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>Select your province</Text>
+            <Text style={styles.modalTitle}>{t.selectProvince}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               {PROVINCES.map((item) => (
                 <Pressable
@@ -574,9 +586,9 @@ export default function HelplineScreen() {
             style={styles.modalSheet}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>Select Guidance Topic</Text>
+            <Text style={styles.modalTitle}>{t.selectTopic}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
-              {GUIDANCE_TOPICS.map((item) => (
+              {guidanceTopics.map((item) => (
                 <Pressable
                   key={item}
                   style={[

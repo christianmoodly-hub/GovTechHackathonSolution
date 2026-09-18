@@ -15,11 +15,14 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useLocale } from "../../../contexts/LocaleContext";
 import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
   ELECTIVES,
-  FAL_LANGUAGES,
-  HOME_LANGUAGES,
+  FAL_LANGUAGE_OPTIONS,
+  HOME_LANGUAGE_OPTIONS,
+  normalizeFalLanguageToId,
+  normalizeHomeLanguageToId,
   type ElectiveId,
   type MathStream,
 } from "../../../questionnaires/subjectPackage";
@@ -33,12 +36,21 @@ import {
   buildSubjectRows,
   calculateNscAps,
   clampNscLevel,
-  nscLevelLabel,
   serializeApsLevels,
   type NscLevel,
 } from "../../../utils/aps";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { href } from "../../../utils/href";
+
+const LEVEL_PERCENT: Record<NscLevel, string> = {
+  7: "80–100%",
+  6: "70–79%",
+  5: "60–69%",
+  4: "50–59%",
+  3: "40–49%",
+  2: "30–39%",
+  1: "0–29%",
+};
 
 function parseElectivesParam(raw: string | string[] | undefined): ElectiveId[] {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -66,6 +78,9 @@ export default function ApsCalculatorScreen() {
     grade?: string | string[];
   }>();
   const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const { strings, tabs } = useLocale();
+  const aps = strings.questionnaires.aps;
+  const subjectT = strings.questionnaires.subjectChooser;
   const vault = useVaultStats();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,14 +117,16 @@ export default function ApsCalculatorScreen() {
       (savedAnswers.math === "lit" || savedAnswers.math === "pure"
         ? savedAnswers.math
         : "pure");
-    const homeLanguage =
+    const homeLanguage = normalizeHomeLanguageToId(
       paramHl ||
-      savedAnswers.homeLanguage ||
-      HOME_LANGUAGES[0];
-    const falLanguage =
+        savedAnswers.homeLanguage ||
+        HOME_LANGUAGE_OPTIONS[0].id,
+    );
+    const falLanguage = normalizeFalLanguageToId(
       paramFal ||
-      savedAnswers.falLanguage ||
-      FAL_LANGUAGES[0];
+        savedAnswers.falLanguage ||
+        FAL_LANGUAGE_OPTIONS[0].id,
+    );
     const grade = paramGrade || savedAnswers.grade || "grade10";
 
     return { electives, math, homeLanguage, falLanguage, grade };
@@ -131,11 +148,10 @@ export default function ApsCalculatorScreen() {
   const [levels, setLevels] = useState<Record<string, NscLevel>>({});
 
   useEffect(() => {
-    // Seed steppers once from saved APS or defaults when package is ready.
     if (packageData.electives.length !== 3) return;
     setLevels((prev) => {
       if (Object.keys(prev).length > 0) return prev;
-      const rows = buildSubjectRows({
+      const built = buildSubjectRows({
         homeLanguage: packageData.homeLanguage,
         falLanguage: packageData.falLanguage,
         math: packageData.math,
@@ -143,7 +159,7 @@ export default function ApsCalculatorScreen() {
         levels: initialLevels,
       });
       const map: Record<string, NscLevel> = {};
-      for (const row of rows) map[row.id] = row.level;
+      for (const row of built) map[row.id] = row.level;
       return map;
     });
   }, [packageData, initialLevels]);
@@ -156,14 +172,42 @@ export default function ApsCalculatorScreen() {
       electives: packageData.electives,
       levels: { ...initialLevels, ...levels },
     });
-    return built.map((row) => ({
-      ...row,
-      level: levels[row.id] ?? initialLevels[row.id] ?? row.level,
-    }));
-  }, [packageData, levels, initialLevels]);
+    return built.map((row) => {
+      let label = row.label;
+      if (row.id === "hl") {
+        label =
+          subjectT.homeLanguages[packageData.homeLanguage] ?? row.label;
+      } else if (row.id === "fal") {
+        label =
+          subjectT.falLanguages[packageData.falLanguage] ?? row.label;
+      } else if (row.id === "math") {
+        label =
+          packageData.math === "pure" ? subjectT.pureMath : subjectT.mathLit;
+      } else {
+        label =
+          subjectT.electives[row.id as ElectiveId]?.title ?? row.label;
+      }
+      return {
+        ...row,
+        label,
+        level: levels[row.id] ?? initialLevels[row.id] ?? row.level,
+      };
+    });
+  }, [packageData, levels, initialLevels, subjectT]);
 
   const { total } = calculateNscAps(rows.map((row) => row.level));
-  const band = apsBandForTotal(total);
+  const baseBand = apsBandForTotal(total);
+  const bandKey =
+    total < 18
+      ? ("below18" as const)
+      : (String(baseBand.filterId) as "18" | "21" | "24" | "28" | "32");
+  const bandStrings = aps.bands[bandKey] ?? aps.bands.below18;
+  const band = {
+    ...baseBand,
+    label: bandStrings.label,
+    short: bandStrings.short,
+    guidance: bandStrings.guidance,
+  };
   const packageReady = packageData.electives.length === 3;
 
   const setLevel = (id: string, next: number) => {
@@ -172,14 +216,11 @@ export default function ApsCalculatorScreen() {
 
   const persistAps = async () => {
     if (!user?.uid) {
-      setError("Sign in to save your APS simulation.");
+      setError("You need to be signed in to save your APS simulation.");
       return false;
     }
     if (!packageReady) {
-      Alert.alert(
-        "Complete your subject package",
-        "Select exactly 3 electives in Subject Chooser before calculating APS.",
-      );
+      Alert.alert(aps.title, aps.missingPackage);
       return false;
     }
 
@@ -217,7 +258,7 @@ export default function ApsCalculatorScreen() {
       return true;
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not save APS simulation.",
+        err instanceof Error ? err.message : aps.missingPackage,
       );
       return false;
     } finally {
@@ -229,17 +270,15 @@ export default function ApsCalculatorScreen() {
     const ok = await persistAps();
     if (ok) {
       Alert.alert(
-        "APS saved",
-        `Your indicative APS is ${total} (${band.short}). Find it anytime under Saved diagnostics.`,
+        aps.saveResults,
+        `${aps.totalLabel}: ${total} (${band.short})`,
       );
     }
   };
 
   const onBrowseQualifications = async () => {
     await persistAps();
-    router.push(
-      href(`/directory/qualifications?aps=${band.filterId}`),
-    );
+    router.push(href(`/directory/qualifications?aps=${band.filterId}`));
   };
 
   if (!packageReady) {
@@ -248,18 +287,15 @@ export default function ApsCalculatorScreen() {
         <KhethaBrandBar />
         <View style={styles.emptyCard}>
           <MaterialIcon name="calculate" size={28} color={colors.primary} />
-          <Text style={styles.emptyTitle}>Subject package needed</Text>
-          <Text style={styles.emptyBody}>
-            Choose your languages, maths stream, and exactly 3 electives first.
-            APS uses that package with your estimated NSC levels.
-          </Text>
+          <Text style={styles.emptyTitle}>{aps.title}</Text>
+          <Text style={styles.emptyBody}>{aps.missingPackage}</Text>
           <Pressable
             style={styles.primaryBtn}
             onPress={() =>
               router.replace(href("/questionnaires/subject-chooser"))
             }
           >
-            <Text style={styles.primaryBtnText}>Open Subject Chooser</Text>
+            <Text style={styles.primaryBtnText}>{subjectT.title}</Text>
           </Pressable>
         </View>
       </Screen>
@@ -271,35 +307,32 @@ export default function ApsCalculatorScreen() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={vault.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
       />
 
       <View style={styles.crumbRow}>
         <Pressable onPress={() => router.push(href("/questionnaires"))}>
-          <Text style={styles.crumbMuted}>Decisions</Text>
+          <Text style={styles.crumbMuted}>{tabs.decisions}</Text>
         </Pressable>
         <MaterialIcon name="chevron_right" size={14} color={colors.textMuted} />
         <Pressable
           onPress={() => router.push(href("/questionnaires/subject-chooser"))}
         >
-          <Text style={styles.crumbMuted}>Subjects</Text>
+          <Text style={styles.crumbMuted}>{subjectT.title}</Text>
         </Pressable>
         <MaterialIcon name="chevron_right" size={14} color={colors.textMuted} />
-        <Text style={styles.crumbActive}>APS Calculator</Text>
+        <Text style={styles.crumbActive}>{aps.title}</Text>
       </View>
 
       <View style={styles.hero}>
-        <Text style={styles.heroKicker}>NSC Admission Point Score</Text>
-        <Text style={styles.heroTitle}>Estimate your APS</Text>
-        <Text style={styles.heroBody}>
-          Set an achievement level (1–7) for each subject in your package. We
-          sum your best 6 subjects (Life Orientation excluded).
-        </Text>
+        <Text style={styles.heroKicker}>{aps.bandLabel}</Text>
+        <Text style={styles.heroTitle}>{aps.title}</Text>
+        <Text style={styles.heroBody}>{aps.subtitle}</Text>
       </View>
 
       <View style={styles.resultCard}>
-        <Text style={styles.resultLabel}>Indicative APS</Text>
+        <Text style={styles.resultLabel}>{aps.totalLabel}</Text>
         <Text style={styles.resultTotal}>{total}</Text>
         <View style={styles.bandPill}>
           <Text style={styles.bandText}>{band.label}</Text>
@@ -307,14 +340,16 @@ export default function ApsCalculatorScreen() {
         <Text style={styles.resultGuidance}>{band.guidance}</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Your subject package</Text>
+      <Text style={styles.sectionTitle}>{aps.guidanceTitle}</Text>
       {rows.map((row) => (
         <View key={row.id} style={styles.subjectCard}>
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Text style={styles.subjectLabel} numberOfLines={2}>
               {row.label}
             </Text>
-            <Text style={styles.subjectMeta}>{nscLevelLabel(row.level)}</Text>
+            <Text style={styles.subjectMeta}>
+              {aps.levelLabel(row.level, LEVEL_PERCENT[row.level])}
+            </Text>
           </View>
           <View style={styles.stepper}>
             <Pressable
@@ -336,11 +371,7 @@ export default function ApsCalculatorScreen() {
         </View>
       ))}
 
-      <Text style={styles.disclaimer}>
-        Indicative NSC APS only — institutions may weight subjects differently
-        or set faculty-specific minima. Confirm with each university or TVET
-        college before applying.
-      </Text>
+      <Text style={styles.disclaimer}>{aps.subtitle}</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -354,7 +385,7 @@ export default function ApsCalculatorScreen() {
         ) : (
           <>
             <Text style={styles.primaryBtnText}>
-              Browse qualifications ({band.short})
+              {`${aps.browseQuals} (${band.short})`}
             </Text>
             <MaterialIcon
               name="arrow_forward"
@@ -371,7 +402,9 @@ export default function ApsCalculatorScreen() {
         onPress={() => void onSave()}
       >
         <MaterialIcon name="check_circle" size={18} color={colors.primary} />
-        <Text style={styles.secondaryBtnText}>Save APS to my profile</Text>
+        <Text style={styles.secondaryBtnText}>
+          {busy ? aps.saving : aps.saveResults}
+        </Text>
       </Pressable>
     </Screen>
   );

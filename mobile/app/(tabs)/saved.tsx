@@ -69,7 +69,8 @@ export default function SavedScreen() {
   const vault = useVaultStats();
   const { highContrast, setHighContrast, textScale, zoomLabel } =
     useAccessibility();
-  const { locale, home, tabs, common } = useLocale();
+  const { locale, home, tabs, common, strings } = useLocale();
+  const t = strings.saved;
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [blueprints, setBlueprints] = useState<OfflineBlueprint[]>([]);
   const [vaultBusy, setVaultBusy] = useState(false);
@@ -79,7 +80,7 @@ export default function SavedScreen() {
 
   const roleLabel =
     LEARNER_ROLES.find((item) => item.id === profile?.demographics?.role)
-      ?.label ?? "Learner";
+      ?.label ?? t.learnerFallback;
   const languageLabel =
     LANGUAGES.find((item) => item.id === locale)?.label ?? "English";
 
@@ -87,9 +88,9 @@ export default function SavedScreen() {
     profile?.demographics?.fullName?.trim() ||
     user?.displayName?.trim() ||
     user?.email?.split("@")[0] ||
-    "Guest explorer";
+    t.guestExplorer;
 
-  const province = profile?.demographics?.province ?? "South Africa";
+  const province = profile?.demographics?.province ?? t.southAfrica;
   const refId = shortRef(user?.uid ?? profile?.id ?? "guest");
   const isVerified = Boolean(user && !user.isAnonymous && user.emailVerified);
 
@@ -106,6 +107,7 @@ export default function SavedScreen() {
       qualification: favourites.filter((f) => f.type === "qualification")
         .length,
       provider: favourites.filter((f) => f.type === "provider").length,
+      bursary: favourites.filter((f) => f.type === "bursary").length,
     }),
     [favourites],
   );
@@ -137,8 +139,8 @@ export default function SavedScreen() {
   const onPrepareOfflinePack = async () => {
     if (!canSync) {
       Alert.alert(
-        "Connect to prepare",
-        "You need an internet connection once to download the offline pack.",
+        t.connectToPrepareTitle,
+        t.connectToPrepareBody,
       );
       return;
     }
@@ -150,13 +152,13 @@ export default function SavedScreen() {
       });
       vault.refresh();
       Alert.alert(
-        "Offline pack ready",
+        t.offlinePackReadyTitle,
         `${result.careers.toLocaleString()} careers, ${result.qualifications} qualifications, ${result.providers} campuses, and ${result.favouritesCached} favourites cached on this device.`,
       );
     } catch (err) {
       Alert.alert(
-        "Could not prepare offline pack",
-        err instanceof Error ? err.message : "Try again when online.",
+        t.couldNotPrepareTitle,
+        err instanceof Error ? err.message : t.tryAgainOnline,
       );
     } finally {
       setVaultBusy(false);
@@ -166,8 +168,8 @@ export default function SavedScreen() {
   const onSyncVault = async () => {
     if (!canSync) {
       Alert.alert(
-        "Offline",
-        "Connect to the internet to sync favourites, results, and helpline requests.",
+        t.offlineTitle,
+        t.offlineSyncBody,
       );
       return;
     }
@@ -177,13 +179,13 @@ export default function SavedScreen() {
       await refreshProfile();
       vault.refresh();
       Alert.alert(
-        "Vault synced",
+        t.vaultSyncedTitle,
         `Synced ${result.profileFlushed} profile change(s) and ${result.helplineFlushed} helpline request(s). Careers cache: ${result.refreshedCareers.toLocaleString()}.`,
       );
     } catch (err) {
       Alert.alert(
-        "Sync failed",
-        err instanceof Error ? err.message : "Try again shortly.",
+        t.syncFailedTitle,
+        err instanceof Error ? err.message : t.tryAgainShortly,
       );
     } finally {
       setVaultBusy(false);
@@ -194,8 +196,8 @@ export default function SavedScreen() {
     try {
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert(
-          "Blueprint saved",
-          `${item.fileName} is stored on this device for offline use.`,
+          t.blueprintSavedTitle,
+          `${item.fileName} ${t.blueprintSavedBody}`,
         );
         return;
       }
@@ -206,8 +208,8 @@ export default function SavedScreen() {
       });
     } catch (err) {
       Alert.alert(
-        "Could not open blueprint",
-        err instanceof Error ? err.message : "Please download it again from your results.",
+        t.couldNotOpenBlueprint,
+        err instanceof Error ? err.message : t.downloadAgain,
       );
     }
   };
@@ -224,13 +226,17 @@ export default function SavedScreen() {
       router.push(href(`/directory/qualifications/${id}`));
       return;
     }
+    if (item.type === "bursary") {
+      router.push(href(`/directory/bursaries/${id}`));
+      return;
+    }
     router.push(href(`/directory/providers/${id}`));
   };
 
   const learnerPersonaLabel = roleLabel.includes("Work")
-    ? "Grade 11 Learner"
+    ? t.grade11Learner
     : roleLabel.replace(" Learner", "").length > 18
-      ? "Learner Mode"
+      ? t.learnerMode
       : roleLabel;
 
   return (
@@ -255,8 +261,8 @@ export default function SavedScreen() {
           }}
         >
           {syncPending || vault.pendingProfileWrites > 0
-            ? "Showing saved profile · sync pending when online"
-            : "Showing profile saved on this device"}
+            ? t.syncPendingBanner
+            : t.cachedProfileBanner}
         </Text>
       ) : null}
 
@@ -265,9 +271,9 @@ export default function SavedScreen() {
         <View style={styles.titleLeft}>
           <MaterialIcon name="folder_shared" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>My Profile & Vault</Text>
+            <Text style={styles.title}>{t.title}</Text>
             <Text style={styles.titleSub}>
-              Iphrofayili Yami · Ref: DHET-ZA-{refId}
+              {t.titleSubPrefix}{refId}
             </Text>
           </View>
         </View>
@@ -301,7 +307,7 @@ export default function SavedScreen() {
                     size={12}
                     color={colors.success}
                   />
-                  <Text style={styles.verifiedText}>Verified</Text>
+                  <Text style={styles.verifiedText}>{t.verified}</Text>
                 </View>
               ) : null}
             </View>
@@ -343,7 +349,7 @@ export default function SavedScreen() {
               ]}
               numberOfLines={1}
             >
-              Work Seeker Mode
+              {t.workSeekerMode}
             </Text>
           </Pressable>
         </View>
@@ -352,14 +358,14 @@ export default function SavedScreen() {
           <View style={styles.infoBadge}>
             <Text style={styles.infoBadgeLabel}>
               <MaterialIcon name="badge" size={12} color={colors.secondary} />{" "}
-              DHET Stats ID
+              {t.dhetStatsId}
             </Text>
             <Text style={styles.infoBadgeValue}>#ZA-{refId}</Text>
           </View>
           <View style={styles.infoBadge}>
             <Text style={styles.infoBadgeLabel}>
               <MaterialIcon name="tune" size={12} color={colors.ochre} />{" "}
-              Assistive View
+              {t.assistiveView}
             </Text>
             <Text style={styles.infoBadgeValue}>
               {zoomLabel} · {Math.round(textScale * 100)}%
@@ -371,9 +377,9 @@ export default function SavedScreen() {
           <View style={styles.contrastLeft}>
             <MaterialIcon name="contrast" size={20} color={colors.primary} />
             <View>
-              <Text style={styles.contrastTitle}>High Contrast Palette</Text>
+              <Text style={styles.contrastTitle}>{t.highContrast}</Text>
               <Text style={styles.contrastSub}>
-                Black-on-white colours (same as the contrast icon in the header)
+                {t.highContrastSub}
               </Text>
             </View>
           </View>
@@ -393,10 +399,10 @@ export default function SavedScreen() {
             <MaterialIcon name="cloud_done" size={22} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.sectionTitle}>
-                Device Storage & Offline Vault
+                {t.deviceVault}
               </Text>
               <Text style={styles.vaultZeroRated}>
-                Zero-Rated Data Access (No Mobile Airtime Required)
+                {t.zeroRatedData}
               </Text>
             </View>
           </View>
@@ -419,14 +425,14 @@ export default function SavedScreen() {
           <View style={styles.meterMetaLeft}>
             <View style={styles.dot} />
             <Text style={styles.meterMetaText}>
-              {vault.careersCached.toLocaleString()} Careers &{" "}
-              {vault.qualificationsCached} Qualifications Cached
+              {vault.careersCached.toLocaleString()} / {vault.qualificationsCached}{" "}
+              {t.careersQualsCached}
               {vault.pendingProfileWrites > 0
-                ? ` · ${vault.pendingProfileWrites} pending sync`
+                ? ` · ${vault.pendingProfileWrites} ${t.pendingSync}`
                 : ""}
             </Text>
           </View>
-          <Text style={styles.meterPct}>{vault.meterPercent}% full</Text>
+          <Text style={styles.meterPct}>{vault.meterPercent}{t.percentFull}</Text>
         </View>
 
         <Pressable
@@ -437,8 +443,8 @@ export default function SavedScreen() {
           <MaterialIcon name="download" size={18} color={colors.onPrimary} />
           <Text style={styles.vaultPrimaryText}>
             {vaultBusy
-              ? "Working…"
-              : "Prepare offline pack (careers, quals, campuses)"}
+              ? t.working
+              : t.prepareOfflinePack}
           </Text>
         </Pressable>
         <Pressable
@@ -448,7 +454,7 @@ export default function SavedScreen() {
         >
           <MaterialIcon name="sync" size={18} color={colors.primary} />
           <Text style={styles.vaultSecondaryText}>
-            Sync Vault with National Database
+            {t.syncVault}
           </Text>
         </Pressable>
       </View>
@@ -457,10 +463,11 @@ export default function SavedScreen() {
       <View style={styles.sectionHead}>
         <View style={styles.sectionHeadLeft}>
           <MaterialIcon name="picture_as_pdf" size={22} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Offline Blueprints</Text>
+          <Text style={styles.sectionTitle}>{t.offlineBlueprints}</Text>
         </View>
         <Text style={styles.sectionCount}>
-          {blueprints.length} PDF{blueprints.length === 1 ? "" : "s"}
+          {blueprints.length}{" "}
+          {blueprints.length === 1 ? t.pdfSingular : t.pdfPlural}
         </Text>
       </View>
 
@@ -484,7 +491,7 @@ export default function SavedScreen() {
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Text style={styles.blueprintTitle}>{item.title}</Text>
                 <Text style={styles.blueprintMeta}>
-                  {item.matchCount} matches ·{" "}
+                  {item.matchCount} {t.matchesLabel} ·{" "}
                   {new Date(item.savedAt).toLocaleDateString("en-ZA")}
                 </Text>
                 <Text style={styles.blueprintFile} numberOfLines={1}>
@@ -497,10 +504,9 @@ export default function SavedScreen() {
         ))
       ) : (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No offline blueprints yet</Text>
+          <Text style={styles.emptyTitle}>{t.noBlueprintsTitle}</Text>
           <Text style={styles.emptyBody}>
-            After you finish a questionnaire, tap Download Offline Blueprint on
-            your results to save a PDF here.
+            {t.noBlueprintsBody}
           </Text>
         </View>
       )}
@@ -509,10 +515,11 @@ export default function SavedScreen() {
       <View style={styles.sectionHead}>
         <View style={styles.sectionHeadLeft}>
           <MaterialIcon name="psychology" size={22} color={colors.gold} />
-          <Text style={styles.sectionTitle}>Completed Diagnostic Tools</Text>
+          <Text style={styles.sectionTitle}>{t.completedDiagnostics}</Text>
         </View>
         <Text style={styles.sectionCount}>
-          {diagnostics.length} Active Record{diagnostics.length === 1 ? "" : "s"}
+          {diagnostics.length}{" "}
+          {diagnostics.length === 1 ? t.activeRecord : t.activeRecords}
         </Text>
       </View>
 
@@ -527,16 +534,15 @@ export default function SavedScreen() {
         ))
       ) : (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No diagnostics completed yet</Text>
+          <Text style={styles.emptyTitle}>{t.noDiagnosticsTitle}</Text>
           <Text style={styles.emptyBody}>
-            Take Subject Choice, Career Choice, or Job Fit to build your vault
-            record.
+            {t.noDiagnosticsBody}
           </Text>
           <Pressable
             style={styles.emptyCta}
             onPress={() => router.push(href("/questionnaires"))}
           >
-            <Text style={styles.emptyCtaText}>Open Decisions</Text>
+            <Text style={styles.emptyCtaText}>{t.openDecisions}</Text>
             <MaterialIcon
               name="arrow_forward"
               size={16}
@@ -550,9 +556,9 @@ export default function SavedScreen() {
       <View style={styles.sectionHead}>
         <View style={styles.sectionHeadLeft}>
           <MaterialIcon name="bookmarks" size={22} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Bookmarked Vault Items</Text>
+          <Text style={styles.sectionTitle}>{t.bookmarkedItems}</Text>
         </View>
-        <Text style={styles.sectionMuted}>{counts.all} Total Saved</Text>
+        <Text style={styles.sectionMuted}>{counts.all} {t.totalSaved}</Text>
       </View>
 
       <ScrollView
@@ -562,10 +568,11 @@ export default function SavedScreen() {
       >
         {(
           [
-            ["all", `All Saved (${counts.all})`],
-            ["occupation", `Careers (${counts.occupation})`],
-            ["qualification", `Qualifications (${counts.qualification})`],
-            ["provider", `Campuses (${counts.provider})`],
+            ["all", `${t.filterAllSaved} (${counts.all})`],
+            ["occupation", `${t.filterCareers} (${counts.occupation})`],
+            ["qualification", `${t.filterQualifications} (${counts.qualification})`],
+            ["provider", `${t.filterCampuses} (${counts.provider})`],
+            ["bursary", `${t.filterBursaries} (${counts.bursary})`],
           ] as const
         ).map(([id, label]) => {
           const active = filter === id;
@@ -599,16 +606,15 @@ export default function SavedScreen() {
         ))
       ) : (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No saved items yet</Text>
+          <Text style={styles.emptyTitle}>{t.noSavedTitle}</Text>
           <Text style={styles.emptyBody}>
-            Favourite careers, qualifications, or campuses from detail screens
-            to build your vault.
+            {t.noSavedBody}
           </Text>
           <Pressable
             style={styles.emptyCta}
             onPress={() => router.push(href("/directory"))}
           >
-            <Text style={styles.emptyCtaText}>Browse Directory</Text>
+            <Text style={styles.emptyCtaText}>{t.browseDirectory}</Text>
             <MaterialIcon
               name="arrow_forward"
               size={16}
@@ -622,38 +628,37 @@ export default function SavedScreen() {
       <View style={styles.exportCard}>
         <View style={styles.exportBadges}>
           <View style={styles.exportOfficial}>
-            <Text style={styles.exportOfficialText}>OFFICIAL DHET RECORD</Text>
+            <Text style={styles.exportOfficialText}>{t.officialRecord}</Text>
           </View>
-          <Text style={styles.exportStandard}>Khetha Verification Standard</Text>
+          <Text style={styles.exportStandard}>{t.verificationStandard}</Text>
         </View>
         <Text style={styles.exportTitle}>
-          Export My Career Portfolio (DHET Certified PDF)
+          {t.exportTitle}
         </Text>
         <Text style={styles.exportBody}>
-          Includes your verified RIASEC scores, shortlisted priority careers,
-          subject requirements, and nearby TVET college application codes.
+          {t.exportBody}
         </Text>
         <Pressable
           style={styles.exportBtn}
           onPress={() =>
             Alert.alert(
-              "Portfolio Generated",
-              `DHET-Portfolio-ZA${refId}.pdf is ready for print or Life Orientation submission.`,
+              t.portfolioGeneratedTitle,
+              `DHET-Portfolio-ZA${refId}.pdf ${t.portfolioGeneratedBody}`,
             )
           }
         >
           <MaterialIcon name="picture_as_pdf" size={20} color={colors.text} />
           <Text style={styles.exportBtnText}>
-            Generate & Share Career Portfolio
+            {t.generatePortfolio}
           </Text>
         </Pressable>
         <Text style={styles.exportHint}>
-          Ready for print or submission to your school Life Orientation teacher.
+          {t.exportHint}
         </Text>
       </View>
 
       <Pressable style={styles.signOut} onPress={() => void signOut()}>
-        <Text style={styles.signOutText}>Sign out</Text>
+        <Text style={styles.signOutText}>{t.signOut}</Text>
       </Pressable>
     </Screen>
   );
@@ -668,28 +673,30 @@ function DiagnosticCard({
   result: QuestionnaireResult;
   onOpen: () => void;
 }) {
+  const { strings } = useLocale();
+  const t = strings.saved;
   const dateLabel = result.completedAt
     ? new Date(result.completedAt).toLocaleDateString("en-ZA", {
         day: "2-digit",
         month: "short",
         year: "numeric",
       })
-    : "Saved";
+    : t.savedDate;
   const topMatch = result.matches?.[0];
   const badges = domainBadges(result.domainScores).slice(0, 2);
 
   if (id === "careerChoice") {
     const title =
       badges.length >= 2
-        ? `${badges[0].label} & ${badges[1].label} Match`
+        ? `${badges[0].label} & ${badges[1].label} ${t.matchSuffix}`
         : badges[0]
-          ? `${badges[0].label} Match`
-          : "Interest Profile Match";
+          ? `${badges[0].label} ${t.matchSuffix}`
+          : t.interestProfileMatch;
     return (
       <View style={styles.card}>
         <View style={styles.diagTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.diagKicker}>Holland RIASEC Profiler</Text>
+            <Text style={styles.diagKicker}>{t.hollandProfiler}</Text>
             <Text style={styles.diagTitle}>{title}</Text>
           </View>
           <View style={styles.datePill}>
@@ -732,14 +739,14 @@ function DiagnosticCard({
             <View style={styles.topFit}>
               <MaterialIcon name="bolt" size={14} color={colors.text} />
               <Text style={styles.topFitText} numberOfLines={1}>
-                Top Fit: {topMatch.title}
+                {t.topFit} {topMatch.title}
               </Text>
             </View>
           ) : (
             <View />
           )}
           <Pressable style={styles.linkBtn} onPress={onOpen}>
-            <Text style={styles.linkBtnText}>View Report</Text>
+            <Text style={styles.linkBtnText}>{t.viewReport}</Text>
             <MaterialIcon
               name="arrow_forward"
               size={14}
@@ -756,11 +763,11 @@ function DiagnosticCard({
       <View style={styles.card}>
         <View style={styles.diagTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.diagKicker}>Skills Aptitude Test</Text>
+            <Text style={styles.diagKicker}>{t.skillsAptitude}</Text>
             <Text style={styles.diagTitle}>
               {badges[0]?.label
-                ? `${badges[0].label} Sector Fit`
-                : "Trades & Workplace Fit"}
+                ? `${badges[0].label} ${t.sectorFitSuffix}`
+                : t.tradesWorkplaceFit}
             </Text>
           </View>
           <View style={[styles.datePill, styles.datePillMuted]}>
@@ -771,17 +778,17 @@ function DiagnosticCard({
         </View>
         <Text style={styles.diagBody}>
           {topMatch
-            ? `Strong alignment with ${topMatch.title}. ${result.matches.length} priority occupations matched from your work-style preferences.`
-            : "Your job-fit preferences are saved to the vault."}
+            ? `${t.strongAlignmentPrefix} ${topMatch.title}. ${result.matches.length} ${t.priorityOccupationsSuffix}`
+            : t.jobFitSaved}
         </Text>
         <View style={styles.diagFooter}>
           <View style={styles.demandRow}>
             <MaterialIcon name="task_alt" size={16} color={colors.success} />
-            <Text style={styles.demandText}>High Sector Demand</Text>
+            <Text style={styles.demandText}>{t.highSectorDemand}</Text>
           </View>
           <Pressable style={styles.linkBtn} onPress={onOpen}>
             <Text style={[styles.linkBtnText, { color: colors.secondary }]}>
-              Review Answers
+              {t.reviewAnswers}
             </Text>
           </Pressable>
         </View>
@@ -795,18 +802,18 @@ function DiagnosticCard({
       <View style={styles.diagTop}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.diagKicker, { color: colors.ochre }]}>
-            Draft Package Saved
+            {t.draftPackageSaved}
           </Text>
           <Text style={styles.diagTitle}>
-            {topMatch?.title ?? "Subject Pathway Package"}
+            {topMatch?.title ?? t.subjectPathwayPackage}
           </Text>
         </View>
         <View style={styles.gradePill}>
-          <Text style={styles.gradePillText}>Grade 10/11</Text>
+          <Text style={styles.gradePillText}>{t.grade1011}</Text>
         </View>
       </View>
       <View style={styles.tagRow}>
-        {(badges.length ? badges : [{ id: "stream", label: "Subject stream" }]).map(
+        {(badges.length ? badges : [{ id: "stream", label: t.subjectStream }]).map(
           (badge) => (
             <View key={badge.id ?? badge.label} style={styles.softTag}>
               <Text style={styles.softTagText}>{badge.label}</Text>
@@ -818,14 +825,14 @@ function DiagnosticCard({
         <View style={styles.demandRow}>
           <MaterialIcon name="lock_open" size={16} color={colors.primary} />
           <Text style={[styles.demandText, { color: colors.primary }]}>
-            {result.matches?.length ?? 0} Career Pathways Unlocked
+            {result.matches?.length ?? 0} {t.careerPathwaysUnlocked}
             {result.answers?.apsTotal
               ? ` · APS ${result.answers.apsTotal}`
               : ""}
           </Text>
         </View>
         <Pressable style={styles.simulateBtn} onPress={onOpen}>
-          <Text style={styles.simulateText}>View Results</Text>
+          <Text style={styles.simulateText}>{t.viewResults}</Text>
         </Pressable>
       </View>
     </View>
@@ -841,6 +848,8 @@ function VaultItemCard({
   index: number;
   onOpen: () => void;
 }) {
+  const { strings } = useLocale();
+  const t = strings.saved;
   if (item.type === "occupation") {
     const thumb =
       PROFILE_THUMBS[index % PROFILE_THUMBS.length] ??
@@ -880,12 +889,12 @@ function VaultItemCard({
               {item.title}
             </Text>
             <Text style={styles.vaultItemMeta}>
-              {item.entityId ? `OFO ${item.entityId}` : "Career pathway"} ·{" "}
+              {item.entityId ? `OFO ${item.entityId}` : t.careerPathway} ·{" "}
               {pathway}
             </Text>
             <Text style={styles.salary}>
               {salary}
-              <Text style={styles.salaryHint}> · indicative</Text>
+              <Text style={styles.salaryHint}> · {t.indicative}</Text>
             </Text>
           </View>
         </Pressable>
@@ -899,7 +908,7 @@ function VaultItemCard({
             <Text style={styles.footMeta}>{pathway}</Text>
           </View>
           <View style={styles.linkBtn}>
-            <Text style={styles.linkBtnText}>View Details</Text>
+            <Text style={styles.linkBtnText}>{t.viewDetails}</Text>
             <MaterialIcon
               name="chevron_right"
               size={14}
@@ -917,12 +926,11 @@ function VaultItemCard({
         <View style={styles.qualTop}>
           <View style={{ flex: 1, gap: 6 }}>
             <View style={styles.nqfPill}>
-              <Text style={styles.nqfText}>DHET / SAQA Accredited</Text>
+              <Text style={styles.nqfText}>{t.dhetSaqaAccredited}</Text>
             </View>
             <Text style={styles.vaultItemTitle}>{item.title}</Text>
             <Text style={styles.diagBody}>
-              Saved qualification pathway · open for entry requirements &
-              providers
+              {t.savedQualPathway}
             </Text>
           </View>
           <FavouriteToggle
@@ -937,11 +945,11 @@ function VaultItemCard({
           <View style={styles.demandRow}>
             <MaterialIcon name="payments" size={14} color={colors.success} />
             <Text style={[styles.footMeta, { color: colors.success }]}>
-              Check NSFAS eligibility
+              {t.checkNsfas}
             </Text>
           </View>
           <Pressable style={styles.linkBtn} onPress={onOpen}>
-            <Text style={styles.linkBtnText}>Open</Text>
+            <Text style={styles.linkBtnText}>{t.open}</Text>
             <MaterialIcon
               name="chevron_right"
               size={14}
@@ -950,6 +958,32 @@ function VaultItemCard({
           </Pressable>
         </View>
       </View>
+    );
+  }
+
+  if (item.type === "bursary") {
+    return (
+      <Pressable style={styles.providerCard} onPress={onOpen}>
+        <View style={styles.providerIcon}>
+          <MaterialIcon
+            name="account_balance_wallet"
+            size={24}
+            color={colors.ochre}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.vaultItemTitle}>{item.title}</Text>
+          <Text style={styles.vaultItemMeta}>{t.savedBursaryMeta}</Text>
+          <Text style={styles.providerOpen}>{t.viewBursaryDetails}</Text>
+        </View>
+        <FavouriteToggle
+          compact
+          type={item.type}
+          url={item.url}
+          title={item.title}
+          entityId={item.entityId}
+        />
+      </Pressable>
     );
   }
 
@@ -965,8 +999,8 @@ function VaultItemCard({
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.vaultItemTitle}>{item.title}</Text>
-        <Text style={styles.vaultItemMeta}>Learning provider · Campus hub</Text>
-        <Text style={styles.providerOpen}>View campus details</Text>
+        <Text style={styles.vaultItemMeta}>{t.learningProvider}</Text>
+        <Text style={styles.providerOpen}>{t.viewCampusDetails}</Text>
       </View>
       <FavouriteToggle
         compact

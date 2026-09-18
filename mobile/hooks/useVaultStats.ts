@@ -9,6 +9,7 @@ const EMPTY: OfflineVaultStats = {
   careersCached: 0,
   qualificationsCached: 0,
   providersCached: 0,
+  bursariesCached: 0,
   blueprintsCached: 0,
   pendingProfileWrites: 0,
   pendingHelplineWrites: 0,

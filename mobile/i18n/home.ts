@@ -52,7 +52,7 @@ export type HomeStrings = {
   whereStudyBody: string;
   whereStudyCta: string;
   fundingTitle: string;
-  fundingBody: string;
+  fundingBody: (count: number) => string;
   fundingCta: string;
   demandTitle: string;
   gazetted: string;
@@ -117,7 +117,10 @@ const en: HomeStrings = {
   whereStudyBody: "26 Public Universities, 50 TVET Colleges, 9 Provinces",
   whereStudyCta: "Find Institutions",
   fundingTitle: "Funding & NSFAS",
-  fundingBody: "Fee-free criteria, Provincial Bursaries, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} bursary listings · verify before you apply`
+      : "Fee-free criteria, Provincial Bursaries, Funza Lushaka",
   fundingCta: "Apply for Bursaries",
   demandTitle: "High Demand Occupations 2024/2025",
   gazetted: "DHET Gazetted",
@@ -185,7 +188,10 @@ const af: HomeStrings = {
   whereStudyBody: "26 Openbare Universiteite, 50 TVET-kolleges, 9 Provinsies",
   whereStudyCta: "Vind Instellings",
   fundingTitle: "Befondsing & NSFAS",
-  fundingBody: "Fooivrye kriteria, Provinsiale Beurse, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} beurslyste · verifieer voor jy aansoek doen`
+      : "Fooivrye kriteria, Provinsiale Beurse, Funza Lushaka",
   fundingCta: "Doen aansoek om Beurse",
   demandTitle: "Hoë-aanvraag-beroep 2024/2025",
   gazetted: "DHET-gegasetteer",
@@ -255,7 +261,10 @@ const zu: HomeStrings = {
     "Amanyuvesi omphakathi angu-26, Amakolishi e-TVET angu-50, Izifundazwe eziyisi-9",
   whereStudyCta: "Thola Izikhungo",
   fundingTitle: "Uxhaso & NSFAS",
-  fundingBody: "Imigomo yokufunda mahhala, Amabhasari Ezifundazwe, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} amabhasari · qinisekisa ngaphambi kokufaka isicelo`
+      : "Imigomo yokufunda mahhala, Amabhasari Ezifundazwe, Funza Lushaka",
   fundingCta: "Faka Isicelo Sebhasari",
   demandTitle: "Imisebenzi Edingeka Kakhulu 2024/2025",
   gazetted: "Ishicilelwe yi-DHET",
@@ -325,8 +334,10 @@ const xh: HomeStrings = {
     "IiYunivesithi zikawonke-wonke ezingama-26, iiKholeji ze-TVET ezingama-50, amaPhondo asi-9",
   whereStudyCta: "Fumana Amaziko",
   fundingTitle: "Inkxaso-mali & NSFAS",
-  fundingBody:
-    "Imigaqo yokufunda simahla, iiBhursari zamaPhondo, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} iibhursari ·qinisekisa phambi kokufaka isicelo`
+      : "Imigaqo yokufunda simahla, iiBhursari zamaPhondo, Funza Lushaka",
   fundingCta: "Faka isicelo seBhursari",
   demandTitle: "Imisebenzi eDingeka kakhulu 2024/2025",
   gazetted: "Ipapashiwe yi-DHET",
@@ -418,7 +429,10 @@ const nso: HomeStrings = {
     "Diunibesithi tša Setšhaba tše 26, Dikholetšhe tša TVET tše 50, Diprovensi tše 9",
   whereStudyCta: "Hwetša Diinstitšušene",
   fundingTitle: "Thekgo ya Ditšhelete & NSFAS",
-  fundingBody: "Melao ya thuto ya mahala, Dibursari tša Diprovensi, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} dibursari · netefatša pele o kgopela`
+      : "Melao ya thuto ya mahala, Dibursari tša Diprovensi, Funza Lushaka",
   fundingCta: "Kgopela Dibursari",
   demandTitle: "Mesomo ye e Nyakegago Kudu 2024/2025",
   gazetted: "E gasetetšwe ke DHET",
@@ -518,7 +532,10 @@ const ve: HomeStrings = {
     "Dziyunivesithi dza Lushaka dza 26, Dzikholichi dza TVET dza 50, Maprovinsi a 9",
   whereStudyCta: "Wanani Zwiinstitusheni",
   fundingTitle: "Thuso ya Masheleni & NSFAS",
-  fundingBody: "Milayo ya u guda mahala, Dibhasari dza Maprovinsi, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} dibhasari · khwaṱhisedzani musi ni sa athu u ita khumbelo`
+      : "Milayo ya u guda mahala, Dibhasari dza Maprovinsi, Funza Lushaka",
   fundingCta: "Kumbelani Dibhasari",
   demandTitle: "Mishumo yo Ṱodwaho Vhukuma 2024/2025",
   gazetted: "Yo gasetiwa nga DHET",
@@ -588,7 +605,10 @@ const ts: HomeStrings = {
     "Tiyunivhesiti ta Rixaka ta 26, Tikholichi ta TVET ta 50, Tiprovhinsi ta 9",
   whereStudyCta: "Kuma Swiyimo",
   fundingTitle: "Nseketelo wa Mali & NSFAS",
-  fundingBody: "Milawu ya dyondzo ya mahala, Tibhasari ta Tiprovhinsi, Funza Lushaka",
+  fundingBody: (count) =>
+    count > 0
+      ? `${count.toLocaleString()} tibhasari · tiyisisa emahlweni ka ku endla xikombelo`
+      : "Milawu ya dyondzo ya mahala, Tibhasari ta Tiprovhinsi, Funza Lushaka",
   fundingCta: "Endla xikombelo xa Tibhasari",
   demandTitle: "Mintirho leyi Laviwaka Ngopfu 2024/2025",
   gazetted: "Yi gasetiwile hi DHET",

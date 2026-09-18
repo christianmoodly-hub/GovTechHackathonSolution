@@ -20,6 +20,7 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { HELPLINE } from "../../../data/staticContent";
+import { useLocale } from "../../../contexts/LocaleContext";
 import { parseCareerFilterParam } from "../../../data/learningPaths";
 import { getOccupationSummaries } from "../../../services/ncapData";
 import type { OccupationSummary } from "../../../services/types";
@@ -48,35 +49,6 @@ import {
 
 const PAGE_SIZE = 20;
 
-const GRADE_OPTIONS: { id: GradeFilterId; label: string; short: string }[] = [
-  { id: "any", label: "Show all pathways (Any level)", short: "All Grades" },
-  {
-    id: "grade9",
-    label: "Grade 9 Completed (GETC / AET Level 4)",
-    short: "Grade 9+",
-  },
-  { id: "grade10", label: "Grade 10 / N1 Certificate", short: "Grade 10+" },
-  { id: "grade11", label: "Grade 11 / N2 Certificate", short: "Grade 11+" },
-  {
-    id: "grade12-dip",
-    label: "Grade 12 NSC (Diploma Endorsement)",
-    short: "Grade 12 Dip",
-  },
-  {
-    id: "grade12-deg",
-    label: "Grade 12 NSC (Bachelor's Endorsement)",
-    short: "Grade 12 Deg",
-  },
-  { id: "n3", label: "N3 / NCV Level 4 Certificate", short: "N3 / NCV 4" },
-];
-
-const MATH_OPTIONS: { id: MathFilterId; label: string }[] = [
-  { id: "pure", label: "Pure Maths (Caps)" },
-  { id: "lit", label: "Maths Literacy" },
-  { id: "tech", label: "Technical Maths" },
-  { id: "none", label: "No Maths / Other" },
-];
-
 const FILTER_ICON_COLOR: Record<CareerFilterId, string> = {
   all: colors.primary,
   demand: colors.gold,
@@ -90,6 +62,9 @@ const FILTER_ICON_COLOR: Record<CareerFilterId, string> = {
 export default function CareersDirectoryScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const { strings, tabs } = useLocale();
+  const t = strings.directory;
+
   const [summaries, setSummaries] = useState<OccupationSummary[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CareerFilterId>("all");
@@ -104,6 +79,40 @@ export default function CareersDirectoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
 
+  const gradeOptions = useMemo(
+    () => [
+      { id: "any" as const, label: t.gradeAny, short: t.allGrades },
+      { id: "grade9" as const, label: t.grade9, short: "Grade 9+" },
+      { id: "grade10" as const, label: t.grade10, short: "Grade 10+" },
+      { id: "grade11" as const, label: t.grade11, short: "Grade 11+" },
+      { id: "grade12-dip" as const, label: t.grade12Dip, short: "Grade 12 Dip" },
+      { id: "grade12-deg" as const, label: t.grade12Deg, short: "Grade 12 Deg" },
+      { id: "n3" as const, label: t.gradeN3, short: "N3 / NCV 4" },
+    ],
+    [t],
+  );
+  const mathOptions = useMemo(
+    () => [
+      { id: "pure" as const, label: t.mathPure },
+      { id: "lit" as const, label: t.mathLit },
+      { id: "tech" as const, label: t.mathTech },
+      { id: "none" as const, label: t.mathNone },
+    ],
+    [t],
+  );
+  const filterLabels: Record<string, string> = useMemo(
+    () => ({
+      all: t.filterAll,
+      demand: t.filterDemand,
+      green: t.filterGreen,
+      trades: t.filterTrades,
+      ict: t.filterIct,
+      health: t.filterHealth,
+      agriculture: t.filterAgriculture,
+    }),
+    [t],
+  );
+
   useEffect(() => {
     const fromParam = parseCareerFilterParam(params.filter);
     if (fromParam) setFilter(fromParam);
@@ -116,7 +125,7 @@ export default function CareersDirectoryScreen() {
       setSummaries(result.summaries);
       setFromCache(result.fromCache);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load careers");
+      setError(err instanceof Error ? err.message : t.failedLoadCareers);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -152,7 +161,7 @@ export default function CareersDirectoryScreen() {
   const progress =
     filtered.length > 0 ? Math.min(1, page.length / filtered.length) : 0;
   const gradeShort =
-    GRADE_OPTIONS.find((g) => g.id === gradeFilter)?.short ?? "All Grades";
+    gradeOptions.find((g) => g.id === gradeFilter)?.short ?? t.allGrades;
 
   const openFilter = () => {
     setDraftGrade(gradeFilter);
@@ -178,29 +187,28 @@ export default function CareersDirectoryScreen() {
     <View style={styles.headerBlock}>
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={2}>
-          Careers Directory{" "}
-          <Text style={styles.titleAlt}>(Imisebenzi)</Text>
+          {t.careersTitle}{" "}
+          <Text style={styles.titleAlt}>{t.careersTitleAlt}</Text>
         </Text>
         <View style={styles.saqaPill}>
-          <Text style={styles.saqaText}>DHET & SAQA</Text>
+          <Text style={styles.saqaText}>{t.dhetSaqa}</Text>
         </View>
       </View>
       <Text style={styles.body}>
-        {summaries.length.toLocaleString()} Government-vetted career pathways
-        across South Africa.
+        {summaries.length.toLocaleString()} {t.careersBody}
       </Text>
 
       <SearchField
         value={query}
         onChangeText={setQuery}
-        placeholder="Search occupation, OFO code, trade..."
+        placeholder={t.searchOccupations}
       />
 
       <Pressable style={styles.filterTrigger} onPress={openFilter}>
         <View style={styles.filterTriggerLeft}>
           <MaterialIcon name="tune" size={20} color={colors.primary} />
           <Text style={styles.filterTriggerLabel} numberOfLines={2}>
-            Filter by Grade & Math Requirement
+            {t.filterGradeMath}
           </Text>
         </View>
         <View style={styles.gradePill}>
@@ -245,7 +253,7 @@ export default function CareersDirectoryScreen() {
                   active && styles.filterChipTextActive,
                 ]}
               >
-                {item.label}
+                {filterLabels[item.id] ?? item.label}
               </Text>
               <View
                 style={[styles.countPill, active && styles.countPillActive]}
@@ -264,12 +272,12 @@ export default function CareersDirectoryScreen() {
         })}
       </ScrollView>
 
-      {loading ? <LoadingState label="Loading occupations…" /> : null}
+      {loading ? <LoadingState label={t.loadingOccupations} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && !filtered.length ? (
         <EmptyState
-          title="No careers found"
-          body="Try a different search term or filter."
+          title={t.noCareersTitle}
+          body={t.noCareersBody}
         />
       ) : null}
     </View>
@@ -281,9 +289,9 @@ export default function CareersDirectoryScreen() {
       <OfflineStatusBar
         cachedCount={summaries.length}
         fromCache={fromCache}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail={`Offline Database Active · ${summaries.length.toLocaleString()} Occupations Available · Updated yesterday`}
+        detail={`${t.offlineDbActive} · ${summaries.length.toLocaleString()} ${t.occupationsAvailable} · ${t.updatedYesterday}`}
       />
 
       <FlatList
@@ -305,9 +313,9 @@ export default function CareersDirectoryScreen() {
           filtered.length ? (
             <View style={styles.footerBlock}>
               <Text style={styles.pageMeta}>
-                Showing {page.length.toLocaleString()} of{" "}
-                {filtered.length.toLocaleString()} occupations · Page{" "}
-                {currentPage} of {totalPages}
+                {t.showingOccupations} {page.length.toLocaleString()} {t.ofOccupations}{" "}
+                {filtered.length.toLocaleString()} {t.occupationsPage}{" "}
+                {currentPage} {t.ofPages} {totalPages}
               </Text>
               <View style={styles.progressTrack}>
                 <View
@@ -328,7 +336,7 @@ export default function CareersDirectoryScreen() {
                     color={colors.primary}
                   />
                   <Text style={styles.loadMoreText}>
-                    Load Next {PAGE_SIZE} Occupations
+                    {t.loadNextOccupations} {PAGE_SIZE} {t.occupationsWord}
                   </Text>
                 </Pressable>
               ) : null}
@@ -342,9 +350,9 @@ export default function CareersDirectoryScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.helpTitle}>Need help choosing?</Text>
+                    <Text style={styles.helpTitle}>{t.needHelpChoosing}</Text>
                     <Text style={styles.helpBody}>
-                      Toll-free DHET Khetha advice line
+                      {t.tollFreeAdvice}
                     </Text>
                   </View>
                 </View>
@@ -388,7 +396,7 @@ export default function CareersDirectoryScreen() {
                       {item.title}
                     </Text>
                     <Text style={styles.cardCode} numberOfLines={1}>
-                      OFO Code: {item.occupationCode}
+                      {t.ofoCode} {item.occupationCode}
                       {subtitle ? (
                         <Text style={[styles.cardCodeAccent, { color: accent }]}>
                           {" "}
@@ -434,19 +442,19 @@ export default function CareersDirectoryScreen() {
 
                 <View style={styles.metaGrid}>
                   <View style={styles.metaCell}>
-                    <Text style={styles.metaLabel}>Min Education</Text>
+                    <Text style={styles.metaLabel}>{t.minEducation}</Text>
                     <Text style={styles.metaValue}>
                       {occupationEducationHint(item.title)}
                     </Text>
                   </View>
                   <View style={styles.metaCell}>
-                    <Text style={styles.metaLabel}>Required Math</Text>
+                    <Text style={styles.metaLabel}>{t.requiredMath}</Text>
                     <Text style={styles.metaValue}>
                       {occupationMathHint(item.title)}
                     </Text>
                   </View>
                   <View style={styles.salaryRow}>
-                    <Text style={styles.metaLabel}>Avg Entry Salary</Text>
+                    <Text style={styles.metaLabel}>{t.avgEntrySalary}</Text>
                     <Text style={styles.salaryValue}>
                       {occupationSalaryHint(item.title)}
                     </Text>
@@ -475,7 +483,7 @@ export default function CareersDirectoryScreen() {
                       )
                     }
                   >
-                    <Text style={styles.pathwayText}>View Pathway</Text>
+                    <Text style={styles.pathwayText}>{t.viewPathway}</Text>
                     <MaterialIcon
                       name="arrow_forward"
                       size={16}
@@ -510,12 +518,12 @@ export default function CareersDirectoryScreen() {
                   size={24}
                   color={colors.primary}
                 />
-                <Text style={styles.modalTitle}>Filter Requirements</Text>
+                <Text style={styles.modalTitle}>{t.filterRequirements}</Text>
               </View>
               <Pressable
                 onPress={() => setFilterOpen(false)}
                 style={styles.modalClose}
-                accessibilityLabel="Close filter dialog"
+                accessibilityLabel={t.closeFilterA11y}
               >
                 <MaterialIcon
                   name="close"
@@ -526,10 +534,10 @@ export default function CareersDirectoryScreen() {
             </View>
 
             <Text style={styles.modalLabel}>
-              Your Highest Level of Completed Education
+              {t.highestEducation}
             </Text>
             <View style={styles.gradeList}>
-              {GRADE_OPTIONS.map((opt) => {
+              {gradeOptions.map((opt) => {
                 const active = draftGrade === opt.id;
                 return (
                   <Pressable
@@ -553,9 +561,9 @@ export default function CareersDirectoryScreen() {
               })}
             </View>
 
-            <Text style={styles.modalLabel}>Your Mathematics Subject</Text>
+            <Text style={styles.modalLabel}>{t.mathSubject}</Text>
             <View style={styles.mathGrid}>
-              {MATH_OPTIONS.map((opt) => {
+              {mathOptions.map((opt) => {
                 const active = draftMath === opt.id;
                 return (
                   <Pressable
@@ -589,10 +597,10 @@ export default function CareersDirectoryScreen() {
 
             <View style={styles.modalActions}>
               <Pressable style={styles.resetBtn} onPress={resetFilter}>
-                <Text style={styles.resetText}>Reset</Text>
+                <Text style={styles.resetText}>{t.reset}</Text>
               </Pressable>
               <Pressable style={styles.applyBtn} onPress={applyFilter}>
-                <Text style={styles.applyText}>Apply Filters</Text>
+                <Text style={styles.applyText}>{t.applyFilters}</Text>
               </Pressable>
             </View>
           </Pressable>

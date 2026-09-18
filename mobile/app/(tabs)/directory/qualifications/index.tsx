@@ -24,6 +24,7 @@ import {
 } from "../../../../data/staticContent";
 import { parseQualTypeParam } from "../../../../data/learningPaths";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
+import { useLocale } from "../../../../contexts/LocaleContext";
 import { getQualificationPage } from "../../../../services/ncapData";
 import type {
   PageCursor,
@@ -55,6 +56,9 @@ const PAGE_SIZE = 20;
 export default function QualificationsDirectoryScreen() {
   const router = useRouter();
   const vault = useVaultStats();
+  const { strings, tabs, common } = useLocale();
+  const t = strings.directory;
+
   const params = useLocalSearchParams<{ type?: string | string[]; aps?: string | string[] }>();
   const [items, setItems] = useState<QualificationSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
@@ -94,7 +98,7 @@ export default function QualificationsDirectoryScreen() {
         setFromCache(page.fromCache);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to load qualifications",
+          err instanceof Error ? err.message : t.failedLoadQuals,
         );
       } finally {
         setLoading(false);
@@ -128,21 +132,20 @@ export default function QualificationsDirectoryScreen() {
     <View style={styles.headerBlock}>
       <View style={styles.registerRow}>
         <MaterialIcon name="school" size={16} color={colors.textSecondary} />
-        <Text style={styles.registerText}>DHET · SAQA National Register</Text>
+        <Text style={styles.registerText}>{t.qualsRegister}</Text>
       </View>
 
       <View style={styles.titleRow}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.title}>Qualifications Directory</Text>
+          <Text style={styles.title}>{t.qualsTitle}</Text>
           <Text style={styles.subtitle}>
-            {totalCached.toLocaleString()} Accredited South African
-            Qualifications (SAQA Vetted)
+            {totalCached.toLocaleString()} {t.qualsBody}
           </Text>
         </View>
         <Pressable
           style={styles.bookmarkBtn}
           onPress={() => router.push(href("/saved"))}
-          accessibilityLabel="View saved qualifications"
+          accessibilityLabel={t.viewSavedQualsA11y}
         >
           <MaterialIcon name="bookmarks" size={20} color={colors.primary} />
         </Pressable>
@@ -151,21 +154,21 @@ export default function QualificationsDirectoryScreen() {
       <View style={styles.offlinePill}>
         <View style={styles.offlineDot} />
         <Text style={styles.offlineText}>
-          Offline Active · {totalCached} Qualifications
+          {t.offlineActiveQuals} · {totalCached}
         </Text>
       </View>
 
       <SearchField
         value={query}
         onChangeText={setQuery}
-        placeholder="Search qualification title, SAQA ID, field..."
+        placeholder={t.searchQualifications}
       />
 
       <View style={styles.apsRow}>
         <Pressable style={styles.apsTrigger} onPress={() => setApsOpen(true)}>
           <Text style={styles.apsTriggerText} numberOfLines={1}>
             {apsFilter === "all"
-              ? "Filter by APS (e.g. Any APS)"
+              ? t.filterByAps
               : APS_OPTIONS.find((o) => o.id === apsFilter)?.label}
           </Text>
           <MaterialIcon
@@ -176,7 +179,7 @@ export default function QualificationsDirectoryScreen() {
         </Pressable>
         <Pressable style={styles.filtersBtn} onPress={() => setApsOpen(true)}>
           <MaterialIcon name="tune" size={18} color={colors.primary} />
-          <Text style={styles.filtersBtnText}>Filters</Text>
+          <Text style={styles.filtersBtnText}>{t.filters}</Text>
         </Pressable>
       </View>
 
@@ -206,12 +209,12 @@ export default function QualificationsDirectoryScreen() {
         })}
       </ScrollView>
 
-      {loading ? <LoadingState label="Loading qualifications…" /> : null}
+      {loading ? <LoadingState label={t.loadingQualifications} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && !filtered.length ? (
         <EmptyState
-          title="No qualifications found"
-          body="Try another search, APS band, or qualification type."
+          title={t.noQualsTitle}
+          body={t.noQualsBody}
         />
       ) : null}
     </View>
@@ -223,7 +226,7 @@ export default function QualificationsDirectoryScreen() {
       <OfflineStatusBar
         cachedCount={totalCached}
         fromCache={fromCache}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
         detail={`${fromCache ? "Cached" : "Live"} · ${totalCached} qualifications on device`}
       />
@@ -266,8 +269,8 @@ export default function QualificationsDirectoryScreen() {
                   />
                   <Text style={styles.loadMoreText}>
                     {loadingMore
-                      ? "Loading…"
-                      : `Load Next ${PAGE_SIZE} Qualifications`}
+                      ? common.loading
+                      : `${t.loadNextOccupations} ${PAGE_SIZE}`}
                   </Text>
                 </Pressable>
               ) : null}
@@ -280,16 +283,14 @@ export default function QualificationsDirectoryScreen() {
                       size={24}
                       color={colors.gold}
                     />
-                    <Text style={styles.helpTitle}>Need Career Guidance?</Text>
+                    <Text style={styles.helpTitle}>{t.needHelpChoosing}</Text>
                   </View>
                   <View style={styles.tollPill}>
-                    <Text style={styles.tollText}>Toll Free</Text>
+                    <Text style={styles.tollText}>{strings.helpline.free}</Text>
                   </View>
                 </View>
                 <Text style={styles.helpBody}>
-                  Speak directly with an accredited DHET Khetha Career Advisor
-                  for qualification matching, entry path verification, and
-                  bursary assistance.
+                  {t.tollFreeAdvice}
                 </Text>
                 <View style={styles.helpActions}>
                   <Pressable
@@ -468,7 +469,7 @@ export default function QualificationsDirectoryScreen() {
                   size={24}
                   color={colors.primary}
                 />
-                <Text style={styles.modalTitle}>Filter by APS score</Text>
+                <Text style={styles.modalTitle}>{t.filterByAps}</Text>
               </View>
               <Pressable
                 onPress={() => setApsOpen(false)}
@@ -519,7 +520,7 @@ export default function QualificationsDirectoryScreen() {
                 setApsOpen(false);
               }}
             >
-              <Text style={styles.resetText}>Reset filters</Text>
+              <Text style={styles.resetText}>{t.reset}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

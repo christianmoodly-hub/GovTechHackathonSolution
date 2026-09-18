@@ -25,23 +25,68 @@ export const GRADE_STAGES: {
   { id: "grade12", label: "Grade 12" },
 ];
 
-export const HOME_LANGUAGES = [
-  "English Home Language",
-  "isiZulu Home Language",
-  "isiXhosa Home Language",
-  "Afrikaans Huistaal",
-  "Sepedi Home Language",
-  "Sesotho Home Language",
-  "Setswana Home Language",
-] as const;
+export type LanguageOption = { id: string; label: string };
 
-export const FAL_LANGUAGES = [
-  "Afrikaans Eerste Addisionele Taal",
-  "isiZulu First Additional Language",
-  "English First Additional Language",
-  "isiXhosa First Additional Language",
-  "Setswana First Additional Language",
-] as const;
+export const HOME_LANGUAGE_OPTIONS: LanguageOption[] = [
+  { id: "english-hl", label: "English Home Language" },
+  { id: "isizulu-hl", label: "isiZulu Home Language" },
+  { id: "isixhosa-hl", label: "isiXhosa Home Language" },
+  { id: "afrikaans-hl", label: "Afrikaans Huistaal" },
+  { id: "sepedi-hl", label: "Sepedi Home Language" },
+  { id: "sesotho-hl", label: "Sesotho Home Language" },
+  { id: "setswana-hl", label: "Setswana Home Language" },
+];
+
+export const FAL_LANGUAGE_OPTIONS: LanguageOption[] = [
+  { id: "afrikaans-fal", label: "Afrikaans Eerste Addisionele Taal" },
+  { id: "isizulu-fal", label: "isiZulu First Additional Language" },
+  { id: "english-fal", label: "English First Additional Language" },
+  { id: "isixhosa-fal", label: "isiXhosa First Additional Language" },
+  { id: "setswana-fal", label: "Setswana First Additional Language" },
+];
+
+/** @deprecated Prefer HOME_LANGUAGE_OPTIONS — label list for legacy UI. */
+export const HOME_LANGUAGES = HOME_LANGUAGE_OPTIONS.map((o) => o.label);
+
+/** @deprecated Prefer FAL_LANGUAGE_OPTIONS — label list for legacy UI. */
+export const FAL_LANGUAGES = FAL_LANGUAGE_OPTIONS.map((o) => o.label);
+
+function normalizeToId(
+  value: string,
+  options: LanguageOption[],
+): string {
+  const trimmed = value.trim();
+  const byId = options.find((o) => o.id === trimmed);
+  if (byId) return byId.id;
+  const byLabel = options.find((o) => o.label === trimmed);
+  if (byLabel) return byLabel.id;
+  const lower = trimmed.toLowerCase();
+  const fuzzy = options.find(
+    (o) =>
+      o.label.toLowerCase() === lower ||
+      o.id.toLowerCase() === lower ||
+      o.label.toLowerCase().includes(lower),
+  );
+  return fuzzy?.id ?? options[0].id;
+}
+
+export function normalizeHomeLanguageToId(value: string): string {
+  return normalizeToId(value, HOME_LANGUAGE_OPTIONS);
+}
+
+export function normalizeFalLanguageToId(value: string): string {
+  return normalizeToId(value, FAL_LANGUAGE_OPTIONS);
+}
+
+export function homeLanguageLabel(idOrLabel: string): string {
+  const id = normalizeHomeLanguageToId(idOrLabel);
+  return HOME_LANGUAGE_OPTIONS.find((o) => o.id === id)?.label ?? idOrLabel;
+}
+
+export function falLanguageLabel(idOrLabel: string): string {
+  const id = normalizeFalLanguageToId(idOrLabel);
+  return FAL_LANGUAGE_OPTIONS.find((o) => o.id === id)?.label ?? idOrLabel;
+}
 
 export type ElectiveDef = {
   id: ElectiveId;

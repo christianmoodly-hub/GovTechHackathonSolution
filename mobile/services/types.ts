@@ -1,4 +1,8 @@
-export type FavouriteType = "occupation" | "qualification" | "provider";
+export type FavouriteType =
+  | "occupation"
+  | "qualification"
+  | "provider"
+  | "bursary";
 
 export type FavouriteRef = {
   type: FavouriteType;
@@ -119,6 +123,45 @@ export type ProviderSummary = {
   name: string;
   providerId: string;
   streetAddress?: string | null;
+  searchText: string;
+};
+
+export type Bursary = {
+  id: string;
+  title: string;
+  url: string;
+  pageId?: number;
+  fieldSlug: string;
+  fieldLabel: string;
+  providerName?: string | null;
+  description?: string | null;
+  eligibility: string[];
+  closingDate?: string | null;
+  closingDateIso?: string | null;
+  openAllYear: boolean;
+  requiredDocuments: string[];
+  applicationSteps: string[];
+  applicationLink?: string | null;
+  contactInfo?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  wpModified?: string | null;
+  closingSortKey: string;
+  schemaVersion?: number;
+  scrapedAt?: string;
+};
+
+export type BursarySummary = {
+  id: string;
+  title: string;
+  url: string;
+  fieldSlug: string;
+  fieldLabel: string;
+  providerName?: string | null;
+  closingDate?: string | null;
+  closingDateIso?: string | null;
+  openAllYear: boolean;
+  closingSortKey: string;
   searchText: string;
 };
 

@@ -18,6 +18,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /bursaries/{bursaryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // User profile — owner-only, no cross-user access
     match /profiles/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

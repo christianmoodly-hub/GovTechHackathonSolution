@@ -18,7 +18,8 @@ import { AuthFooter } from "../components/auth/AuthFooter";
 import { AuthHeader } from "../components/auth/AuthHeader";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
-import { HELPLINE, PROVINCES, REGISTER_ROLES } from "../data/staticContent";
+import { useLocale } from "../contexts/LocaleContext";
+import { HELPLINE, PROVINCES } from "../data/staticContent";
 import type { Demographics } from "../services/types";
 import { colors, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
@@ -38,6 +39,8 @@ const ROLE_ICONS: Record<string, { icon: string; color: string }> = {
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { strings } = useLocale();
+  const t = strings.auth;
   const { registerWithPassword, clearError, error, isLoading } = useAuth();
 
   const [fullName, setFullName] = useState("");
@@ -59,6 +62,37 @@ export default function RegisterScreen() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const message = localError || error;
+
+  const registerRoles = useMemo(
+    () => [
+      {
+        id: "grade9_10",
+        label: t.regRoleGrade910Label,
+        description: t.regRoleGrade910Desc,
+      },
+      {
+        id: "grade11_12",
+        label: t.regRoleGrade1112Label,
+        description: t.regRoleGrade1112Desc,
+      },
+      {
+        id: "tvet",
+        label: t.regRoleTvetLabel,
+        description: t.regRoleTvetDesc,
+      },
+      {
+        id: "university",
+        label: t.regRoleUniversityLabel,
+        description: t.regRoleUniversityDesc,
+      },
+      {
+        id: "work_seeker",
+        label: t.regRoleWorkSeekerLabel,
+        description: t.regRoleWorkSeekerDesc,
+      },
+    ],
+    [t],
+  );
 
   const idValid = useMemo(() => {
     if (docType !== "rsa_id") return null;
@@ -131,11 +165,11 @@ export default function RegisterScreen() {
     setLocalError(null);
     clearError();
     if (pin !== confirmPin) {
-      setLocalError("PIN / password confirmation does not match.");
+      setLocalError(t.errPinMismatch);
       return;
     }
     if (!agreed) {
-      setLocalError("Please accept the DHET data collection agreement.");
+      setLocalError(t.errAcceptAgreement);
       return;
     }
 
@@ -150,7 +184,7 @@ export default function RegisterScreen() {
       // AuthGate routes to /verify-email until Firebase emailVerified is true.
     } catch (err) {
       console.error("[register] create failed", err);
-      setLocalError(err instanceof Error ? err.message : "Registration failed.");
+      setLocalError(err instanceof Error ? err.message : t.errRegistrationFailed);
     } finally {
       setBusy(false);
     }
@@ -158,7 +192,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <AuthHeader title="Create Profile" />
+      <AuthHeader title={t.createProfileTitle} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -175,29 +209,29 @@ export default function RegisterScreen() {
               </Text>
             </View>
             <View style={styles.sessionPill}>
-              <Text style={styles.sessionText}>Session 25m</Text>
+              <Text style={styles.sessionText}>{t.sessionLabel}</Text>
             </View>
           </View>
 
           <View style={styles.intro}>
-            <Text style={styles.headline}>Create Your Free Khetha Profile</Text>
+            <Text style={styles.headline}>{t.registerHeadline}</Text>
             <Text style={styles.subtitle}>
-              Get personalized career, bursary and study guidance.
+              {t.registerSubtitle}
             </Text>
             <View style={styles.trustRow}>
               <View style={styles.trustChip}>
                 <MaterialIcon name="wifi_tethering" size={16} color={colors.success} />
-                <Text style={styles.trustText}>100% Free · Zero-Rated</Text>
+                <Text style={styles.trustText}>{t.trustFree}</Text>
               </View>
               <View style={styles.trustChip}>
                 <MaterialIcon name="bolt" size={14} color={colors.success} />
-                <Text style={styles.trustText}>Firebase Email Verify</Text>
+                <Text style={styles.trustText}>{t.trustFirebase}</Text>
               </View>
             </View>
             <View style={styles.progressTrack}>
               <View style={styles.progressFill} />
             </View>
-            <Text style={styles.progressLabel}>Step 1 of 4</Text>
+            <Text style={styles.progressLabel}>{t.stepOf4}</Text>
           </View>
 
           <View style={styles.sectionCard}>
@@ -205,31 +239,31 @@ export default function RegisterScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.sectionTitleRow}>
                   <MaterialIcon name="badge" size={20} color={colors.primary} />
-                  <Text style={styles.sectionTitle}>Personal Information</Text>
+                  <Text style={styles.sectionTitle}>{t.personalInfo}</Text>
                 </View>
                 <Text style={styles.sectionSub}>
-                  Follow the prompts for particulars below.
+                  {t.personalInfoSub}
                 </Text>
               </View>
               <MaterialIcon name="badge" size={20} color={colors.primary} />
             </View>
 
             <AuthField
-              label="Full Legal Name & Surname"
+              label={t.fullNameLabel}
               leadingIcon="person"
-              placeholder="e.g. Lerato Nomvula Shabangu"
-              hint="As per ID Document / Copy"
+              placeholder={t.fullNamePlaceholder}
+              hint={t.fullNameHint}
               value={fullName}
               onChangeText={setFullName}
             />
 
-            <Text style={styles.fieldLabel}>Citizen Document Type</Text>
+            <Text style={styles.fieldLabel}>{t.docTypeLabel}</Text>
             <View style={styles.docRow}>
               {(
                 [
-                  ["asylum", "Asylum / Refugee"],
-                  ["rsa_id", "RSA ID"],
-                  ["passport", "Passport / Foreign"],
+                  ["asylum", t.docAsylum],
+                  ["rsa_id", t.docRsaId],
+                  ["passport", t.docPassport],
                 ] as const
               ).map(([id, label]) => {
                 const on = docType === id;
@@ -250,12 +284,12 @@ export default function RegisterScreen() {
             <AuthField
               label={
                 docType === "rsa_id"
-                  ? "RSA ID Number (13 Digits)"
-                  : "Passport / Asylum Number"
+                  ? t.rsaIdLabel
+                  : t.passportAsylumLabel
               }
               leadingIcon="fingerprint"
               placeholder={
-                docType === "rsa_id" ? "e.g. 7401015800088" : "Document number"
+                docType === "rsa_id" ? t.rsaIdPlaceholder : t.docNumberPlaceholder
               }
               value={saIdOrPassport}
               onChangeText={onSaIdChange}
@@ -274,33 +308,41 @@ export default function RegisterScreen() {
             {idValid === true ? (
               <View style={styles.validRow}>
                 <MaterialIcon name="verified" size={16} color={colors.success} />
-                <Text style={styles.validText}>ID checksum verified</Text>
+                <Text style={styles.validText}>{t.idVerified}</Text>
               </View>
             ) : null}
 
             <AuthField
-              label="Date of Birth"
+              label={t.dobLabel}
               leadingIcon="history_edu"
-              placeholder="YYYY-MM-DD"
+              placeholder={t.dobPlaceholder}
               hint={
                 docType === "rsa_id"
-                  ? "Filled automatically from your RSA ID (you can still edit it)."
+                  ? t.dobHintFromId
                   : undefined
               }
               value={dateOfBirth}
               onChangeText={setDateOfBirth}
             />
 
-            <Text style={styles.fieldLabel}>Gender</Text>
+            <Text style={styles.fieldLabel}>{t.genderLabel}</Text>
             <View style={styles.chipRow}>
-              {["Female", "Male", "Prefer not to say"].map((item) => (
+              {(
+                [
+                  ["Female", t.genderFemale],
+                  ["Male", t.genderMale],
+                  ["Prefer not to say", t.genderPreferNot],
+                ] as const
+              ).map(([value, label]) => (
                 <Pressable
-                  key={item}
-                  onPress={() => setGender(item)}
-                  style={[styles.chip, gender === item && styles.chipOn]}
+                  key={value}
+                  onPress={() => setGender(value)}
+                  style={[styles.chip, gender === value && styles.chipOn]}
                 >
-                  <Text style={[styles.chipText, gender === item && styles.chipTextOn]}>
-                    {item}
+                  <Text
+                    style={[styles.chipText, gender === value && styles.chipTextOn]}
+                  >
+                    {label}
                   </Text>
                 </Pressable>
               ))}
@@ -312,37 +354,37 @@ export default function RegisterScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.sectionTitleRow}>
                   <MaterialIcon name="mark_chat_read" size={20} color="#1D4ED8" />
-                  <Text style={styles.sectionTitle}>Contact & Province</Text>
+                  <Text style={styles.sectionTitle}>{t.contactProvince}</Text>
                 </View>
                 <Text style={styles.sectionSub}>
-                  We need primary contact information to serve you.
+                  {t.contactProvinceSub}
                 </Text>
               </View>
               <MaterialIcon name="mark_chat_read" size={20} color="#1D4ED8" />
             </View>
 
             <AuthField
-              label="Primary Mobile Number"
+              label={t.mobileLabel}
               leadingIcon="sms"
-              placeholder="+27 72 000 0000"
-              hint="Used for advisor callbacks. Account verification is emailed by Firebase."
+              placeholder={t.mobilePlaceholder}
+              hint={t.mobileHint}
               value={mobile}
               onChangeText={setMobile}
               keyboardType="phone-pad"
             />
             <AuthField
-              label="Email Address *"
-              trailingLabel="Required"
+              label={t.emailLabel}
+              trailingLabel={t.emailRequired}
               leadingIcon="mail"
-              placeholder="your@emailaddress.co.za"
-              hint="Firebase will email you a verification link after you create your account."
+              placeholder={t.emailPlaceholder}
+              hint={t.emailHint}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
 
-            <Text style={styles.fieldLabel}>Province of Residence</Text>
+            <Text style={styles.fieldLabel}>{t.provinceLabel}</Text>
             <View style={styles.chipRow}>
               {PROVINCES.map((item) => (
                 <Pressable
@@ -363,17 +405,17 @@ export default function RegisterScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.sectionTitleRow}>
                   <MaterialIcon name="school" size={20} color={colors.ochre} />
-                  <Text style={styles.sectionTitle}>Your Current Situation</Text>
+                  <Text style={styles.sectionTitle}>{t.situationTitle}</Text>
                 </View>
                 <Text style={styles.sectionSub}>
-                  Please describe your current education and training options.
+                  {t.situationSub}
                 </Text>
               </View>
               <MaterialIcon name="school" size={20} color={colors.ochre} />
             </View>
 
             <View style={styles.roleGrid}>
-              {REGISTER_ROLES.filter((r) => r.id !== "work_seeker").map((item) => {
+              {registerRoles.filter((r) => r.id !== "work_seeker").map((item) => {
                 const meta = ROLE_ICONS[item.id] ?? {
                   icon: "school",
                   color: colors.primary,
@@ -398,7 +440,7 @@ export default function RegisterScreen() {
               })}
             </View>
 
-            {REGISTER_ROLES.filter((r) => r.id === "work_seeker").map((item) => {
+            {registerRoles.filter((r) => r.id === "work_seeker").map((item) => {
               const on = role === item.id;
               return (
                 <Pressable
@@ -426,19 +468,19 @@ export default function RegisterScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.sectionTitleRow}>
                   <MaterialIcon name="lock_reset" size={20} color={colors.text} />
-                  <Text style={styles.sectionTitle}>Security Access</Text>
+                  <Text style={styles.sectionTitle}>{t.securityTitle}</Text>
                 </View>
                 <Text style={styles.sectionSub}>
-                  Create a memorable 6-digit PIN or password
+                  {t.securitySub}
                 </Text>
               </View>
               <MaterialIcon name="lock_reset" size={20} color={colors.text} />
             </View>
 
             <AuthField
-              label="Create 6-Digit PIN / Password"
+              label={t.createPinLabel}
               leadingIcon="lock"
-              placeholder="Minimum 6 characters"
+              placeholder={t.createPinPlaceholder}
               value={pin}
               onChangeText={setPin}
               secureTextEntry={!showPin}
@@ -453,9 +495,9 @@ export default function RegisterScreen() {
               }
             />
             <AuthField
-              label="Confirm PIN / Password"
+              label={t.confirmPinLabel}
               leadingIcon="lock"
-              placeholder="Repeat PIN / password"
+              placeholder={t.confirmPinPlaceholder}
               value={confirmPin}
               onChangeText={setConfirmPin}
               secureTextEntry={!showConfirm}
@@ -474,15 +516,15 @@ export default function RegisterScreen() {
           <AuthCheckbox
             checked={hasDisability}
             onToggle={() => setHasDisability((v) => !v)}
-            title="I am a person living with a disability"
-            body="Enables assistive pathways and accessible career guidance options."
+            title={t.disabilityCheckTitle}
+            body={t.disabilityCheckBody}
           />
 
           <AuthCheckbox
             checked={agreed}
             onToggle={() => setAgreed((v) => !v)}
-            title="DHET Privacy Policy & Service Level Agreement (POPIA Compliant)"
-            body="I agree that anonymized career and aptitude data may be used by DHET to improve national career services."
+            title={t.privacyCheckTitle}
+            body={t.privacyCheckBody}
           />
 
           <ImageBackground
@@ -493,7 +535,7 @@ export default function RegisterScreen() {
             <View style={styles.bannerOverlay}>
               <MaterialIcon name="stars" size={28} color={colors.gold} />
               <Text style={styles.bannerText}>
-                Personalized bursaries, artisan routes, and universities.
+                {t.bannerText}
               </Text>
             </View>
           </ImageBackground>
@@ -510,7 +552,7 @@ export default function RegisterScreen() {
             ) : (
               <>
                 <Text style={styles.primaryText}>
-                  Create Account & Send Verification Email
+                  {t.createAccountCta}
                 </Text>
                 <MaterialIcon name="arrow_forward" size={20} color={colors.onPrimary} />
               </>
@@ -519,8 +561,8 @@ export default function RegisterScreen() {
 
           <Pressable onPress={() => router.replace(href("/sign-in"))}>
             <Text style={styles.signInLink}>
-              Already registered with Khetha?{" "}
-              <Text style={styles.signInLinkBold}>Sign-In here</Text>
+              {t.alreadyRegistered}{" "}
+              <Text style={styles.signInLinkBold}>{t.signInHere}</Text>
             </Text>
           </Pressable>
 
@@ -529,16 +571,17 @@ export default function RegisterScreen() {
               <MaterialIcon name="support_agent" size={20} color={colors.gold} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.helpTitle}>Need help registering?</Text>
+              <Text style={styles.helpTitle}>{t.needHelpRegister}</Text>
               <Text style={styles.helpBody}>
-                Speak to a DHET Career Adviser toll-free at{" "}
+                {t.needHelpRegisterBodyPrefix}{" "}
                 <Text
                   style={styles.inlineLink}
                   onPress={() => void Linking.openURL(`tel:${HELPLINE.tollFree}`)}
                 >
                   {HELPLINE.tollFreeDisplay}
                 </Text>{" "}
-                or SMS {HELPLINE.whatsappDisplay} for a free callback.
+                {t.needHelpRegisterBodyMid} {HELPLINE.whatsappDisplay}{" "}
+                {t.needHelpRegisterBodySuffix}
               </Text>
             </View>
           </View>

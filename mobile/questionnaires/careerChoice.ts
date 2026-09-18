@@ -20,43 +20,41 @@ function scaleWeights(
   return next;
 }
 
-/** Shared Holland RIASEC Likert scale (Stitch Career Interest Profiler). */
+/**
+ * Shared Holland RIASEC Likert scale.
+ * Labels are placeholders — resolveCareerChoice overwrites from i18n.
+ */
 function likertOptions(
   base: Partial<Record<CareerDomain, number>>,
 ): QuestionOption[] {
   return [
     {
       id: "strongly_dislike",
-      label: "Strongly Dislike",
-      altLabel: "Angikuthandi Nhlobo",
+      label: "",
       emoji: "😡",
       weights: {},
     },
     {
       id: "dislike",
-      label: "Dislike",
-      altLabel: "Angikuthandi",
+      label: "",
       emoji: "🙁",
       weights: {},
     },
     {
       id: "neutral",
-      label: "Unsure / Neutral",
-      altLabel: "Anginasiqiniseko",
+      label: "",
       emoji: "😐",
       weights: scaleWeights(base, 0.25),
     },
     {
       id: "like",
-      label: "Like",
-      altLabel: "Ngiyakuthanda",
+      label: "",
       emoji: "🙂",
       weights: scaleWeights(base, 1),
     },
     {
       id: "strongly_like",
-      label: "Strongly Like",
-      altLabel: "Ngiyakuthanda Kakhulu",
+      label: "",
       emoji: "🤩",
       weights: scaleWeights(base, 2),
     },

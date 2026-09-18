@@ -140,3 +140,82 @@ class Provider(BaseModel):
       default_factory=lambda: datetime.utcnow().isoformat(),
       description="Timestamp of when the record was scraped",
   )
+
+
+class BursaryRef(BaseModel):
+  title: str = Field(..., description="Bursary title from a closing-date calendar entry")
+  url: Optional[str] = Field(
+      None, description="Absolute URL to the bursary detail page when known"
+  )
+  closing_date_iso: Optional[str] = Field(
+      None, description="YYYY-MM-DD when parseable from the calendar listing"
+  )
+  field_slug: Optional[str] = Field(
+      None, description="Field-category slug when derivable from the URL"
+  )
+
+
+class BursaryDetail(BaseModel):
+  title: str = Field(
+      ..., description="Name of the bursary (e.g., 'Allan Gray Orbis Fellowship')"
+  )
+  url: str = Field(..., description="Source URL of the bursary page (join key)")
+  page_id: int = Field(..., description="WordPress page ID for batched re-fetch")
+  field_slug: str = Field(
+      ...,
+      description="First URL path segment, e.g. 'engineering-bursaries-south-africa'",
+  )
+  field_label: str = Field(
+      ..., description="Human field label, e.g. 'Engineering'"
+  )
+  provider_name: Optional[str] = Field(
+      None, description="Sponsor / organisation name when extractable"
+  )
+  description: Optional[str] = Field(
+      None, description="High-level summary of who the bursary is for"
+  )
+  eligibility: List[str] = Field(
+      default_factory=list,
+      description="Eligibility criteria list items from the detail page",
+  )
+  closing_date: Optional[str] = Field(
+      None, description="Raw string of the deadline (e.g., '31 October 2026')"
+  )
+  closing_date_iso: Optional[str] = Field(
+      None, description="YYYY-MM-DD when the raw closing date is parseable"
+  )
+  open_all_year: bool = Field(
+      False,
+      description="True when ongoing / no confirmed closing date",
+  )
+  required_documents: List[str] = Field(
+      default_factory=list,
+      description="List of requested docs (e.g., 'Certified ID', 'Matric Results')",
+  )
+  application_steps: List[str] = Field(
+      default_factory=list,
+      description="How-to-apply list items from the detail page",
+  )
+  application_link: Optional[str] = Field(
+      None, description="External URL to the actual application portal or PDF"
+  )
+  contact_info: Optional[str] = Field(
+      None, description="Email or phone block for queries"
+  )
+  contact_email: Optional[str] = Field(
+      None, description="Email extracted from contact_info / mailto"
+  )
+  contact_phone: Optional[str] = Field(
+      None, description="Phone extracted from contact_info"
+  )
+  wp_modified: Optional[str] = Field(
+      None, description="WordPress modified timestamp for incremental re-scrape"
+  )
+  schema_version: int = Field(
+      ...,
+      description="Scraper schema version used when this record was written",
+  )
+  scraped_at: str = Field(
+      default_factory=lambda: datetime.utcnow().isoformat(),
+      description="Timestamp of when the record was enriched",
+  )

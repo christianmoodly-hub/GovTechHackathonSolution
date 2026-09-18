@@ -18,6 +18,7 @@ import {
   OfflineStatusBar,
 } from "./KhethaBrandBar";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { useVaultStats } from "../hooks/useVaultStats";
 import { getOccupationSummaries, updateProfile } from "../services/ncapData";
 import {
@@ -43,6 +44,8 @@ type Props = {
 export function QuestionnaireScreen({ definition, resultKey }: Props) {
   const router = useRouter();
   const { user, profile, refreshProfile, applyLocalProfile } = useAuth();
+  const { strings, tabs } = useLocale();
+  const chrome = strings.questionnaires.chrome;
   const vault = useVaultStats();
   const isCareerChoice = resultKey === "careerChoice";
 
@@ -182,23 +185,21 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
       {isCareerChoice ? (
         <OfflineStatusBar
           cachedCount={vault.careersCached}
-          rightLabel="Decisions"
+          rightLabel={tabs.decisions}
           onRightPress={() => router.push(href("/questionnaires"))}
         />
       ) : (
         <View style={styles.crumbRow}>
           <Pressable onPress={() => router.back()} style={styles.crumbBack}>
             <MaterialIcon name="arrow_back" size={18} color={colors.primary} />
-            <Text style={styles.crumbText}>Decisions</Text>
+            <Text style={styles.crumbText}>{tabs.decisions}</Text>
           </Pressable>
           <Text style={styles.crumbSep}>/</Text>
           <Text style={styles.crumbCurrent}>{definition.title}</Text>
         </View>
       )}
       {draftRestored ? (
-        <Text style={styles.draftHint}>
-          Restored your saved progress on this device.
-        </Text>
+        <Text style={styles.draftHint}>{chrome.draftRestored}</Text>
       ) : null}
       {phase === "intro" ? (
         <View style={styles.card}>
@@ -232,13 +233,13 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
                 Previous results found. View your matches or retake the diagnostic.
               </Text>
               <PrimaryButton
-                label="View past results"
+                label={chrome.seeResults}
                 onPress={() =>
                   router.push(href(`/questionnaires/results/${resultKey}`))
                 }
               />
               <PrimaryButton
-                label="Retake questionnaire"
+                label={chrome.retake}
                 variant="secondary"
                 onPress={startFresh}
               />
@@ -250,7 +251,11 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
                 profile and link into real NCAP occupations.
               </Text>
               <PrimaryButton
-                label={isCareerChoice ? "Start Interest Profiler" : "Start diagnostic"}
+                label={
+                  isCareerChoice
+                    ? chrome.startInterestProfiler
+                    : chrome.startDiagnostic
+                }
                 onPress={startFresh}
               />
             </>
@@ -268,6 +273,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
           selected={selected}
           busy={busy}
           error={error}
+          chrome={chrome}
           onPause={saveAndExit}
           onSelect={onSelect}
           onBack={() => setStep((value) => Math.max(0, value - 1))}
@@ -280,9 +286,11 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
         <View style={styles.card}>
           <View style={styles.progressMeta}>
             <Text style={styles.stepLabel}>
-              Step {step + 1} of {total}
+              {chrome.questionOf(step + 1, total)}
             </Text>
-            <Text style={styles.pctLabel}>{progressPct}% Complete</Text>
+            <Text style={styles.pctLabel}>
+              {chrome.progressComplete(progressPct)}
+            </Text>
           </View>
           <ProgressBar current={step + 1} total={total} />
           <Text style={styles.eta}>
@@ -292,9 +300,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
 
           <View style={styles.offlineBanner}>
             <MaterialIcon name="offline_pin" size={16} color={colors.success} />
-            <Text style={styles.offlineText}>
-              Answers saved locally to device cache · Zero data cost
-            </Text>
+            <Text style={styles.offlineText}>{chrome.autoSaveHint}</Text>
           </View>
 
           <View style={styles.moduleBanner}>
@@ -319,7 +325,6 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
                 key={option.id}
                 label={option.label}
                 description={option.description}
-                altLabel={option.altLabel}
                 emoji={option.emoji}
                 icon={option.icon}
                 image={option.image}
@@ -333,10 +338,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
 
           <View style={styles.guidance}>
             <MaterialIcon name="tips_and_updates" size={18} color={colors.secondary} />
-            <Text style={styles.guidanceText}>
-              Khetha Guidance: honest answers improve occupation matching against
-              the national NCAP database.
-            </Text>
+            <Text style={styles.guidanceText}>{chrome.autoSaveHint}</Text>
           </View>
 
           <View style={styles.row}>
@@ -346,7 +348,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
               onPress={() => setStep((value) => Math.max(0, value - 1))}
             >
               <MaterialIcon name="chevron_left" size={20} color={colors.text} />
-              <Text style={styles.secondaryText}>Previous</Text>
+              <Text style={styles.secondaryText}>{chrome.back}</Text>
             </Pressable>
             <Pressable
               style={[
@@ -361,7 +363,9 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
               ) : (
                 <>
                   <Text style={styles.primaryText}>
-                    {step === total - 1 ? "See results" : "Next Question"}
+                    {step === total - 1
+                      ? chrome.seeResults
+                      : chrome.nextQuestion}
                   </Text>
                   <MaterialIcon
                     name="arrow_forward"
@@ -376,7 +380,7 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
           <Pressable onPress={saveAndExit} style={styles.saveLater}>
             <MaterialIcon name="cloud_sync" size={16} color={colors.primary} />
             <Text style={styles.saveLaterText}>
-              Save Progress & Finish Later (Offline Friendly)
+              {chrome.saveProgressLater}
             </Text>
           </Pressable>
         </View>
@@ -394,6 +398,7 @@ function CareerChoiceFlow({
   selected,
   busy,
   error,
+  chrome,
   onPause,
   onSelect,
   onBack,
@@ -408,6 +413,7 @@ function CareerChoiceFlow({
   selected?: string;
   busy: boolean;
   error: string | null;
+  chrome: ReturnType<typeof useLocale>["strings"]["questionnaires"]["chrome"];
   onPause: () => void;
   onSelect: (id: string) => void;
   onBack: () => void;
@@ -431,7 +437,7 @@ function CareerChoiceFlow({
         <Pressable
           onPress={onPause}
           style={styles.pauseBtn}
-          accessibilityLabel="Pause questionnaire and save progress"
+          accessibilityLabel={chrome.pauseSave}
         >
           <MaterialIcon name="pause_circle" size={22} color={colors.textSecondary} />
         </Pressable>
@@ -440,9 +446,11 @@ function CareerChoiceFlow({
       <View style={styles.progressBlock}>
         <View style={styles.progressMeta}>
           <Text style={styles.ccStep}>
-            Question {step + 1} of {total}
+            {chrome.questionOf(step + 1, total)}
           </Text>
-          <Text style={styles.ccPct}>{progressPct}% Complete</Text>
+          <Text style={styles.ccPct}>
+            {chrome.progressComplete(progressPct)}
+          </Text>
         </View>
         <View style={styles.ccTrack}>
           <View style={[styles.ccFill, { width: `${progressPct}%` }]} />
@@ -498,7 +506,6 @@ function CareerChoiceFlow({
             <OptionButton
               key={option.id}
               label={option.label}
-              altLabel={option.altLabel}
               emoji={option.emoji}
               selected={selected === option.id}
               onPress={() => onSelect(option.id)}
@@ -508,10 +515,7 @@ function CareerChoiceFlow({
 
         <View style={styles.autoSave}>
           <MaterialIcon name="cloud_done" size={18} color={colors.success} />
-          <Text style={styles.autoSaveText}>
-            Tap your choice. Your answers are automatically saved offline on this
-            device.
-          </Text>
+          <Text style={styles.autoSaveText}>{chrome.autoSaveHint}</Text>
         </View>
       </View>
 
@@ -524,7 +528,7 @@ function CareerChoiceFlow({
           onPress={onBack}
         >
           <MaterialIcon name="arrow_back" size={18} color={colors.primary} />
-          <Text style={styles.ccBackText}>Back</Text>
+          <Text style={styles.ccBackText}>{chrome.back}</Text>
         </Pressable>
         <Pressable
           style={[styles.ccNext, (!selected || busy) && styles.disabled]}
@@ -536,7 +540,9 @@ function CareerChoiceFlow({
           ) : (
             <>
               <Text style={styles.ccNextText}>
-                {step === total - 1 ? "See results" : "Next Question"}
+                {step === total - 1
+                  ? chrome.seeResults
+                  : chrome.nextQuestion}
               </Text>
               <MaterialIcon
                 name="arrow_forward"
@@ -550,9 +556,7 @@ function CareerChoiceFlow({
 
       <Pressable onPress={onSaveExit} style={styles.saveExit}>
         <MaterialIcon name="save" size={16} color={colors.textSecondary} />
-        <Text style={styles.saveExitText}>
-          Save & Exit (Resume anytime offline)
-        </Text>
+        <Text style={styles.saveExitText}>{chrome.saveExit}</Text>
       </Pressable>
 
       <View style={styles.trust}>

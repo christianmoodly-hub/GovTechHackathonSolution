@@ -12,6 +12,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { MaterialIcon } from "./MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { colors, layout, radii, spacing, typography } from "../theme";
 import { publicEnv } from "../utils/publicEnv";
 
@@ -31,6 +32,8 @@ type Props = {
  */
 export function GoogleSignInButton({ disabled, onError }: Props) {
   const { signInWithGoogleIdToken, isLoading } = useAuth();
+  const { strings } = useLocale();
+  const t = strings.auth;
   const [busy, setBusy] = useState(false);
   const handledResponse = useRef<string | null>(null);
 
@@ -154,7 +157,7 @@ export function GoogleSignInButton({ disabled, onError }: Props) {
           <View style={styles.gMark}>
             <Text style={styles.gLetter}>G</Text>
           </View>
-          <Text style={styles.label}>Continue with Google</Text>
+          <Text style={styles.label}>{t.continueGoogle}</Text>
           <MaterialIcon
             name="arrow_forward"
             size={18}

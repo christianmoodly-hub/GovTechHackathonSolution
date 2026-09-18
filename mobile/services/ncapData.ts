@@ -10,6 +10,7 @@ import {
   startAfter,
   serverTimestamp,
   setDoc,
+  where,
   type DocumentData,
   type Query,
   type QueryDocumentSnapshot,
@@ -25,6 +26,8 @@ import {
   writeProfileMirror,
 } from "./offlineProfile";
 import type {
+  Bursary,
+  BursarySummary,
   FavouriteRef,
   FavouriteType,
   Occupation,
@@ -44,18 +47,21 @@ const PROFILES = "profiles";
 const OCCUPATIONS = "occupations";
 const QUALIFICATIONS = "qualifications";
 const PROVIDERS = "providers";
+const BURSARIES = "bursaries";
 export const OCC_INDEX_CACHE_KEY = "ncap.occupationSummaries.v1";
 export const QUAL_PAGE_CACHE_KEY = "ncap.qualificationPage.v1";
 export const PROVIDER_PAGE_CACHE_KEY = "ncap.providerPage.v1";
 export const QUAL_INDEX_CACHE_KEY = "ncap.qualificationIndex.v1";
 export const PROVIDER_INDEX_CACHE_KEY = "ncap.providerIndex.v1";
+export const BURSARY_PAGE_CACHE_KEY = "ncap.bursaryPage.v1";
+export const BURSARY_INDEX_CACHE_KEY = "ncap.bursaryIndex.v1";
 const PAGE_SIZE = 100;
 const DIRECTORY_PAGE_SIZE = 40;
 /** Cap offline pack indexes to keep low-data downloads reasonable. */
 const OFFLINE_INDEX_CAP = 300;
 
 function entityCacheKey(
-  type: "occupation" | "qualification" | "provider",
+  type: "occupation" | "qualification" | "provider" | "bursary",
   id: string,
 ): string {
   return `ncap.entity.${type}.${id}.v1`;
@@ -615,6 +621,7 @@ export async function toggleFavourite(
         if (item.type === "occupation") await getOccupation(item.entityId!);
         else if (item.type === "qualification")
           await getQualification(item.entityId!);
+        else if (item.type === "bursary") await getBursary(item.entityId!);
         else await getProvider(item.entityId!);
       } catch {
         // Best-effort prefetch
@@ -981,5 +988,275 @@ export async function readCachedProviderCount(): Promise<number> {
   const index = await readPageCache<ProviderSummary>(PROVIDER_INDEX_CACHE_KEY);
   if (index?.items?.length) return index.items.length;
   const page = await readPageCache<ProviderSummary>(PROVIDER_PAGE_CACHE_KEY);
+  return page?.items?.length ?? 0;
+}
+
+function mapBursary(id: string, data: DocumentData): Bursary {
+  return {
+    id,
+    title: String(data.title ?? ""),
+    url: String(data.url ?? ""),
+    pageId: typeof data.pageId === "number" ? data.pageId : undefined,
+    fieldSlug: String(data.fieldSlug ?? ""),
+    fieldLabel: String(data.fieldLabel ?? ""),
+    providerName: data.providerName ?? null,
+    description: data.description ?? null,
+    eligibility: Array.isArray(data.eligibility) ? data.eligibility : [],
+    closingDate: data.closingDate ?? null,
+    closingDateIso: data.closingDateIso ?? null,
+    openAllYear: Boolean(data.openAllYear),
+    requiredDocuments: Array.isArray(data.requiredDocuments)
+      ? data.requiredDocuments
+      : [],
+    applicationSteps: Array.isArray(data.applicationSteps)
+      ? data.applicationSteps
+      : [],
+    applicationLink: data.applicationLink ?? null,
+    contactInfo: data.contactInfo ?? null,
+    contactEmail: data.contactEmail ?? null,
+    contactPhone: data.contactPhone ?? null,
+    wpModified: data.wpModified ?? null,
+    closingSortKey: String(
+      data.closingSortKey ?? data.closingDateIso ?? "9999-12-31",
+    ),
+    schemaVersion: data.schemaVersion,
+    scrapedAt: data.scrapedAt,
+  };
+}
+
+function toBursarySummary(bursary: Bursary): BursarySummary {
+  return {
+    id: bursary.id,
+    title: bursary.title,
+    url: bursary.url,
+    fieldSlug: bursary.fieldSlug,
+    fieldLabel: bursary.fieldLabel,
+    providerName: bursary.providerName ?? null,
+    closingDate: bursary.closingDate ?? null,
+    closingDateIso: bursary.closingDateIso ?? null,
+    openAllYear: bursary.openAllYear,
+    closingSortKey: bursary.closingSortKey,
+    searchText: [
+      bursary.title,
+      bursary.providerName ?? "",
+      bursary.fieldLabel,
+      bursary.fieldSlug,
+    ]
+      .join(" ")
+      .toLowerCase(),
+  };
+}
+
+export async function getBursary(id: string): Promise<Bursary | null> {
+  const trimmed = id.trim();
+  if (!trimmed) {
+    throw new NcapDataError("invalid-argument", "Bursary id is required");
+  }
+  const cacheKey = entityCacheKey("bursary", trimmed);
+  try {
+    const snap = await getDoc(doc(getDb(), BURSARIES, trimmed));
+    if (!snap.exists()) return null;
+    const bursary = mapBursary(snap.id, snap.data());
+    await writeEntityCache(cacheKey, bursary);
+    return bursary;
+  } catch (err) {
+    const cached = await readEntityCache<Bursary>(cacheKey);
+    if (cached) return cached;
+    throw new NcapDataError(
+      "get-bursary-failed",
+      `Failed to load bursary ${trimmed}`,
+      { cause: err },
+    );
+  }
+}
+
+export async function getBursaryPage(options?: {
+  cursor?: PageCursor | null;
+  pageSize?: number;
+  forceRefresh?: boolean;
+}): Promise<PagedResult<BursarySummary>> {
+  const pageSize = options?.pageSize ?? DIRECTORY_PAGE_SIZE;
+  const cursor = options?.cursor ?? null;
+
+  if (!cursor && !options?.forceRefresh) {
+    const index = await readPageCache<BursarySummary>(BURSARY_INDEX_CACHE_KEY);
+    if (index?.items?.length) {
+      const page = index.items.slice(0, pageSize);
+      const last = page[page.length - 1];
+      return {
+        items: page,
+        nextCursor:
+          index.items.length > pageSize && last
+            ? { sortValue: last.closingSortKey, id: last.id }
+            : null,
+        fromCache: true,
+      };
+    }
+    const cached = await readPageCache<BursarySummary>(BURSARY_PAGE_CACHE_KEY);
+    if (cached?.items?.length) {
+      return {
+        items: cached.items,
+        nextCursor:
+          cached.items.length >= pageSize
+            ? {
+                sortValue: cached.items[cached.items.length - 1].closingSortKey,
+                id: cached.items[cached.items.length - 1].id,
+              }
+            : null,
+        fromCache: true,
+      };
+    }
+  }
+
+  try {
+    const pageQuery = cursor
+      ? query(
+          collection(getDb(), BURSARIES),
+          orderBy("closingSortKey"),
+          startAfter(cursor.sortValue),
+          limit(pageSize),
+        )
+      : query(
+          collection(getDb(), BURSARIES),
+          orderBy("closingSortKey"),
+          limit(pageSize),
+        );
+
+    const snap = await getDocs(pageQuery);
+    const items = snap.docs.map((docSnap) =>
+      toBursarySummary(mapBursary(docSnap.id, docSnap.data())),
+    );
+
+    if (!cursor) {
+      await AsyncStorage.setItem(
+        BURSARY_PAGE_CACHE_KEY,
+        JSON.stringify({ cachedAt: new Date().toISOString(), items }),
+      );
+    }
+
+    const last = items[items.length - 1];
+    return {
+      items,
+      nextCursor:
+        items.length === pageSize && last
+          ? { sortValue: last.closingSortKey, id: last.id }
+          : null,
+      fromCache: false,
+    };
+  } catch (err) {
+    if (!cursor) {
+      const index = await readPageCache<BursarySummary>(BURSARY_INDEX_CACHE_KEY);
+      if (index?.items?.length) {
+        return {
+          items: index.items.slice(0, pageSize),
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
+      const cached = await readPageCache<BursarySummary>(BURSARY_PAGE_CACHE_KEY);
+      if (cached?.items?.length) {
+        return {
+          items: cached.items,
+          nextCursor: null,
+          fromCache: true,
+        };
+      }
+    }
+    throw new NcapDataError(
+      "list-bursaries-failed",
+      "Failed to load bursaries",
+      { cause: err },
+    );
+  }
+}
+
+export async function getBursariesByField(
+  fieldSlug: string,
+  options?: { limit?: number },
+): Promise<BursarySummary[]> {
+  const slug = fieldSlug.trim();
+  if (!slug) return [];
+  const take = options?.limit ?? 12;
+  const cacheKey = `ncap.bursaryField.${slug}.v1`;
+
+  try {
+    const pageQuery = query(
+      collection(getDb(), BURSARIES),
+      where("fieldSlug", "==", slug),
+      limit(Math.max(take * 2, 24)),
+    );
+    const snap = await getDocs(pageQuery);
+    const today = new Date().toISOString().slice(0, 10);
+    const items = snap.docs
+      .map((docSnap) => toBursarySummary(mapBursary(docSnap.id, docSnap.data())))
+      .filter(
+        (b) =>
+          b.openAllYear || !b.closingDateIso || b.closingDateIso >= today,
+      )
+      .sort((a, b) => a.closingSortKey.localeCompare(b.closingSortKey))
+      .slice(0, take);
+
+    await AsyncStorage.setItem(
+      cacheKey,
+      JSON.stringify({ cachedAt: new Date().toISOString(), items }),
+    );
+    return items;
+  } catch (err) {
+    const cached = await readPageCache<BursarySummary>(cacheKey);
+    if (cached?.items?.length) return cached.items.slice(0, take);
+    throw new NcapDataError(
+      "list-bursaries-by-field-failed",
+      `Failed to load bursaries for ${slug}`,
+      { cause: err },
+    );
+  }
+}
+
+export async function prefetchBursaryIndex(options?: {
+  cap?: number;
+}): Promise<{ count: number; cachedAt: string }> {
+  const cap = options?.cap ?? OFFLINE_INDEX_CAP;
+  const items: BursarySummary[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+
+  while (items.length < cap) {
+    const take = Math.min(PAGE_SIZE, cap - items.length);
+    const pageQuery: Query = lastDoc
+      ? query(
+          collection(getDb(), BURSARIES),
+          orderBy("closingSortKey"),
+          startAfter(lastDoc),
+          limit(take),
+        )
+      : query(
+          collection(getDb(), BURSARIES),
+          orderBy("closingSortKey"),
+          limit(take),
+        );
+    const snap = await getDocs(pageQuery);
+    if (snap.empty) break;
+    for (const docSnap of snap.docs) {
+      items.push(toBursarySummary(mapBursary(docSnap.id, docSnap.data())));
+    }
+    lastDoc = snap.docs[snap.docs.length - 1] ?? null;
+    if (snap.size < take) break;
+  }
+
+  const cachedAt = new Date().toISOString();
+  await AsyncStorage.setItem(
+    BURSARY_INDEX_CACHE_KEY,
+    JSON.stringify({ cachedAt, items }),
+  );
+  await AsyncStorage.setItem(
+    BURSARY_PAGE_CACHE_KEY,
+    JSON.stringify({ cachedAt, items: items.slice(0, DIRECTORY_PAGE_SIZE) }),
+  );
+  return { count: items.length, cachedAt };
+}
+
+export async function readCachedBursaryCount(): Promise<number> {
+  const index = await readPageCache<BursarySummary>(BURSARY_INDEX_CACHE_KEY);
+  if (index?.items?.length) return index.items.length;
+  const page = await readPageCache<BursarySummary>(BURSARY_PAGE_CACHE_KEY);
   return page?.items?.length ?? 0;
 }

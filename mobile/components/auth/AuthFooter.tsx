@@ -1,41 +1,52 @@
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialIcon } from "../MaterialIcon";
+import { useLocale } from "../../contexts/LocaleContext";
 import { HELPLINE } from "../../data/staticContent";
 import { colors, radii, spacing, typography } from "../../theme";
 
 export function AuthFooter() {
+  const { strings } = useLocale();
+  const t = strings.auth;
+
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
-        <Text style={styles.muted}>DHET Career Helpline:</Text>
+        <Text style={styles.muted}>{t.footerHelpline}</Text>
         <Pressable onPress={() => void Linking.openURL(`tel:${HELPLINE.tollFree}`)}>
           <Text style={styles.link}>{HELPLINE.tollFreeDisplay}</Text>
         </Pressable>
-        <Text style={styles.muted}>(Toll-Free)</Text>
+        <Text style={styles.muted}>{t.footerTollFree}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.muted}>SMS/Callback: {HELPLINE.whatsappDisplay}</Text>
+        <Text style={styles.muted}>
+          {t.footerSms} {HELPLINE.whatsappDisplay}
+        </Text>
         <Text style={styles.dot}>·</Text>
-        <Text style={styles.link}>Privacy & POPIA</Text>
+        <Text style={styles.link}>{t.footerPrivacy}</Text>
       </View>
     </View>
   );
 }
 
 export function HelpContactCards({
-  title = "Need Help Logging In?",
-  body = "If you forgot your login details or changed your mobile phone number, reach out to our DHET career advisors for immediate verification support:",
+  title,
+  body,
 }: {
   title?: string;
   body?: string;
 }) {
+  const { strings } = useLocale();
+  const t = strings.auth;
+  const resolvedTitle = title ?? t.needHelpLogin;
+  const resolvedBody = body ?? t.needHelpLoginBody;
+
   return (
     <View style={styles.help}>
       <View style={styles.helpTitleRow}>
         <MaterialIcon name="support_agent" size={20} color={colors.primary} />
-        <Text style={styles.helpTitle}>{title}</Text>
+        <Text style={styles.helpTitle}>{resolvedTitle}</Text>
       </View>
-      <Text style={styles.helpBody}>{body}</Text>
+      <Text style={styles.helpBody}>{resolvedBody}</Text>
       <View style={styles.contactCol}>
         <Pressable
           style={styles.contactCard}
@@ -43,7 +54,8 @@ export function HelpContactCards({
         >
           <MaterialIcon name="call" size={18} color={colors.success} />
           <Text style={styles.contactText}>
-            Toll-Free: <Text style={styles.strong}>{HELPLINE.tollFreeDisplay}</Text>
+            {t.tollFreeLabel}{" "}
+            <Text style={styles.strong}>{HELPLINE.tollFreeDisplay}</Text>
           </Text>
         </Pressable>
         <Pressable
@@ -54,7 +66,8 @@ export function HelpContactCards({
         >
           <MaterialIcon name="chat" size={18} color={colors.success} />
           <Text style={styles.contactText}>
-            WhatsApp: <Text style={styles.strong}>{HELPLINE.whatsappDisplay}</Text>
+            {t.whatsappLabel}{" "}
+            <Text style={styles.strong}>{HELPLINE.whatsappDisplay}</Text>
           </Text>
         </Pressable>
       </View>

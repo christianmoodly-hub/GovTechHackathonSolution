@@ -1,8 +1,12 @@
 import { QuestionnaireScreen } from "../../../components/QuestionnaireScreen";
-import { careerChoice } from "../../../questionnaires/careerChoice";
+import { useLocale } from "../../../contexts/LocaleContext";
+import { resolveCareerChoice } from "../../../questionnaires/resolveCareerChoice";
 
 export default function CareerChoiceRoute() {
+  const { locale } = useLocale();
+  const definition = resolveCareerChoice(locale);
+
   return (
-    <QuestionnaireScreen definition={careerChoice} resultKey="careerChoice" />
+    <QuestionnaireScreen definition={definition} resultKey="careerChoice" />
   );
 }

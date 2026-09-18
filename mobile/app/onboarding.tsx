@@ -42,7 +42,8 @@ function mapRegisterRoleToOnboarding(role?: string | null): string | null {
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile, continueAsGuest, clearError } = useAuth();
-  const { locale, common } = useLocale();
+  const { locale, common, strings } = useLocale();
+  const t = strings.onboarding;
 
   const existing = profile?.demographics;
   const mappedRole = mapRegisterRoleToOnboarding(existing?.role);
@@ -95,7 +96,7 @@ export default function OnboardingScreen() {
       router.replace(href("/"));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not save your profile details.",
+        err instanceof Error ? err.message : t.errorSave,
       );
     } finally {
       setBusy(false);
@@ -124,7 +125,7 @@ export default function OnboardingScreen() {
       }
       router.replace(href("/"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Guest mode unavailable.");
+      setError(err instanceof Error ? err.message : t.errorGuest);
     } finally {
       setBusy(false);
     }
@@ -136,13 +137,13 @@ export default function OnboardingScreen() {
         <View style={styles.govRow}>
           <MaterialIcon name="account_balance" size={18} color={colors.primary} />
           <View>
-            <Text style={styles.govLabel}>REPUBLIC OF SOUTH AFRICA</Text>
-            <Text style={styles.govSub}>DHET · Khetha NCAP</Text>
+            <Text style={styles.govLabel}>{t.govLabel}</Text>
+            <Text style={styles.govSub}>{t.govSub}</Text>
           </View>
         </View>
         <View style={styles.zeroPill}>
           <View style={styles.zeroDot} />
-          <Text style={styles.zeroText}>Zero-Rated Portal</Text>
+          <Text style={styles.zeroText}>{t.zeroRated}</Text>
         </View>
       </View>
 
@@ -150,10 +151,10 @@ export default function OnboardingScreen() {
         <View style={styles.heroIcon}>
           <MaterialIcon name="school" size={28} color={colors.gold} />
         </View>
-        <Text style={styles.heroKicker}>NATIONAL CAREER ADVICE PORTAL</Text>
-        <Text style={styles.heroTitle}>Welcome to Khetha NCAP</Text>
+        <Text style={styles.heroKicker}>{t.heroKicker}</Text>
+        <Text style={styles.heroTitle}>{t.heroTitle}</Text>
         <Text style={styles.heroBody}>
-          Please complete below for statistics & tailored guidance.
+          {t.heroBody}
         </Text>
       </View>
 
@@ -164,9 +165,9 @@ export default function OnboardingScreen() {
       <LanguagePicker showLabel={false} />
 
       <View style={styles.sectionHead}>
-        <Text style={styles.section}>Who are you? (Select your current role)</Text>
+        <Text style={styles.section}>{t.whoAreYou}</Text>
         <View style={styles.requiredPill}>
-          <Text style={styles.requiredText}>Required</Text>
+          <Text style={styles.requiredText}>{t.required}</Text>
         </View>
       </View>
       <View style={styles.list}>
@@ -186,8 +187,13 @@ export default function OnboardingScreen() {
                 ) : null}
               </View>
               <View style={styles.roleCopy}>
-                <Text style={styles.roleTitle}>{item.label}</Text>
-                <Text style={styles.roleBody}>{item.description}</Text>
+                <Text style={styles.roleTitle}>
+                  {t.roles[item.id as keyof typeof t.roles]?.label ?? item.label}
+                </Text>
+                <Text style={styles.roleBody}>
+                  {t.roles[item.id as keyof typeof t.roles]?.description ??
+                    item.description}
+                </Text>
               </View>
               <MaterialIcon
                 name={ROLE_ICONS[item.id] ?? "person"}
@@ -208,9 +214,9 @@ export default function OnboardingScreen() {
           />
         </View>
         <View style={{ flex: 1, gap: spacing.sm }}>
-          <Text style={styles.section}>Disability Status</Text>
+          <Text style={styles.section}>{t.disabilityStatus}</Text>
           <Text style={styles.roleBody}>
-            Are you a person living with a disability?
+            {t.disabilityQuestion}
           </Text>
           <View style={styles.chipRow}>
             <Pressable
@@ -229,7 +235,7 @@ export default function OnboardingScreen() {
                   !hasDisability && styles.yesNoTextSelected,
                 ]}
               >
-                No
+                {t.no}
               </Text>
             </Pressable>
             <Pressable
@@ -247,7 +253,7 @@ export default function OnboardingScreen() {
                   hasDisability && styles.yesNoTextSelected,
                 ]}
               >
-                Yes
+                {t.yes}
               </Text>
             </Pressable>
           </View>
@@ -267,7 +273,8 @@ export default function OnboardingScreen() {
                 <Text
                   style={[styles.langText, selected && styles.langTextSelected]}
                 >
-                  {item.label}
+                  {t.disabilities[item.id as keyof typeof t.disabilities] ??
+                    item.label}
                 </Text>
               </Pressable>
             );
@@ -278,10 +285,9 @@ export default function OnboardingScreen() {
       <View style={styles.infoBanner}>
         <MaterialIcon name="check_circle" size={20} color={colors.secondary} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.infoTitle}>Works offline after first sync</Text>
+          <Text style={styles.infoTitle}>{t.offlineTitle}</Text>
           <Text style={styles.infoBody}>
-            Browse cached careers and continue questionnaires without signal.
-            Favourites and results save on device and sync when you reconnect.
+            {t.offlineBody}
           </Text>
         </View>
       </View>
@@ -297,24 +303,23 @@ export default function OnboardingScreen() {
           <MaterialIcon name="explore" size={20} color={colors.text} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.ctaTitle}>Start Exploring / Qala</Text>
-          <Text style={styles.ctaSub}>Unlock personalized study pathways</Text>
+          <Text style={styles.ctaTitle}>{t.startExploring}</Text>
+          <Text style={styles.ctaSub}>{t.startExploringSub}</Text>
         </View>
         <MaterialIcon name="arrow_forward" size={22} color={colors.gold} />
       </Pressable>
 
       <Pressable style={styles.guest} onPress={() => void onGuest()} disabled={busy}>
-        <Text style={styles.guestText}>Continue as Guest</Text>
+        <Text style={styles.guestText}>{t.continueGuest}</Text>
         <MaterialIcon name="chevron_right" size={18} color={colors.primary} />
       </Pressable>
 
       <View style={styles.quoteBox}>
         <Text style={styles.quoteMark}>“</Text>
         <Text style={styles.quote}>
-          Education is the most powerful weapon which you can use to change the
-          world.
+          {t.quote}
         </Text>
-        <Text style={styles.quoteAttr}>— Nelson Rolihlahla Mandela —</Text>
+        <Text style={styles.quoteAttr}>{t.quoteAttr}</Text>
       </View>
     </Screen>
   );

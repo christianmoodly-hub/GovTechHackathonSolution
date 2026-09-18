@@ -159,24 +159,6 @@ export const DIGITAL_CHANNELS = [
   },
 ] as const;
 
-export const FUNDING_CARDS = [
-  {
-    id: "nsfas",
-    title: "NSFAS & Fee-free criteria",
-    body: "Check eligibility for fee-free higher education and TVET support through NSFAS.",
-  },
-  {
-    id: "funza",
-    title: "Funza Lushaka",
-    body: "Bursary support for students who want to teach priority school subjects.",
-  },
-  {
-    id: "provincial",
-    title: "Provincial bursaries",
-    body: "Explore province-specific bursaries and SETA-funded learnership pathways.",
-  },
-] as const;
-
 export const OFFLINE_VAULT_STATS = {
   careersCached: 0,
   qualificationsCached: 0,

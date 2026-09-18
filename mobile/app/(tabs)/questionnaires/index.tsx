@@ -16,6 +16,7 @@ import {
   OfflineStatusBar,
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useLocale } from "../../../contexts/LocaleContext";
 import { HELPLINE } from "../../../data/staticContent";
 import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
@@ -41,46 +42,41 @@ function pathwayStatus(
   return "pending";
 }
 
-type Pathway = {
+type PathwayConfig = {
   key: PathwayKey;
   href: string;
   accent: string;
   badgeIcon: string;
-  badgeLabel: string;
   badgeTone: "green" | "gold" | "blue";
-  duration: string;
   icon: string;
   iconBg: string;
   iconColor: string;
+  ctaIcon: string;
+  banner: ImageSourcePropType;
+};
+
+type Pathway = PathwayConfig & {
+  badgeLabel: string;
+  duration: string;
   title: string;
   subtitle: string;
   body: string;
   tags: string[];
   cta: string;
-  ctaIcon: string;
   journeyLabel: string;
-  banner: ImageSourcePropType;
 };
 
-const PATHWAYS: Pathway[] = [
+const PATHWAY_CONFIG: PathwayConfig[] = [
   {
     key: "subjectChooser",
     href: "/questionnaires/subject-chooser",
     accent: colors.primary,
     badgeIcon: "school",
-    badgeLabel: "Recommended for High School",
     badgeTone: "green",
-    duration: "5–8 mins",
     icon: "menu_book",
     iconBg: colors.primaryMuted,
     iconColor: colors.primary,
-    title: "1. Subject Chooser",
-    subtitle: "Ukukhetha Izifundo · CAPS Aligned",
-    body: "Select your current or prospective Grade 10–12 subjects to test admission into university degrees, TVET college diplomas, and high-demand trades. Prevent closing academic doors early.",
-    tags: ["APS Calculator", "Pure Maths vs Math Lit", "Faculty Prerequisites"],
-    cta: "Launch Subject Chooser",
     ctaIcon: "chevron_right",
-    journeyLabel: "Subject Choice (Grade 10–12)",
     banner: QUESTIONNAIRE_PATH_IMAGES.subjectChooser,
   },
   {
@@ -88,23 +84,11 @@ const PATHWAYS: Pathway[] = [
     href: "/questionnaires/career-choice",
     accent: colors.gold,
     badgeIcon: "local_fire_department",
-    badgeLabel: "Most Popular Diagnostic",
     badgeTone: "gold",
-    duration: "12–15 mins",
     icon: "psychology",
     iconBg: "#FFF4E5",
     iconColor: colors.ochre,
-    title: "2. Career Choice Questionnaire",
-    subtitle: "Holland RIASEC Model · 4 Languages",
-    body: "Discover which fields truly match your natural personality, passions, and core thinking style. Generates your official 3-letter RIASEC profile mapped to registered SAQA occupations.",
-    tags: [
-      "Realistic · Investigative · Artistic",
-      "1,432+ SAQA Careers",
-      "Audio Voice-Over",
-    ],
-    cta: "Start Interest Profiler",
     ctaIcon: "arrow_forward",
-    journeyLabel: "Career Interest (Holland RIASEC)",
     banner: QUESTIONNAIRE_PATH_IMAGES.careerChoice,
   },
   {
@@ -112,58 +96,40 @@ const PATHWAYS: Pathway[] = [
     href: "/questionnaires/job-fit",
     accent: colors.secondary,
     badgeIcon: "handyman",
-    badgeLabel: "Great for Vocational & TVET",
     badgeTone: "blue",
-    duration: "10 mins",
     icon: "engineering",
     iconBg: colors.secondarySubtle,
     iconColor: colors.secondary,
-    title: "3. Job Fit Questionnaire",
-    subtitle: "Workplace Environment Match",
-    body: "Evaluate tangible day-to-day realities: outdoor physical trades, engineering workshops, healthcare wards, corporate teams, or independent digital environments.",
-    tags: [
-      "SETA Apprenticeships",
-      "Centres of Specialisation",
-      "Work Climate Demands",
-    ],
-    cta: "Assess Your Job Fit",
     ctaIcon: "chevron_right",
-    journeyLabel: "Job Fit (Trade & Artisan Focus)",
     banner: QUESTIONNAIRE_PATH_IMAGES.jobFit,
   },
 ];
 
-const FAQ = [
+const FAQ_CONFIG = [
   {
     id: 1,
     icon: "check",
-    question: "In Grade 9 or choosing Matric subjects?",
-    best: "Best choice: 1. Subject Chooser",
-    answer:
-      "Helps you check APS thresholds early so you don't drop Mathematics or Science if your dream qualification requires it.",
     href: "/questionnaires/subject-chooser",
+    keys: { q: "q1", best: "best1", a: "a1" } as const,
   },
   {
     id: 2,
     icon: "help_outline",
-    question: "No idea what career fits you?",
-    best: "Best choice: 2. Career Choice Questionnaire",
-    answer:
-      "Examines your core psychological preferences and personality affinities to provide a curated shortlist of South African occupations.",
     href: "/questionnaires/career-choice",
+    keys: { q: "q2", best: "best2", a: "a2" } as const,
   },
   {
     id: 3,
     icon: "handyman",
-    question: "Prefer hands-on trades or TVET paths?",
-    best: "Best choice: 3. Job Fit Questionnaire",
-    answer:
-      "Focuses directly on physical, technical, and trade conditions to connect you with SETA artisanal qualifications and Centres of Specialisation.",
     href: "/questionnaires/job-fit",
+    keys: { q: "q3", best: "best3", a: "a3" } as const,
   },
 ] as const;
 
-function statusMeta(status: PathwayStatus): {
+function statusMeta(
+  status: PathwayStatus,
+  labels: { completed: string; inProgress: string; pending: string },
+): {
   icon: string;
   label: string;
   iconColor: string;
@@ -174,7 +140,7 @@ function statusMeta(status: PathwayStatus): {
   if (status === "completed") {
     return {
       icon: "check_circle",
-      label: "Completed",
+      label: labels.completed,
       iconColor: colors.success,
       pillBg: colors.card,
       pillFg: colors.success,
@@ -184,7 +150,7 @@ function statusMeta(status: PathwayStatus): {
   if (status === "in_progress") {
     return {
       icon: "pending",
-      label: "In Progress",
+      label: labels.inProgress,
       iconColor: colors.ochre,
       pillBg: "#E7EEFF",
       pillFg: colors.ochre,
@@ -193,7 +159,7 @@ function statusMeta(status: PathwayStatus): {
   }
   return {
     icon: "radio_button_unchecked",
-    label: "Pending",
+    label: labels.pending,
     iconColor: colors.textMuted,
     pillBg: colors.muted,
     pillFg: colors.textSecondary,
@@ -214,8 +180,49 @@ function badgeColors(tone: Pathway["badgeTone"]) {
 export default function QuestionnairesHub() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { strings, tabs } = useLocale();
+  const decisions = strings.questionnaires.decisions;
   const vault = useVaultStats();
   const [faqOpen, setFaqOpen] = useState<number | null>(1);
+
+  const PATHWAYS = useMemo<Pathway[]>(() => {
+    return PATHWAY_CONFIG.map((cfg) => {
+      const copy = decisions[cfg.key];
+      return {
+        ...cfg,
+        badgeLabel: copy.badgeLabel,
+        duration: copy.duration,
+        title: copy.title,
+        subtitle: copy.subtitle,
+        body: copy.body,
+        tags: copy.tags,
+        cta: copy.cta,
+        journeyLabel: copy.journeyLabel,
+      };
+    });
+  }, [decisions]);
+
+  const FAQ = useMemo(
+    () =>
+      FAQ_CONFIG.map((item) => ({
+        id: item.id,
+        icon: item.icon,
+        href: item.href,
+        question: decisions.faq[item.keys.q],
+        best: decisions.faq[item.keys.best],
+        answer: decisions.faq[item.keys.a],
+      })),
+    [decisions],
+  );
+
+  const statusLabels = useMemo(
+    () => ({
+      completed: decisions.statusCompleted,
+      inProgress: decisions.statusInProgress,
+      pending: decisions.statusPending,
+    }),
+    [decisions],
+  );
 
   const statuses = useMemo(() => {
     const map = {} as Record<PathwayKey, PathwayStatus>;
@@ -226,7 +233,7 @@ export default function QuestionnairesHub() {
     const firstOpen = PATHWAYS.find((p) => map[p.key] === "pending");
     if (firstOpen) map[firstOpen.key] = "in_progress";
     return map;
-  }, [profile]);
+  }, [profile, PATHWAYS]);
 
   const completedCount = PATHWAYS.filter(
     (p) => statuses[p.key] === "completed",
@@ -241,7 +248,7 @@ export default function QuestionnairesHub() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={vault.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         detail="DHET National Guidance Engine · Device cache"
       />
 
@@ -254,16 +261,9 @@ export default function QuestionnairesHub() {
       </View>
 
       <View style={styles.hero}>
-        <Text style={styles.heroKicker}>
-          Thatha Isinqumo Esifanele · Neem die regte besluit
-        </Text>
-        <Text style={styles.heroTitle}>Decisions</Text>
-        <Text style={styles.heroBody}>
-          Unsure where to start? Use our three scientifically calibrated
-          decision pathways to match school subjects, personality interests, or
-          workplace environment preferences with accredited South African
-          qualifications.
-        </Text>
+        <Text style={styles.heroKicker}>{decisions.subtitle}</Text>
+        <Text style={styles.heroTitle}>{decisions.title}</Text>
+        <Text style={styles.heroBody}>{decisions.subtitle}</Text>
       </View>
 
       <View style={styles.journeyCard}>
@@ -273,7 +273,7 @@ export default function QuestionnairesHub() {
               <MaterialIcon name="explore" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.journeyTitle}>Your Decision Journey</Text>
+              <Text style={styles.journeyTitle}>{decisions.journeyTitle}</Text>
               <Text style={styles.journeySub}>
                 {completedCount} of {PATHWAYS.length} Pathways Completed
               </Text>
@@ -291,7 +291,7 @@ export default function QuestionnairesHub() {
         <View style={styles.journeyList}>
           {PATHWAYS.map((p) => {
             const status = statuses[p.key];
-            const meta = statusMeta(status);
+            const meta = statusMeta(status, statusLabels);
             return (
               <View
                 key={p.key}
@@ -479,7 +479,7 @@ export default function QuestionnairesHub() {
             <MaterialIcon name="help" size={18} color={colors.primary} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.faqTitle}>Which tool should I take first?</Text>
+            <Text style={styles.faqTitle}>{decisions.faqTitle}</Text>
             <Text style={styles.faqSub}>
               Tap the question that best matches your situation
             </Text>

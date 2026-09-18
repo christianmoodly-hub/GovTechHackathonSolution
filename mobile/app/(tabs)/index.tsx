@@ -174,9 +174,9 @@ export default function HomeScreen() {
           iconBg="#FFF4E5"
           iconColor={colors.ochre}
           title={t.fundingTitle}
-          body={t.fundingBody}
+          body={t.fundingBody(vault.bursariesCached)}
           cta={t.fundingCta}
-          onPress={() => router.push(href("/helpline"))}
+          onPress={() => router.push(href("/directory/bursaries"))}
         />
       </View>
 
