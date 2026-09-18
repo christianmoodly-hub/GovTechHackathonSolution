@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen, EmptyState } from "../../../../components/Screen";
 import { MatchResultsList } from "../../../../components/MatchResultsList";
@@ -11,6 +11,7 @@ import {
 } from "../../../../components/KhethaBrandBar";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { OFFLINE_VAULT_STATS } from "../../../../data/staticContent";
+import { downloadOfflineBlueprint } from "../../../../services/offlineBlueprint";
 import type { QuestionnaireId } from "../../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
@@ -19,8 +20,12 @@ import { domainBadges } from "../../../../utils/occupationPresentation";
 export default function QuestionnaireResultsScreen() {
   const router = useRouter();
   const { questionnaireId } = useLocalSearchParams<{ questionnaireId: string }>();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState(
+    "Blueprint saved on this device. Use the share sheet to keep a copy in Files or Drive.",
+  );
+  const [downloading, setDownloading] = useState(false);
 
   const key = questionnaireId as QuestionnaireId;
   const result = profile?.questionnaireResults?.[key];
@@ -30,6 +35,12 @@ export default function QuestionnaireResultsScreen() {
     topTwo.length >= 2
       ? `${topTwo[0].label} & ${topTwo[1].label}`
       : topTwo[0]?.label ?? "Realistic & Investigative";
+
+  const displayName =
+    profile?.demographics?.fullName?.trim() ||
+    user?.displayName?.trim() ||
+    user?.email?.split("@")[0] ||
+    "Guest explorer";
 
   const retakeHref =
     key === "subjectChooser"
@@ -53,9 +64,30 @@ export default function QuestionnaireResultsScreen() {
     );
   }
 
-  const onDownload = () => {
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 2800);
+  const onDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadOfflineBlueprint({
+        questionnaireId: key,
+        result,
+        displayName,
+      });
+      setToastMessage(
+        "PDF saved on this device. You can reopen it anytime from Saved → Offline Blueprints.",
+      );
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 3600);
+    } catch (err) {
+      Alert.alert(
+        "Download failed",
+        err instanceof Error
+          ? err.message
+          : "Could not create your offline blueprint. Please try again.",
+      );
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -114,15 +146,29 @@ export default function QuestionnaireResultsScreen() {
         </View>
       </View>
 
-      <Pressable style={styles.downloadCard} onPress={onDownload}>
+      <Pressable
+        style={[styles.downloadCard, downloading && styles.downloadCardBusy]}
+        onPress={() => void onDownload()}
+        disabled={downloading}
+        accessibilityRole="button"
+        accessibilityLabel="Download offline blueprint PDF"
+      >
         <View style={styles.downloadLeft}>
           <View style={styles.downloadIcon}>
-            <MaterialIcon name="download" size={24} color={colors.primary} />
+            <MaterialIcon
+              name={downloading ? "pending" : "download"}
+              size={24}
+              color={colors.primary}
+            />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.downloadTitle}>Download Offline Blueprint</Text>
+            <Text style={styles.downloadTitle}>
+              {downloading
+                ? "Preparing Offline Blueprint…"
+                : "Download Offline Blueprint"}
+            </Text>
             <Text style={styles.downloadMeta}>
-              Official DHET PDF · Zero data rate · 1.4 MB
+              Official DHET PDF · Saved on device · Share to Files
             </Text>
           </View>
         </View>
@@ -141,10 +187,8 @@ export default function QuestionnaireResultsScreen() {
         <View style={styles.toast}>
           <MaterialIcon name="cloud_done" size={22} color="#9EF4D0" />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.toastTitle}>Blueprint Saved for Offline Use</Text>
-            <Text style={styles.toastBody}>
-              Accessible anytime in your Saved Documents tab.
-            </Text>
+            <Text style={styles.toastTitle}>Blueprint Ready Offline</Text>
+            <Text style={styles.toastBody}>{toastMessage}</Text>
           </View>
         </View>
       ) : null}
@@ -253,6 +297,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadows.card,
   },
+  downloadCardBusy: { opacity: 0.7 },
   downloadLeft: {
     flexDirection: "row",
     alignItems: "center",

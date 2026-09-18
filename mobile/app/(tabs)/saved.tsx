@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -9,7 +9,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import * as Sharing from "expo-sharing";
 import { Screen } from "../../components/Screen";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import {
@@ -26,6 +27,10 @@ import {
   LEARNER_ROLES,
   OFFLINE_VAULT_STATS,
 } from "../../data/staticContent";
+import {
+  listOfflineBlueprints,
+  type OfflineBlueprint,
+} from "../../services/offlineBlueprint";
 import { stableUrlId } from "../../services/ids";
 import type {
   FavouriteRef,
@@ -58,6 +63,7 @@ export default function SavedScreen() {
     useAccessibility();
   const { locale, home, tabs, common } = useLocale();
   const [filter, setFilter] = useState<VaultFilter>("all");
+  const [blueprints, setBlueprints] = useState<OfflineBlueprint[]>([]);
   const [personaMode, setPersonaMode] = useState<"learner" | "seeker">(() =>
     profile?.demographics?.role === "work_seeker" ? "seeker" : "learner",
   );
@@ -105,6 +111,40 @@ export default function SavedScreen() {
       Boolean(entry[1]?.matches?.length || entry[1]?.completedAt),
     );
   }, [profile?.questionnaireResults]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      void listOfflineBlueprints().then((items) => {
+        if (alive) setBlueprints(items);
+      });
+      return () => {
+        alive = false;
+      };
+    }, []),
+  );
+
+  const openBlueprint = async (item: OfflineBlueprint) => {
+    try {
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          "Blueprint saved",
+          `${item.fileName} is stored on this device for offline use.`,
+        );
+        return;
+      }
+      await Sharing.shareAsync(item.uri, {
+        mimeType: "application/pdf",
+        dialogTitle: item.title,
+        UTI: "com.adobe.pdf",
+      });
+    } catch (err) {
+      Alert.alert(
+        "Could not open blueprint",
+        err instanceof Error ? err.message : "Please download it again from your results.",
+      );
+    }
+  };
 
   const openFavourite = async (item: FavouriteRef) => {
     if (item.type === "occupation") {
@@ -331,6 +371,58 @@ export default function SavedScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Offline blueprints */}
+      <View style={styles.sectionHead}>
+        <View style={styles.sectionHeadLeft}>
+          <MaterialIcon name="picture_as_pdf" size={22} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Offline Blueprints</Text>
+        </View>
+        <Text style={styles.sectionCount}>
+          {blueprints.length} PDF{blueprints.length === 1 ? "" : "s"}
+        </Text>
+      </View>
+
+      {blueprints.length ? (
+        blueprints.map((item) => (
+          <Pressable
+            key={item.id}
+            style={styles.card}
+            onPress={() => void openBlueprint(item)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.title}`}
+          >
+            <View style={styles.blueprintRow}>
+              <View style={styles.blueprintIcon}>
+                <MaterialIcon
+                  name="picture_as_pdf"
+                  size={22}
+                  color={colors.primary}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text style={styles.blueprintTitle}>{item.title}</Text>
+                <Text style={styles.blueprintMeta}>
+                  {item.matchCount} matches ·{" "}
+                  {new Date(item.savedAt).toLocaleDateString("en-ZA")}
+                </Text>
+                <Text style={styles.blueprintFile} numberOfLines={1}>
+                  {item.fileName}
+                </Text>
+              </View>
+              <MaterialIcon name="share" size={18} color={colors.textSecondary} />
+            </View>
+          </Pressable>
+        ))
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>No offline blueprints yet</Text>
+          <Text style={styles.emptyBody}>
+            After you finish a questionnaire, tap Download Offline Blueprint on
+            your results to save a PDF here.
+          </Text>
+        </View>
+      )}
 
       {/* Diagnostics */}
       <View style={styles.sectionHead}>
@@ -1032,6 +1124,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionCount: { ...typography.labelMd, color: colors.secondary },
+  blueprintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  blueprintIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  blueprintTitle: {
+    ...typography.labelLg,
+    color: colors.text,
+    fontWeight: "800",
+  },
+  blueprintMeta: { ...typography.caption, color: colors.textSecondary },
+  blueprintFile: { ...typography.caption, color: colors.textMuted },
   sectionMuted: { ...typography.labelMd, color: colors.textSecondary },
   diagTop: {
     flexDirection: "row",
