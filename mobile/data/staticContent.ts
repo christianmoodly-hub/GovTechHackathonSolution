@@ -1,8 +1,15 @@
 export const LANGUAGES = [
   { id: "en", label: "English" },
+  { id: "af", label: "Afrikaans" },
   { id: "zu", label: "isiZulu" },
   { id: "xh", label: "isiXhosa" },
-  { id: "af", label: "Afrikaans" },
+  { id: "nr", label: "isiNdebele" },
+  { id: "ss", label: "siSwati" },
+  { id: "nso", label: "Sepedi" },
+  { id: "st", label: "Sesotho" },
+  { id: "tn", label: "Setswana" },
+  { id: "ve", label: "Tshivenda" },
+  { id: "ts", label: "Xitsonga" },
 ] as const;
 
 export const LEARNER_ROLES = [

@@ -1,14 +1,19 @@
 import type { AppLocale, HomeLocale } from "./types";
-import { isAppLocale } from "./types";
+import { APP_LOCALES } from "./types";
+import { createBundle, resolveLocale } from "./createBundle";
 
 export type { AppLocale, HomeLocale };
-export { APP_LOCALES } from "./types";
+export { APP_LOCALES };
 
-export const HOME_LOCALES: AppLocale[] = ["en", "zu", "xh", "af"];
+export const HOME_LOCALES: readonly AppLocale[] = APP_LOCALES;
 
-type HomeStrings = {
+export type HomeStrings = {
   homeTab: string;
-  offlineDetail: (careers: string, qualifications: number, providers: number) => string;
+  offlineDetail: (
+    careers: string,
+    qualifications: number,
+    providers: number,
+  ) => string;
   officialPill: string;
   heroTitle: string;
   heroBody: string;
@@ -131,6 +136,74 @@ const en: HomeStrings = {
   version: "Khetha CDS · NCAP Mobile",
 };
 
+const af: HomeStrings = {
+  homeTab: "Tuis",
+  offlineDetail: (careers, qualifications, providers) =>
+    `Aflyn-databasis aktief · ${careers} Loopbane · ${qualifications} Kwalifikasies · ${providers} Verskaffers`,
+  officialPill: "Amptelike DHET CDS-portaal",
+  heroTitle: "Nasionale Loopbaanadviesportaal",
+  heroBody:
+    "Jou selfhulpinstrument vir ingeligte loopbaan- en studiebesluite, aangebied deur Career Development Services, DHET.",
+  voiceLabel: "Kies jou taal:",
+  counselKicker: "Gratis Loopbaanberading",
+  free: "GRATIS",
+  counselBody: (hours) =>
+    `Praat met 'n gekwalifiseerde loopbaanadviseur (${hours})`,
+  tollFree: "Tolvry",
+  whatsapp: "WhatsApp",
+  gatewaysTitle: "Kern-besluitspoorte",
+  gatewaysSub: "Neem begeleidde stappe om jou ná-skool-opsies oop te sluit",
+  subjectTag: "Vir Graad 9 & 10",
+  subjectTitle: "Vakkeuse",
+  subjectBody:
+    "Ontdek watter Graad 10–12-vakke jou droomloopbaandeure oop hou en aan tersiêre toelatingspunt- (APS) minimums voldoen.",
+  subjectMeta: "Voorvereiste-kontroleerder",
+  subjectCta: "Verken Vakke",
+  careerTag: "15 min assessering · RIASEC-model",
+  careerTitle: "Loopbaankeuse-vraelys",
+  careerBody:
+    "Ontdek beroepe wat by jou belange en persoonlikheid pas. Beantwoord vinnige, toeganklike vrae om jou veld te karteer.",
+  careerMeta: "Vordering word outomaties gestoor",
+  careerCta: "Begin Assessering",
+  jobFitTag: "Werksoekers & Gr 12",
+  jobFitTitle: "Werkspasings-vraelys",
+  jobFitBody:
+    "Pas jou werkstyl, omgewingsvoorkeure en praktiese tegniese vaardighede by TVET-ambagte en moderne werkplekrolle.",
+  jobFitMeta: "Ambag- & Ambagsman-gereed",
+  jobFitCta: "Kontroleer Werkspassing",
+  directoryTitle: "Verken Gids",
+  directorySub: "Amptelike databasisse geakkrediteer deur DHET & SAQA",
+  careersDirTitle: "Loopbaangids",
+  careersDirBody: (count) =>
+    `${count} beroepe, Ambagte, Groen Loopbane & Hoë Aanvraag`,
+  careersDirCta: "Blaai deur Beroepe",
+  whatStudyTitle: "Wat om te Studeer",
+  whatStudyBody: (count) =>
+    `${count} Kwalifikasies, APS-sakrekenaar, TVET NATED, Diplomas`,
+  whatStudyCta: "Bekyk Grade/NATED",
+  whereStudyTitle: "Waar om te Studeer",
+  whereStudyBody: "26 Openbare Universiteite, 50 TVET-kolleges, 9 Provinsies",
+  whereStudyCta: "Vind Instellings",
+  fundingTitle: "Befondsing & NSFAS",
+  fundingBody: "Fooivrye kriteria, Provinsiale Beurse, Funza Lushaka",
+  fundingCta: "Doen aansoek om Beurse",
+  demandTitle: "Hoë-aanvraag-beroep 2024/2025",
+  gazetted: "DHET-gegasetteer",
+  demandSub:
+    "Prioriteitsvaardighede krities vir Suid-Afrika se Ekonomiese Heropbou- & Herstelplan.",
+  solarTitle: "Sonkrag-PV-tegnikus / Installeerder",
+  solarMeta: "Groen Ekonomie · TVET N4–N6",
+  softwareTitle: "Sagteware- & Webontwikkelaar",
+  softwareMeta: "IKT-sektor · Graad / Diploma",
+  millwrightTitle: "Meulmaker / Megatronika",
+  millwrightMeta: "Vervaardiging · Ambagstoets / TVET",
+  policy:
+    "Alle loopbaanprofiele, hoër onderwysinstellings en TVET-kolleges word amptelik gekeur deur die Departement van Hoër Onderwys en Opleiding (DHET) & SAQA.",
+  quote: "“'n Belegging in kennis betaal die beste rente.”",
+  quoteAttr: "— Benjamin Franklin",
+  version: "Khetha CDS · NCAP Mobile",
+};
+
 const zu: HomeStrings = {
   homeTab: "Ikhaya",
   offlineDetail: (careers, qualifications, providers) =>
@@ -147,7 +220,8 @@ const zu: HomeStrings = {
   tollFree: "Mahhala",
   whatsapp: "WhatsApp",
   gatewaysTitle: "Amasango Ezinqumo Ezingqangi",
-  gatewaysSub: "Thatha izinyathelo eziqondisiwe ukuvula izinketho zakho emva kwesikole",
+  gatewaysSub:
+    "Thatha izinyathelo eziqondisiwe ukuvula izinketho zakho emva kwesikole",
   subjectTag: "Ibanga 9 no-10",
   subjectTitle: "Ukukhetha Izifundo",
   subjectBody:
@@ -271,81 +345,288 @@ const xh: HomeStrings = {
   version: "Khetha CDS · NCAP Mobile",
 };
 
-const af: HomeStrings = {
-  homeTab: "Tuis",
+/** Nguni-family locales adapt from isiZulu with light orthography tweaks. */
+function nguniFromZu(
+  overrides: Partial<HomeStrings> & Pick<HomeStrings, "homeTab" | "voiceLabel">,
+): HomeStrings {
+  return { ...zu, ...overrides };
+}
+
+const nr = nguniFromZu({
+  homeTab: "Ikhaya",
+  voiceLabel: "Khetha ilimi lakho:",
+  heroTitle: "Iphothali Kazwelonke Yezeluleko Zemisebenzi",
+  counselKicker: "Ukwelulekwa Ngomsebenzi Mahhala",
+});
+
+const ss = nguniFromZu({
+  homeTab: "Likhaya",
+  voiceLabel: "Khetsa lulwimi lwakho:",
+  heroTitle: "Iphothali Yesive Yeteluleko Temsebenti",
+  counselKicker: "Kwelulekwa Ngemsebenti Mahhala",
+  gatewaysTitle: "Emasango Etinchumo Letibalulekile",
+});
+
+const nso: HomeStrings = {
+  homeTab: "Gae",
   offlineDetail: (careers, qualifications, providers) =>
-    `Aflyn-databasis aktief · ${careers} Loopbane · ${qualifications} Kwalifikasies · ${providers} Verskaffers`,
-  officialPill: "Amptelike DHET CDS-portaal",
-  heroTitle: "Nasionale Loopbaanadviesportaal",
+    `Database ya ntle le inthanete e šoma · Mesomo ${careers} · Dikwalofikeišene ${qualifications} · Bafani ${providers}`,
+  officialPill: "Portal ya semmušo ya DHET CDS",
+  heroTitle: "Portal ya Bosetšhaba ya Dikeletšo tša Mošomo",
   heroBody:
-    "Jou selfhulpinstrument vir ingeligte loopbaan- en studiebesluite, aangebied deur Career Development Services, DHET.",
-  voiceLabel: "Kies jou taal:",
-  counselKicker: "Gratis Loopbaanberading",
-  free: "GRATIS",
+    "Sedirišwa sa gago sa go ithuša go tšea diphetho tša mošomo le thuto tše di nago le tsebo, se tlišitšwego ke Career Development Services, DHET.",
+  voiceLabel: "Kgetha polelo ya gago:",
+  counselKicker: "Dikeletšo tša Mošomo tša Mahala",
+  free: "MAHALA",
   counselBody: (hours) =>
-    `Praat met 'n gekwalifiseerde loopbaanadviseur (${hours})`,
-  tollFree: "Tolvry",
+    `Bolela le molekodi wa mošomo yo a nago le bokgoni (${hours})`,
+  tollFree: "Mahala",
   whatsapp: "WhatsApp",
-  gatewaysTitle: "Kern-besluitspoorte",
-  gatewaysSub: "Neem begeleidde stappe om jou ná-skool-opsies oop te sluit",
-  subjectTag: "Vir Graad 9 & 10",
-  subjectTitle: "Vakkeuse",
+  gatewaysTitle: "Dikgoro tša Diphetho tša Motheo",
+  gatewaysSub:
+    "Tšea magato a go hlahlišwa go bula dikgetho tša gago ka morago ga sekolo",
+  subjectTag: "Bakeng sa Mphato wa 9 le 10",
+  subjectTitle: "Kgetho ya Dithuto",
   subjectBody:
-    "Ontdek watter Graad 10–12-vakke jou droomloopbaandeure oop hou en aan tersiêre toelatingspunt- (APS) minimums voldoen.",
-  subjectMeta: "Voorvereiste-kontroleerder",
-  subjectCta: "Verken Vakke",
-  careerTag: "15 min assessering · RIASEC-model",
-  careerTitle: "Loopbaankeuse-vraelys",
+    "Hwetša gore ke dife dithuto tša Mphato wa 10–12 tše di bulago menyako ya mošomo wa gago wa ditoro le go fihlelela dinomoro tša go tsena (APS).",
+  subjectMeta: "Molekodi wa Ditlhokego tša Pele",
+  subjectCta: "Utolla Dithuto",
+  careerTag: "Tekolo ya metsotso ye 15 · Model ya RIASEC",
+  careerTitle: "Lenaneo la Dipotšišo tša Kgetho ya Mošomo",
   careerBody:
-    "Ontdek beroepe wat by jou belange en persoonlikheid pas. Beantwoord vinnige, toeganklike vrae om jou veld te karteer.",
-  careerMeta: "Vordering word outomaties gestoor",
-  careerCta: "Begin Assessering",
-  jobFitTag: "Werksoekers & Gr 12",
-  jobFitTitle: "Werkspasings-vraelys",
+    "Hwetša mesomo ye e swanelago dikgahlego le botho bja gago. Araba dipotšišo tše kopana go mapa lefelo la gago.",
+  careerMeta: "Tšwelopele e a ipoloka",
+  careerCta: "Thoma Tekolo",
+  jobFitTag: "Banyakišiši ba Mošomo & Mphato wa 12",
+  jobFitTitle: "Lenaneo la Dipotšišo tša Go Swanela Mošomo",
   jobFitBody:
-    "Pas jou werkstyl, omgewingsvoorkeure en praktiese tegniese vaardighede by TVET-ambagte en moderne werkplekrolle.",
-  jobFitMeta: "Ambag- & Ambagsman-gereed",
-  jobFitCta: "Kontroleer Werkspassing",
-  directoryTitle: "Verken Gids",
-  directorySub: "Amptelike databasisse geakkrediteer deur DHET & SAQA",
-  careersDirTitle: "Loopbaangids",
+    "Bapiša mokgwa wa gago wa go šoma, dikgetho tša tikologo, le bokgoni bja matsogo le mesomo ya TVET le mešomo ya sebjalebjale.",
+  jobFitMeta: "E loketše Mošomo wa Botsebi & Boartišane",
+  jobFitCta: "Lekola Go Swanela",
+  directoryTitle: "Utolla Tšhupetšo",
+  directorySub: "Didatabase tša semmušo tše di netefaditšwego ke DHET le SAQA",
+  careersDirTitle: "Tšhupetšo ya Mesomo",
   careersDirBody: (count) =>
-    `${count} beroepe, Ambagte, Groen Loopbane & Hoë Aanvraag`,
-  careersDirCta: "Blaai deur Beroepe",
-  whatStudyTitle: "Wat om te Studeer",
+    `Mesomo ye ${count}, Ditrade, Mesomo ye Tala & ye e Nyakegago Kudu`,
+  careersDirCta: "Lebelela Mesomo",
+  whatStudyTitle: "Seo o ka se Ithutago",
   whatStudyBody: (count) =>
-    `${count} Kwalifikasies, APS-sakrekenaar, TVET NATED, Diplomas`,
-  whatStudyCta: "Bekyk Grade/NATED",
-  whereStudyTitle: "Waar om te Studeer",
-  whereStudyBody: "26 Openbare Universiteite, 50 TVET-kolleges, 9 Provinsies",
-  whereStudyCta: "Vind Instellings",
-  fundingTitle: "Befondsing & NSFAS",
-  fundingBody: "Fooivrye kriteria, Provinsiale Beurse, Funza Lushaka",
-  fundingCta: "Doen aansoek om Beurse",
-  demandTitle: "Hoë-aanvraag-beroep 2024/2025",
-  gazetted: "DHET-gegasetteer",
+    `Dikwalofikeišene tše ${count}, Sibalanyi sa APS, TVET NATED, Diploma`,
+  whatStudyCta: "Lebelela Digirii/NATED",
+  whereStudyTitle: "Mo o ka Ithutago",
+  whereStudyBody:
+    "Diunibesithi tša Setšhaba tše 26, Dikholetšhe tša TVET tše 50, Diprovensi tše 9",
+  whereStudyCta: "Hwetša Diinstitšušene",
+  fundingTitle: "Thekgo ya Ditšhelete & NSFAS",
+  fundingBody: "Melao ya thuto ya mahala, Dibursari tša Diprovensi, Funza Lushaka",
+  fundingCta: "Kgopela Dibursari",
+  demandTitle: "Mesomo ye e Nyakegago Kudu 2024/2025",
+  gazetted: "E gasetetšwe ke DHET",
   demandSub:
-    "Prioriteitsvaardighede krities vir Suid-Afrika se Ekonomiese Heropbou- & Herstelplan.",
-  solarTitle: "Sonkrag-PV-tegnikus / Installeerder",
-  solarMeta: "Groen Ekonomie · TVET N4–N6",
-  softwareTitle: "Sagteware- & Webontwikkelaar",
-  softwareMeta: "IKT-sektor · Graad / Diploma",
-  millwrightTitle: "Meulmaker / Megatronika",
-  millwrightMeta: "Vervaardiging · Ambagstoets / TVET",
+    "Bokgoni bja bohlokwa bja Lenaneo la Go Aga Leswa le Go Tsosolosa Ekonomi ya Afrika Borwa.",
+  solarTitle: "Setsebi / Mofaki wa Solar PV",
+  solarMeta: "Ekonomi ye Tala · TVET N4–N6",
+  softwareTitle: "Motšweletši wa Software & Web",
+  softwareMeta: "Lefapha la ICT · Digirii / Diploma",
+  millwrightTitle: "Millwright / Mechatronics",
+  millwrightMeta: "Tšweletšo · Teko ya Trade / TVET",
   policy:
-    "Alle loopbaanprofiele, hoër onderwysinstellings en TVET-kolleges word amptelik gekeur deur die Departement van Hoër Onderwys en Opleiding (DHET) & SAQA.",
-  quote: "“'n Belegging in kennis betaal die beste rente.”",
+    "Diprofaele ka moka tša mesomo, diinstitšušene tša thuto ye ephagameng, le dikholetšhe tša TVET di netefaditšwe semmušo ke Lefapha la Thuto ye Ephagameng le Training (DHET) le SAQA.",
+  quote: "“Peeletšo tsebong e hwetša tswalo ye kaone.”",
   quoteAttr: "— Benjamin Franklin",
   version: "Khetha CDS · NCAP Mobile",
 };
 
-const HOME_I18N: Record<AppLocale, HomeStrings> = { en, zu, xh, af };
+const st: HomeStrings = {
+  ...nso,
+  homeTab: "Hae",
+  voiceLabel: "Khetha puo ea hao:",
+  heroTitle: "Portal ea Naha ea Keletso ea Mosebetsi",
+  counselKicker: "Keletso ea Mosebetsi ea Mahala",
+  free: "MAHALA",
+  gatewaysTitle: "Likhoro tsa Liqeto tsa Motheo",
+  subjectTitle: "Khetho ea Lithuto",
+  careerTitle: "Lenaneo la Lipotso tsa Khetho ea Mosebetsi",
+  jobFitTitle: "Lenaneo la Lipotso tsa Ho Tšoanela Mosebetsi",
+  directoryTitle: "Hlahloba Tataiso",
+  fundingTitle: "Tšehetso ea Lichelete & NSFAS",
+};
 
-export function isHomeLocale(value: string | null | undefined): value is AppLocale {
-  return isAppLocale(value);
+const tn: HomeStrings = {
+  ...nso,
+  homeTab: "Gae",
+  voiceLabel: "Tlhopha puo ya gago:",
+  heroTitle: "Portal ya Bosetšhaba ya Dikeletšo tsa Tiro",
+  counselKicker: "Dikeletšo tsa Tiro tsa Mahala",
+  free: "MAHALA",
+  gatewaysTitle: "Dikgoro tsa Ditshwetso tsa Motheo",
+  subjectTitle: "Tlhopho ya Dithuto",
+  careerTitle: "Lenaneo la Dipotso tsa Tlhopho ya Tiro",
+  jobFitTitle: "Lenaneo la Dipotso tsa Go Tshwanela Tiro",
+  directoryTitle: "Tlhola Tshupiso",
+  fundingTitle: "Thekgo ya Madi & NSFAS",
+};
+
+const ve: HomeStrings = {
+  homeTab: "Haya",
+  offlineDetail: (careers, qualifications, providers) =>
+    `Database ya nnda ha inthanethe i khou shuma · Mishumo ${careers} · Zwikwalifikheisheni ${qualifications} · Vhafari ${providers}`,
+  officialPill: "Portal ya DHET CDS ya mulayo",
+  heroTitle: "Portal ya Lushaka ya Ndaeledzo ya Mushumo",
+  heroBody:
+    "Tshishumiswa tshanu tsha u thusa nga vhone vho u dzhia zwitatiso zwa mushumo na u guda zwi re na ndivho, zwo dalwa nga Career Development Services, DHET.",
+  voiceLabel: "Nangani luambo lwanu:",
+  counselKicker: "Ndaeledzo ya Mushumo ya Mahala",
+  free: "MAHALA",
+  counselBody: (hours) =>
+    `Ambani na mueluleli wa mushumo o pfumiswaho (${hours})`,
+  tollFree: "Mahala",
+  whatsapp: "WhatsApp",
+  gatewaysTitle: "Mikoro ya Zwitatiso zwa Motheo",
+  gatewaysSub:
+    "Dzhenani magato a u hulutshedzwa u vula khetho dzaṋu nga murahu ha tshikolo",
+  subjectTag: "Kha Gireidi ya 9 na 10",
+  subjectTitle: "Khetho ya Zwifundo",
+  subjectBody:
+    "Wanani uri ndi zwifundo zwifhio zwa Gireidi ya 10–12 zwi vulaho mikoro ya mushumo wanu wa ndoro na u swikelela manomboro a u dzhena (APS).",
+  subjectMeta: "Tsedzuluso ya Zwine zwa Ṱodwa Phanda",
+  subjectCta: "Gonisani Zwifundo",
+  careerTag: "Tsedzuluso ya miminithi ya 15 · Modela wa RIASEC",
+  careerTitle: "Mutevhe wa Mibudziso ya Khetho ya Mushumo",
+  careerBody:
+    "Wanani mishumo i tevhelanaho na zwine na takalela na vhuthu haṋu. Fhindulani mibudziso yo pfufhafaho u mapa nḓila yaṋu.",
+  careerMeta: "Mveledziso i a ḓi vhulunga",
+  careerCta: "Thomani Tsedzuluso",
+  jobFitTag: "Vhaṱoḓi vha Mushumo & Gireidi ya 12",
+  jobFitTitle: "Mutevhe wa Mibudziso ya u Tea Mushumo",
+  jobFitBody:
+    "Lingani nḓila yaṋu ya u shuma, zwiṱakadzi zwa mupo, na vhukoni ha zwanda na mishumo ya TVET na mishumo ya zwino.",
+  jobFitMeta: "Yo lugiswa Mushumo wa Vhufundi & Vhartisan",
+  jobFitCta: "Sedzani u Tea",
+  directoryTitle: "Gonisani Tshumisano",
+  directorySub: "Dhidatabase dza mulayo dzo tendelwaho nga DHET na SAQA",
+  careersDirTitle: "Tshumisano ya Mishumo",
+  careersDirBody: (count) =>
+    `Mishumo ya ${count}, Dzitrade, Mishumo dza Green & dzo Ṱodwaho Vhukuma`,
+  careersDirCta: "Lavhelesani Mishumo",
+  whatStudyTitle: "Zwine na nga Guda",
+  whatStudyBody: (count) =>
+    `Zwikwalifikheisheni zwa ${count}, Tshibaledzi tsha APS, TVET NATED, Diploma`,
+  whatStudyCta: "Lavhelesani Digirii/NATED",
+  whereStudyTitle: "Hune na nga Guda hone",
+  whereStudyBody:
+    "Dziyunivesithi dza Lushaka dza 26, Dzikholichi dza TVET dza 50, Maprovinsi a 9",
+  whereStudyCta: "Wanani Zwiinstitusheni",
+  fundingTitle: "Thuso ya Masheleni & NSFAS",
+  fundingBody: "Milayo ya u guda mahala, Dibhasari dza Maprovinsi, Funza Lushaka",
+  fundingCta: "Kumbelani Dibhasari",
+  demandTitle: "Mishumo yo Ṱodwaho Vhukuma 2024/2025",
+  gazetted: "Yo gasetiwa nga DHET",
+  demandSub:
+    "Vhukoni ha ndeme ha Pulane ya u Fhaṱa Hafhu na u Vhuedzedza Ikonomi ya Afurika Tshipembe.",
+  solarTitle: "Mudivhi / Muisa wa Solar PV",
+  solarMeta: "Ikonomi ya Green · TVET N4–N6",
+  softwareTitle: "Muvhambadzi wa Software & Web",
+  softwareMeta: "Sekithara ya ICT · Digirii / Diploma",
+  millwrightTitle: "Millwright / Mechatronics",
+  millwrightMeta: "U bveledza · Tsedzuluso ya Trade / TVET",
+  policy:
+    "Phurofaele dzothe dza mishumo, zwiinstitusheni zwa pfunzo ya nṱha, na dzikholichi dza TVET zwo tendelwa nga Muhasho wa Pfunzo ya Nṱha na Training (DHET) & SAQA.",
+  quote: "“U vhea tshelede kha ndivho zwi vhuyedza vhukuma.”",
+  quoteAttr: "— Benjamin Franklin",
+  version: "Khetha CDS · NCAP Mobile",
+};
+
+const ts: HomeStrings = {
+  homeTab: "Kaya",
+  offlineDetail: (careers, qualifications, providers) =>
+    `Database leyi handle ka inthanete yi tirha · Mintirho ${careers} · Swikiliifikheixini ${qualifications} · Vanyikeri ${providers}`,
+  officialPill: "Portal ya DHET CDS ya ximfumo",
+  heroTitle: "Portal ya Rixaka ya Swiletelo swa Ntirho",
+  heroBody:
+    "Xitirhisiwa xa wena xo tipfunisa ku teka swiboho swa ntirho na dyondzo leswi nga ni vutivi, leswi tisiwaka hi Career Development Services, DHET.",
+  voiceLabel: "Hlawula ririmi ra wena:",
+  counselKicker: "Swiletelo swa Ntirho swa Mahala",
+  free: "MAHALA",
+  counselBody: (hours) =>
+    `Vulavula na muceleteri wa ntirho loyi a nga ni vuswikoti (${hours})`,
+  tollFree: "Mahala",
+  whatsapp: "WhatsApp",
+  gatewaysTitle: "Tinyangwa ta Swiboho swa Xisekelo",
+  gatewaysSub:
+    "Tekela magoza lama kongomisiweke ku pfulela swihlawulekisi swa wena endzhaku ka xikolo",
+  subjectTag: "Eka Gireyi ya 9 na 10",
+  subjectTitle: "Nhlawulo wa Swifundzo",
+  subjectBody:
+    "Kuma swifundzo swihi swa Gireyi ya 10–12 leswi pfulaka tinyangwa ta ntirho wa wena wa norho na ku fikelela tinomboro ta ku nghena (APS).",
+  subjectMeta: "Mukambisisi wa Swilaveko swa Ku Sungula",
+  subjectCta: "Kambisisa Swifundzo",
+  careerTag: "Nkambisiso wa timinete ta 15 · Modela wa RIASEC",
+  careerTitle: "Nxaxamelo wa Swivutiso swa Nhlawulo wa Ntirho",
+  careerBody:
+    "Kuma mintirho leyi fambelanaka na swinavelo na vumunhu bya wena. Hlamula swivutiso swo koma ku mapa nsimu ya wena.",
+  careerMeta: "Ndzulamiso wu tipfunela",
+  careerCta: "Sungula Nkambisiso",
+  jobFitTag: "Valavi va Ntirho & Gireyi ya 12",
+  jobFitTitle: "Nxaxamelo wa Swivutiso swa Ku Faneleka ka Ntirho",
+  jobFitBody:
+    "Fanisa ndlela ya wena yo tirha, swinavelo swa mbango, na vuswikoti bya mavoko na mintirho ya TVET na mintirho ya sweswinyana.",
+  jobFitMeta: "Yi lulamile eka Ntirho wa Vutshila & Vuartisan",
+  jobFitCta: "Kambela Ku Faneleka",
+  directoryTitle: "Kambisisa Xikombiso",
+  directorySub: "Tidatabase ta ximfumo leti amukeriweke hi DHET na SAQA",
+  careersDirTitle: "Xikombiso xa Mintirho",
+  careersDirBody: (count) =>
+    `Mintirho ya ${count}, Titrade, Mintirho ya Rihlaza & leyi Laviwaka Ngopfu`,
+  careersDirCta: "Languta Mintirho",
+  whatStudyTitle: "Leswi u nga swi Dyondzaka",
+  whatStudyBody: (count) =>
+    `Swikiliifikheixini swa ${count}, Xibalo xa APS, TVET NATED, Diploma`,
+  whatStudyCta: "Languta Digirii/NATED",
+  whereStudyTitle: "Laha u nga Dyondza kona",
+  whereStudyBody:
+    "Tiyunivhesiti ta Rixaka ta 26, Tikholichi ta TVET ta 50, Tiprovhinsi ta 9",
+  whereStudyCta: "Kuma Swiyimo",
+  fundingTitle: "Nseketelo wa Mali & NSFAS",
+  fundingBody: "Milawu ya dyondzo ya mahala, Tibhasari ta Tiprovhinsi, Funza Lushaka",
+  fundingCta: "Endla xikombelo xa Tibhasari",
+  demandTitle: "Mintirho leyi Laviwaka Ngopfu 2024/2025",
+  gazetted: "Yi gasetiwile hi DHET",
+  demandSub:
+    "Vuswikoti bya nkoka bya Pulani yo Aka Nakambe na ku Tlherisela Ikonomi ya Afrika Dzonga.",
+  solarTitle: "Mudyondzi / Muongori wa Solar PV",
+  solarMeta: "Ikonomi ya Rihlaza · TVET N4–N6",
+  softwareTitle: "Mutumbuluxi wa Software & Web",
+  softwareMeta: "Xiyenge xa ICT · Digirii / Diploma",
+  millwrightTitle: "Millwright / Mechatronics",
+  millwrightMeta: "Vutumbuluxi · Nkambisiso wa Trade / TVET",
+  policy:
+    "Tiphurofaele hinkwato ta mintirho, swiyimo swa dyondzo ya le henhla, na tikholichi ta TVET swi kamberiwa hi ndlela ya ximfumo hi Ndzawulo ya Dyondzo ya le Henhla na Training (DHET) & SAQA.",
+  quote: "“Ku veka mali eka vutivi swi humesa ribye ra kahle.”",
+  quoteAttr: "— Benjamin Franklin",
+  version: "Khetha CDS · NCAP Mobile",
+};
+
+const HOME_I18N = createBundle<HomeStrings>({
+  en,
+  af,
+  zu,
+  xh,
+  nr,
+  ss,
+  nso,
+  st,
+  tn,
+  ve,
+  ts,
+});
+
+export function isHomeLocale(
+  value: string | null | undefined,
+): value is AppLocale {
+  return resolveLocale(value) === value;
 }
 
 export function getHomeStrings(locale: string | null | undefined): HomeStrings {
-  const key = isAppLocale(locale) ? locale : "en";
-  return HOME_I18N[key];
+  return HOME_I18N[resolveLocale(locale)];
 }

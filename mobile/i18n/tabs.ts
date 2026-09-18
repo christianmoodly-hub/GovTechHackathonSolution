@@ -1,7 +1,7 @@
 import type { AppLocale } from "./types";
-import { isAppLocale } from "./types";
+import { createBundle, resolveLocale } from "./createBundle";
 
-type TabStrings = {
+export type TabStrings = {
   home: string;
   decisions: string;
   directory: string;
@@ -15,6 +15,14 @@ const en: TabStrings = {
   directory: "Directory",
   saved: "Saved",
   helpline: "Helpline",
+};
+
+const af: TabStrings = {
+  home: "Tuis",
+  decisions: "Besluite",
+  directory: "Gids",
+  saved: "Gestoor",
+  helpline: "Hulplyn",
 };
 
 const zu: TabStrings = {
@@ -33,17 +41,76 @@ const xh: TabStrings = {
   helpline: "Umgca Woncedo",
 };
 
-const af: TabStrings = {
-  home: "Tuis",
-  decisions: "Besluite",
-  directory: "Gids",
-  saved: "Gestoor",
-  helpline: "Hulplyn",
+const nr: TabStrings = {
+  home: "Ikhaya",
+  decisions: "Iinqumo",
+  directory: "Isizindalwazi",
+  saved: "Okulondoloziweko",
+  helpline: "Ulayini Wosizo",
 };
 
-const TAB_I18N: Record<AppLocale, TabStrings> = { en, zu, xh, af };
+const ss: TabStrings = {
+  home: "Likhaya",
+  decisions: "Tinchumo",
+  directory: "Silulu Selwati",
+  saved: "Lokulondoloziwe",
+  helpline: "Ulayini Wesito",
+};
+
+const nso: TabStrings = {
+  home: "Gae",
+  decisions: "Diphetho",
+  directory: "Tšhupetšo",
+  saved: "Tše di bolokilwego",
+  helpline: "Mogala wa Thušo",
+};
+
+const st: TabStrings = {
+  home: "Hae",
+  decisions: "Liqeto",
+  directory: "Tataiso",
+  saved: "Tse bolokiloeng",
+  helpline: "Mohala oa Thuso",
+};
+
+const tn: TabStrings = {
+  home: "Gae",
+  decisions: "Ditshwetso",
+  directory: "Tshupiso",
+  saved: "Tse di bolokilweng",
+  helpline: "Mogala wa Thuso",
+};
+
+const ve: TabStrings = {
+  home: "Haya",
+  decisions: "Zwitatiso",
+  directory: "Tshumisano",
+  saved: "Zwo vhulungwaho",
+  helpline: "Lutingo lwa Thuso",
+};
+
+const ts: TabStrings = {
+  home: "Kaya",
+  decisions: "Swiboho",
+  directory: "Xikombiso",
+  saved: "Swo hlayisiwa",
+  helpline: "Noyini wa Mpfuno",
+};
+
+const TAB_I18N = createBundle<TabStrings>({
+  en,
+  af,
+  zu,
+  xh,
+  nr,
+  ss,
+  nso,
+  st,
+  tn,
+  ve,
+  ts,
+});
 
 export function getTabStrings(locale: string | null | undefined): TabStrings {
-  const key = isAppLocale(locale) ? locale : "en";
-  return TAB_I18N[key];
+  return TAB_I18N[resolveLocale(locale)];
 }
