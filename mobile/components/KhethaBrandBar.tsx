@@ -2,6 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcon } from "./MaterialIcon";
 import { useAccessibility } from "../contexts/AccessibilityContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { radii, spacing, typography } from "../theme";
 import { href } from "../utils/href";
 
@@ -145,6 +146,7 @@ export function OfflineStatusBar({
   detail?: string;
 }) {
   const { colors, highContrast } = useAccessibility();
+  const { common } = useLocale();
   return (
     <View style={styles.statusWrap}>
       <View
@@ -160,7 +162,7 @@ export function OfflineStatusBar({
         <View style={styles.statusLeft}>
           <View style={[styles.dot, { backgroundColor: colors.success }]} />
           <Text style={[styles.statusText, { color: colors.success }]}>
-            {fromCache ? "Offline Ready" : "Online"} ·{" "}
+            {fromCache ? common.offlineReady : common.online} ·{" "}
             {cachedCount.toLocaleString()} Cached
           </Text>
         </View>

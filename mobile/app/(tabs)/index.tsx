@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Image,
   Linking,
@@ -15,48 +14,17 @@ import {
   KhethaBrandBar,
   OfflineStatusBar,
 } from "../../components/KhethaBrandBar";
-import { useAuth } from "../../contexts/AuthContext";
-import { HELPLINE, LANGUAGES, OFFLINE_VAULT_STATS } from "../../data/staticContent";
+import { LanguagePicker } from "../../components/LanguagePicker";
+import { useLocale } from "../../contexts/LocaleContext";
+import { HELPLINE, OFFLINE_VAULT_STATS } from "../../data/staticContent";
 import { QUESTIONNAIRE_PATH_IMAGES } from "../../data/learningPaths";
-import { getHomeStrings, isHomeLocale, type HomeLocale } from "../../i18n/home";
-import { updateProfile } from "../../services/ncapData";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
-  const profileLanguage = profile?.demographics?.preferredLanguage;
-  const [locale, setLocale] = useState<HomeLocale>(() =>
-    isHomeLocale(profileLanguage) ? profileLanguage : "en",
-  );
-
-  useEffect(() => {
-    if (isHomeLocale(profileLanguage)) {
-      setLocale(profileLanguage);
-    }
-  }, [profileLanguage]);
-
-  const t = getHomeStrings(locale);
+  const { home: t } = useLocale();
   const careersCount = OFFLINE_VAULT_STATS.careersCached.toLocaleString();
-
-  const selectLanguage = (next: HomeLocale) => {
-    setLocale(next);
-    if (!user || !profile?.demographics) return;
-    void (async () => {
-      try {
-        await updateProfile(user.uid, {
-          demographics: {
-            ...profile.demographics,
-            preferredLanguage: next,
-          },
-        });
-        await refreshProfile();
-      } catch {
-        // Keep local home locale even if profile sync fails.
-      }
-    })();
-  };
 
   return (
     <Screen>
@@ -79,27 +47,10 @@ export default function HomeScreen() {
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>{t.heroTitle}</Text>
         <Text style={styles.heroBody}>{t.heroBody}</Text>
-        <Text style={styles.voiceLabel}>{t.voiceLabel}</Text>
-        <View style={styles.langRow}>
-          {LANGUAGES.map((lang) => {
-            const active = locale === lang.id;
-            return (
-              <Pressable
-                key={lang.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                onPress={() => selectLanguage(lang.id as HomeLocale)}
-                style={[styles.langChip, active && styles.langChipActive]}
-              >
-                <Text
-                  style={[styles.langText, active && styles.langTextActive]}
-                >
-                  {lang.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <LanguagePicker
+          label={t.voiceLabel}
+          labelStyle={{ color: "#FFFFFF" }}
+        />
       </View>
 
       <View style={styles.counselCard}>

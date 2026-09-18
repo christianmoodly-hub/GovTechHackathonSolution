@@ -94,7 +94,7 @@ const PATHWAYS: Pathway[] = [
     iconBg: "#FFF4E5",
     iconColor: colors.ochre,
     title: "2. Career Choice Questionnaire",
-    subtitle: "Holland RIASEC Model · 11 Languages",
+    subtitle: "Holland RIASEC Model · 4 Languages",
     body: "Discover which fields truly match your natural personality, passions, and core thinking style. Generates your official 3-letter RIASEC profile mapped to registered SAQA occupations.",
     tags: [
       "Realistic · Investigative · Artistic",

@@ -1,7 +1,7 @@
 export const LANGUAGES = [
   { id: "en", label: "English" },
   { id: "zu", label: "isiZulu" },
-  { id: "st", label: "Sesotho" },
+  { id: "xh", label: "isiXhosa" },
   { id: "af", label: "Afrikaans" },
 ] as const;
 

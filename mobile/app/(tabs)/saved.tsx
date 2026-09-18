@@ -17,8 +17,10 @@ import {
   OfflineStatusBar,
 } from "../../components/KhethaBrandBar";
 import { FavouriteToggle } from "../../components/FavouriteToggle";
+import { LanguagePicker } from "../../components/LanguagePicker";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAccessibility } from "../../contexts/AccessibilityContext";
+import { useLocale } from "../../contexts/LocaleContext";
 import {
   LANGUAGES,
   LEARNER_ROLES,
@@ -54,6 +56,7 @@ export default function SavedScreen() {
   const { user, profile, signOut } = useAuth();
   const { highContrast, setHighContrast, textScale, zoomLabel } =
     useAccessibility();
+  const { locale, home, tabs, common } = useLocale();
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [personaMode, setPersonaMode] = useState<"learner" | "seeker">(() =>
     profile?.demographics?.role === "work_seeker" ? "seeker" : "learner",
@@ -63,9 +66,7 @@ export default function SavedScreen() {
     LEARNER_ROLES.find((item) => item.id === profile?.demographics?.role)
       ?.label ?? "Learner";
   const languageLabel =
-    LANGUAGES.find(
-      (item) => item.id === profile?.demographics?.preferredLanguage,
-    )?.label ?? "English";
+    LANGUAGES.find((item) => item.id === locale)?.label ?? "English";
 
   const displayName =
     profile?.demographics?.fullName?.trim() ||
@@ -131,9 +132,13 @@ export default function SavedScreen() {
       <KhethaBrandBar />
       <OfflineStatusBar
         cachedCount={OFFLINE_VAULT_STATS.careersCached}
-        rightLabel="Decisions"
+        rightLabel={tabs.decisions}
         onRightPress={() => router.push(href("/questionnaires"))}
-        detail={`Offline Database Active · ${OFFLINE_VAULT_STATS.careersCached.toLocaleString()} Careers · ${OFFLINE_VAULT_STATS.qualificationsCached} Qualifications · ${OFFLINE_VAULT_STATS.providersCached} Providers`}
+        detail={home.offlineDetail(
+          OFFLINE_VAULT_STATS.careersCached.toLocaleString(),
+          OFFLINE_VAULT_STATS.qualificationsCached,
+          OFFLINE_VAULT_STATS.providersCached,
+        )}
       />
 
       {/* Title + language */}
@@ -151,6 +156,11 @@ export default function SavedScreen() {
           <MaterialIcon name="translate" size={14} color={colors.gold} />
           <Text style={styles.langPillText}>{languageLabel}</Text>
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>{common.preferredLanguage}</Text>
+        <LanguagePicker showLabel={false} />
       </View>
 
       {/* Profile card */}

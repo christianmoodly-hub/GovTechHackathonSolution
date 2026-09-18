@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { useAccessibility } from "../../contexts/AccessibilityContext";
+import { useLocale } from "../../contexts/LocaleContext";
 import { typography } from "../../theme";
 
 function TabIcon({
@@ -15,6 +16,7 @@ function TabIcon({
 
 export default function TabsLayout() {
   const { colors, highContrast } = useAccessibility();
+  const { tabs } = useLocale();
 
   return (
     <Tabs
@@ -39,35 +41,35 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: tabs.home,
           tabBarIcon: ({ color }) => <TabIcon name="roofing" color={color} />,
         }}
       />
       <Tabs.Screen
         name="questionnaires"
         options={{
-          title: "Decisions",
+          title: tabs.decisions,
           tabBarIcon: ({ color }) => <TabIcon name="explore" color={color} />,
         }}
       />
       <Tabs.Screen
         name="directory"
         options={{
-          title: "Directory",
+          title: tabs.directory,
           tabBarIcon: ({ color }) => <TabIcon name="menu_book" color={color} />,
         }}
       />
       <Tabs.Screen
         name="saved"
         options={{
-          title: "Saved",
+          title: tabs.saved,
           tabBarIcon: ({ color }) => <TabIcon name="bookmark" color={color} />,
         }}
       />
       <Tabs.Screen
         name="helpline"
         options={{
-          title: "Helpline",
+          title: tabs.helpline,
           tabBarIcon: ({ color }) => (
             <TabIcon name="support_agent" color={color} />
           ),

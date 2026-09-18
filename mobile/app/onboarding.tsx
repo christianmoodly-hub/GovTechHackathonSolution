@@ -3,12 +3,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen } from "../components/Screen";
 import { MaterialIcon } from "../components/MaterialIcon";
+import { LanguagePicker } from "../components/LanguagePicker";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { updateProfile } from "../services/ncapData";
 import type { Demographics } from "../services/types";
 import {
   DISABILITY_CATEGORIES,
-  LANGUAGES,
   LEARNER_ROLES,
 } from "../data/staticContent";
 import { colors, radii, shadows, spacing, typography } from "../theme";
@@ -41,11 +42,11 @@ function mapRegisterRoleToOnboarding(role?: string | null): string | null {
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile, continueAsGuest, clearError } = useAuth();
+  const { locale, common } = useLocale();
 
   const existing = profile?.demographics;
   const mappedRole = mapRegisterRoleToOnboarding(existing?.role);
 
-  const [language, setLanguage] = useState(existing?.preferredLanguage || "en");
   const [role, setRole] = useState<string | null>(mappedRole);
   const [hasDisability, setHasDisability] = useState(
     Boolean(existing?.hasDisability),
@@ -56,7 +57,7 @@ export default function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = useMemo(() => Boolean(language && role), [language, role]);
+  const canSubmit = useMemo(() => Boolean(locale && role), [locale, role]);
 
   const toggleCategory = (id: string) => {
     setDisabilityCategories((prev) =>
@@ -71,7 +72,7 @@ export default function OnboardingScreen() {
     clearError();
     try {
       const demographics: Demographics = {
-        preferredLanguage: language,
+        preferredLanguage: locale,
         role,
         hasDisability,
         disabilityCategories: hasDisability ? disabilityCategories : [],
@@ -108,7 +109,7 @@ export default function OnboardingScreen() {
     try {
       if (user?.uid && !user.isAnonymous) {
         const demographics: Demographics = {
-          preferredLanguage: language || "en",
+          preferredLanguage: locale || "en",
           role: "guest",
           hasDisability: false,
           disabilityCategories: [],
@@ -158,28 +159,9 @@ export default function OnboardingScreen() {
 
       <View style={styles.sectionHead}>
         <MaterialIcon name="translate" size={18} color={colors.secondary} />
-        <Text style={styles.section}>
-          Preferred language / Ulimi olukhethayo
-        </Text>
+        <Text style={styles.section}>{common.preferredLanguage}</Text>
       </View>
-      <View style={styles.langGrid}>
-        {LANGUAGES.map((item) => {
-          const selected = language === item.id;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => setLanguage(item.id)}
-              style={[styles.langChip, selected && styles.langChipSelected]}
-            >
-              <Text
-                style={[styles.langText, selected && styles.langTextSelected]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <LanguagePicker showLabel={false} />
 
       <View style={styles.sectionHead}>
         <Text style={styles.section}>Who are you? (Select your current role)</Text>

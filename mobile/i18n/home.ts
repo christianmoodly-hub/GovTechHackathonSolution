@@ -1,6 +1,10 @@
-export type HomeLocale = "en" | "zu" | "st" | "af";
+import type { AppLocale, HomeLocale } from "./types";
+import { isAppLocale } from "./types";
 
-export const HOME_LOCALES: HomeLocale[] = ["en", "zu", "st", "af"];
+export type { AppLocale, HomeLocale };
+export { APP_LOCALES } from "./types";
+
+export const HOME_LOCALES: AppLocale[] = ["en", "zu", "xh", "af"];
 
 type HomeStrings = {
   homeTab: string;
@@ -68,7 +72,7 @@ const en: HomeStrings = {
   heroTitle: "National Career Advice Portal",
   heroBody:
     "Your self-help tool for informed career and study decisions, brought to you by Career Development Services, DHET.",
-  voiceLabel: "Choose Voice:",
+  voiceLabel: "Choose your language:",
   counselKicker: "Free Career Counselling",
   free: "FREE",
   counselBody: (hours) => `Speak to a qualified Career Advisor (${hours})`,
@@ -135,7 +139,7 @@ const zu: HomeStrings = {
   heroTitle: "Iphothali Kazwelonke Yezeluleko Zomsebenzi",
   heroBody:
     "Ithuluzi lakho lokuzisiza ukuze wenze izinqumo ezinolwazi ngomsebenzi nokufunda, elethwa yi-Career Development Services, DHET.",
-  voiceLabel: "Khetha Izwi:",
+  voiceLabel: "Khetha ulimi lwakho:",
   counselKicker: "Ukwelulekwa Ngomsebenzi Mahhala",
   free: "MAHHALA",
   counselBody: (hours) =>
@@ -196,71 +200,73 @@ const zu: HomeStrings = {
   version: "Khetha CDS · NCAP Mobile",
 };
 
-const st: HomeStrings = {
-  homeTab: "Lehae",
+const xh: HomeStrings = {
+  homeTab: "Ikhaya",
   offlineDetail: (careers, qualifications, providers) =>
-    `Database e sa sebeliseng inthanete e sebetsa · Mesebetsi ${careers} · Mangolo ${qualifications} · Bahlinneki ${providers}`,
-  officialPill: "Sethala sa Semmuso sa DHET CDS",
-  heroTitle: "Sethala sa Naha sa Keletso ea Mosebetsi",
+    `Isizindalwazi esingaxhunyiwe kwi-intanethi sisebenza · Imisebenzi ${careers} · Iziqu ${qualifications} · Ababoneleli ${providers}`,
+  officialPill: "Iphothali ye-DHET CDS esemthethweni",
+  heroTitle: "Iphothali yeSizwe yeengCebiso zoMsebenzi",
   heroBody:
-    "Sesebelisoa sa hau sa ho ithusa bakeng sa liqeto tse nang le tsebo ka mosebetsi le thuto, se tlisitsoeng ke Career Development Services, DHET.",
-  voiceLabel: "Khetha Lentsoe:",
-  counselKicker: "Keletso ea Mosebetsi ea Mahala",
-  free: "MAHALA",
+    "Isixhobo sakho sokuzinceda ukwenza izigqibo ezinolwazi ngomsebenzi nokufunda, eziziswa yi-Career Development Services, DHET.",
+  voiceLabel: "Khetha ulwimi lwakho:",
+  counselKicker: "Ukucetyiswa ngoMsebenzi Simahla",
+  free: "SIMAHLA",
   counselBody: (hours) =>
-    `Bua le moeletsi oa mosebetsi ea koetlisitsoeng (${hours})`,
-  tollFree: "Mahala",
+    `Thetha nomcebisi womsebenzi oqeqeshiweyo (${hours})`,
+  tollFree: "Simahla",
   whatsapp: "WhatsApp",
-  gatewaysTitle: "Menyako ea Liqeto tsa Mantlha",
-  gatewaysSub: "Nka mehato e tataisoang ho bula dikgetho tsa hau kamora sekolo",
-  subjectTag: "Bakeng sa Kereiti ea 9 le 10",
-  subjectTitle: "Khetho ea Lithuto",
+  gatewaysTitle: "Amasango eziGqibo eziPhambili",
+  gatewaysSub:
+    "Thatha amanyathelo akhokelwayo ukuvula iinketho zakho emva kwesikolo",
+  subjectTag: "Ibanga lesi-9 nese-10",
+  subjectTitle: "Ukukhetha Izifundo",
   subjectBody:
-    "Fumana hore ke lithuto life tsa Kereiti ea 10–12 tse bula menyako ea mosebetsi oa hau oa toro le ho fihlela lintlha tsa APS.",
-  subjectMeta: "Sehlahlobi sa Litlhoko tsa Pele",
-  subjectCta: "Hlahloba Lithuto",
-  careerTag: "Tekolo ea metsotso e 15 · Mohlala oa RIASEC",
-  careerTitle: "Lenane la Lipotso tsa Khetho ea Mosebetsi",
+    "Fumanisa ukuba zeziphi izifundo zebanga le-10–12 ezivula iingcango zomsebenzi wakho wephupha kwaye zihlangabezane namanqaku okungena kwiziko (APS).",
+  subjectMeta: "Isihloli seeMfuneko zangaphambili",
+  subjectCta: "Phonononga Izifundo",
+  careerTag: "Uvavanyo lwemizuzu engama-15 · Imodeli ye-RIASEC",
+  careerTitle: "Uluhlu lweMibuzo lokuKhetha uMsebenzi",
   careerBody:
-    "Fumana mesebetsi e tsamaellanang le lithahasello le botho ba hau. Araba lipotso tse khutšoane ho hlophisa tšimo ea hau.",
-  careerMeta: "Tsoelo-pele e ipoloka",
-  careerCta: "Qala Tekolo",
-  jobFitTag: "Batho ba Batlang Mosebetsi & Kereiti ea 12",
-  jobFitTitle: "Lenane la Lipotso tsa Ho Tšoanela Mosebetsi",
+    "Fumana imisebenzi ehambelana nemidla yakho nobuntu bakho. Phendula imibuzo emfutshane ukuze uhlele icandelo lakho.",
+  careerMeta: "Inkqubela iyazigcina",
+  careerCta: "Qala Uvavanyo",
+  jobFitTag: "Abafuna uMsebenzi & Ibanga le-12",
+  jobFitTitle: "Uluhlu lweMibuzo lokuFanela uMsebenzi",
   jobFitBody:
-    "Bapisa mokhoa oa hau oa ho sebetsa, litakatso tsa tikoloho, le bokhoni ba matsoho le mesebetsi ea TVET le mesebetsi ea sejoale-joale.",
-  jobFitMeta: "E Loketse Khoebo le Setsebi",
-  jobFitCta: "Hlahloba Ho Tšoanela",
-  directoryTitle: "Hlahloba Directory",
-  directorySub: "Database tsa semmuso tse netefalitsoeng ke DHET le SAQA",
-  careersDirTitle: "Directory ea Mesebetsi",
+    "Linganisa indlela yakho yokusebenza, izinto ozithandayo kwindawo yokusebenza, nezakhono zezandla kunye nemisebenzi ye-TVET neendima zale mihla.",
+  jobFitMeta: "Kulungele uMsebenzi woRhwebo noBuchule",
+  jobFitCta: "Jonga ukuFanela",
+  directoryTitle: "Phonononga iSizindalwazi",
+  directorySub: "Izizindalwazi ezisemthethweni ezivunyiweyo yi-DHET ne-SAQA",
+  careersDirTitle: "Isizindalwazi seMisebenzi",
   careersDirBody: (count) =>
-    `Mesebetsi e ${count}, Mesebetsi ea Matsoho, Mesebetsi e Tala & e Batloang Haholo`,
-  careersDirCta: "Sheba Mesebetsi",
-  whatStudyTitle: "Seo u ka se Ithutang",
+    `Imisebenzi engama-${count}, Imisebenzi yezandla, Imisebenzi eluhlaza & edingeka kakhulu`,
+  careersDirCta: "Khangela Imisebenzi",
+  whatStudyTitle: "Into onokuyiFunda",
   whatStudyBody: (count) =>
-    `Mangolo a ${count}, Calculator ea APS, TVET NATED, Diploma`,
-  whatStudyCta: "Sheba Mangolo/NATED",
-  whereStudyTitle: "Moo u ka Ithutang",
+    `Iziqu ezingama-${count}, Isibali se-APS, i-TVET NATED, iiDiploma`,
+  whatStudyCta: "Jonga Iziqu/NATED",
+  whereStudyTitle: "Apho ungafunda Khona",
   whereStudyBody:
-    "Diunivesithi tsa Sechaba tse 26, Likoleche tsa TVET tse 50, Liprofinse tse 9",
-  whereStudyCta: "Fumana Litsi",
-  fundingTitle: "Chelete & NSFAS",
-  fundingBody: "Maemo a thuto ea mahala, Libursary tsa Liprofinse, Funza Lushaka",
-  fundingCta: "Kenya Kopo ea Bursary",
-  demandTitle: "Mesebetsi e Batloang Haholo 2024/2025",
-  gazetted: "E phatlalalitsoe ke DHET",
+    "IiYunivesithi zikawonke-wonke ezingama-26, iiKholeji ze-TVET ezingama-50, amaPhondo asi-9",
+  whereStudyCta: "Fumana Amaziko",
+  fundingTitle: "Inkxaso-mali & NSFAS",
+  fundingBody:
+    "Imigaqo yokufunda simahla, iiBhursari zamaPhondo, Funza Lushaka",
+  fundingCta: "Faka isicelo seBhursari",
+  demandTitle: "Imisebenzi eDingeka kakhulu 2024/2025",
+  gazetted: "Ipapashiwe yi-DHET",
   demandSub:
-    "Litsebo tsa bohlokoa bakeng sa Moralo oa Kaho Botjha le Pholoso ea Moruo oa Afrika Boroa.",
-  solarTitle: "Setsebi / Moinstola oa Solar PV",
-  solarMeta: "Moruo o Motala · TVET N4–N6",
-  softwareTitle: "Moqapi oa Software & Web",
-  softwareMeta: "Lekala la ICT · Lengolo / Diploma",
-  millwrightTitle: "Millwright / Mechatronics",
-  millwrightMeta: "Tlhahiso · Teko ea Khoebo / TVET",
+    "Izakhono eziphambili ezibalulekileyo kwiSicwangciso sokuPhinda kuKhiwe nokuBuyiselwa koQoqosho lwaseMzantsi Afrika.",
+  solarTitle: "Igcisa / Umfaki we-Solar PV",
+  solarMeta: "Uqoqosho oluLuhlaza · TVET N4–N6",
+  softwareTitle: "Umphuhlisi weSoftware & iWebhu",
+  softwareMeta: "Icandelo le-ICT · Isidanga / iDiploma",
+  millwrightTitle: "Umillwright / i-Mechatronics",
+  millwrightMeta: "Imveliso · Uvavanyo loRhwebo / TVET",
   policy:
-    "Liprofaele tsohle tsa mosebetsi, litsi tse phahameng, le likoleche tsa TVET li hlahlobiloe ka molao ke Lefapha la Thuto e Phahameng le Koetliso (DHET) le SAQA.",
-  quote: "“Ho tsetela tsebong ho fana ka phaello e ntle ka ho fetisisa.”",
+    "Zonke iiprofayile zemisebenzi, amaziko emfundo ephakamileyo, neekholeji ze-TVET zihlolwa ngokusemthethweni liSebe leMfundo ePhakamileyo nokuQeqeshwa (DHET) kunye ne-SAQA.",
+  quote: "“Utyalo-mali kulwazi luhlawula eyona nzala intle.”",
   quoteAttr: "— Benjamin Franklin",
   version: "Khetha CDS · NCAP Mobile",
 };
@@ -273,7 +279,7 @@ const af: HomeStrings = {
   heroTitle: "Nasionale Loopbaanadviesportaal",
   heroBody:
     "Jou selfhulpinstrument vir ingeligte loopbaan- en studiebesluite, aangebied deur Career Development Services, DHET.",
-  voiceLabel: "Kies Stem:",
+  voiceLabel: "Kies jou taal:",
   counselKicker: "Gratis Loopbaanberading",
   free: "GRATIS",
   counselBody: (hours) =>
@@ -333,13 +339,13 @@ const af: HomeStrings = {
   version: "Khetha CDS · NCAP Mobile",
 };
 
-const HOME_I18N: Record<HomeLocale, HomeStrings> = { en, zu, st, af };
+const HOME_I18N: Record<AppLocale, HomeStrings> = { en, zu, xh, af };
 
-export function isHomeLocale(value: string | null | undefined): value is HomeLocale {
-  return value === "en" || value === "zu" || value === "st" || value === "af";
+export function isHomeLocale(value: string | null | undefined): value is AppLocale {
+  return isAppLocale(value);
 }
 
 export function getHomeStrings(locale: string | null | undefined): HomeStrings {
-  const key = isHomeLocale(locale) ? locale : "en";
+  const key = isAppLocale(locale) ? locale : "en";
   return HOME_I18N[key];
 }
