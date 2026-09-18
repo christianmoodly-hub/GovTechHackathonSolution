@@ -1,6 +1,7 @@
 import { Linking, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ProviderSummary } from "./types";
+import { publicEnv } from "../utils/publicEnv";
 
 const CACHE_KEY = "ncap.providerGeo.v1";
 const GEOCODE_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json";
@@ -15,7 +16,7 @@ export type ProviderWithDistance = ProviderSummary & {
 type GeoCache = Record<string, LatLng>;
 
 function mapsApiKey(): string | null {
-  const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
+  const key = publicEnv("EXPO_PUBLIC_GOOGLE_MAPS_API_KEY")?.trim();
   return key ? key : null;
 }
 

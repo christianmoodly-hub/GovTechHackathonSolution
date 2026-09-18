@@ -1,0 +1,35 @@
+const appJson = require("./app.json");
+
+/** Keys that must be available in release builds (EAS injects process.env). */
+const PUBLIC_ENV_KEYS = [
+  "EXPO_PUBLIC_FIREBASE_API_KEY",
+  "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+  "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "EXPO_PUBLIC_FIREBASE_APP_ID",
+  "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID",
+  "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
+  "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY",
+];
+
+function publicEnv() {
+  const out = {};
+  for (const key of PUBLIC_ENV_KEYS) {
+    const value = process.env[key];
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
+module.exports = () => {
+  const expo = appJson.expo;
+  const env = publicEnv();
+  return {
+    ...expo,
+    extra: {
+      ...(expo.extra ?? {}),
+      ...env,
+    },
+  };
+};

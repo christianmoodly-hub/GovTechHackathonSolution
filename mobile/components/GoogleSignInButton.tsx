@@ -13,11 +13,12 @@ import { makeRedirectUri } from "expo-auth-session";
 import { MaterialIcon } from "./MaterialIcon";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, layout, radii, spacing, typography } from "../theme";
+import { publicEnv } from "../utils/publicEnv";
 
 // Must run at module load so the returning browser session can finish.
 WebBrowser.maybeCompleteAuthSession();
 
-const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? "";
+const webClientId = publicEnv("EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID")?.trim() ?? "";
 
 type Props = {
   disabled?: boolean;
