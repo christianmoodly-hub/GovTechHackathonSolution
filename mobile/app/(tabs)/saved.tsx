@@ -598,7 +598,12 @@ export default function SavedScreen() {
             key={id}
             id={id}
             result={result}
-            onOpen={() => router.push(href(`/questionnaires/results/${id}`))}
+            onOpen={() =>
+              router.push({
+                pathname: "/questionnaires/results/[questionnaireId]",
+                params: { questionnaireId: id },
+              })
+            }
           />
         ))
       ) : (
@@ -751,11 +756,14 @@ function DiagnosticCard({
   const badges = domainBadges(result.domainScores).slice(0, 2);
 
   if (id === "careerChoice") {
+    // Domain badges can share a RIASEC label (e.g. education+health → Social).
+    // Deduplicate so the title doesn't read "Social & Social Match".
+    const uniqueLabels = [...new Set(badges.map((b) => b.label))];
     const title =
-      badges.length >= 2
-        ? `${badges[0].label} & ${badges[1].label} ${t.matchSuffix}`
-        : badges[0]
-          ? `${badges[0].label} ${t.matchSuffix}`
+      uniqueLabels.length >= 2
+        ? `${uniqueLabels[0]} & ${uniqueLabels[1]} ${t.matchSuffix}`
+        : uniqueLabels[0]
+          ? `${uniqueLabels[0]} ${t.matchSuffix}`
           : t.interestProfileMatch;
     return (
       <View style={styles.card}>
@@ -771,7 +779,7 @@ function DiagnosticCard({
         {badges.length ? (
           <View style={styles.scorePanel}>
             {badges.map((badge, i) => (
-              <View key={`${badge.label}-${i}`} style={styles.scoreBlock}>
+              <View key={`${badge.id}-${i}`} style={styles.scoreBlock}>
                 <View style={styles.scoreRow}>
                   <Text style={styles.scoreLabel}>{badge.label}</Text>
                   <Text
@@ -861,7 +869,7 @@ function DiagnosticCard({
     );
   }
 
-  // subjectChooser
+  // subjectChooser — title is the questionnaire type; top career is secondary.
   return (
     <View style={styles.card}>
       <View style={styles.diagTop}>
@@ -869,9 +877,12 @@ function DiagnosticCard({
           <Text style={[styles.diagKicker, { color: colors.ochre }]}>
             {t.draftPackageSaved}
           </Text>
-          <Text style={styles.diagTitle}>
-            {topMatch?.title ?? t.subjectPathwayPackage}
-          </Text>
+          <Text style={styles.diagTitle}>{t.subjectPathwayPackage}</Text>
+          {topMatch?.title ? (
+            <Text style={styles.diagBody} numberOfLines={2}>
+              {t.topFit} {topMatch.title}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.gradePill}>
           <Text style={styles.gradePillText}>{t.grade1011}</Text>
