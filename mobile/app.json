@@ -7,7 +7,9 @@
     "scheme": "ncap",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "icon": "./assets/auth/brand-logo.png",
     "splash": {
+      "image": "./assets/auth/brand-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#006A4E"
     },
@@ -20,9 +22,11 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/auth/brand-logo.png",
         "backgroundColor": "#006A4E"
       },
       "package": "za.gov.ncap.careeradvice",
+      "versionCode": 1,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"

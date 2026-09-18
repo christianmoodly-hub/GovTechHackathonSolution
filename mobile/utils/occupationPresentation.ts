@@ -269,7 +269,7 @@ export function tagToneColors(tone: CareerTag["tone"]): {
 /** Map questionnaire domain scores into display badges (RIASEC-style labels). */
 export function domainBadges(
   domainScores: Record<string, number> | undefined,
-): { label: string; pct: number; icon: string }[] {
+): { id: string; label: string; pct: number; icon: string }[] {
   if (!domainScores) return [];
   const total = Object.values(domainScores).reduce(
     (sum, n) => sum + Math.max(0, Number(n) || 0),
@@ -300,6 +300,7 @@ export function domainBadges(
         icon: "stars",
       };
       return {
+        id: domain,
         label: meta.label,
         icon: meta.icon,
         pct: Math.round(((score as number) / total) * 100),

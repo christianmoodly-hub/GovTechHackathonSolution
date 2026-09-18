@@ -725,9 +725,9 @@ function DiagnosticCard({
         </View>
       </View>
       <View style={styles.tagRow}>
-        {(badges.length ? badges : [{ label: "Subject stream" }]).map(
+        {(badges.length ? badges : [{ id: "stream", label: "Subject stream" }]).map(
           (badge) => (
-            <View key={badge.label} style={styles.softTag}>
+            <View key={badge.id ?? badge.label} style={styles.softTag}>
               <Text style={styles.softTagText}>{badge.label}</Text>
             </View>
           ),
@@ -737,7 +737,7 @@ function DiagnosticCard({
         <View style={styles.demandRow}>
           <MaterialIcon name="lock_open" size={16} color={colors.primary} />
           <Text style={[styles.demandText, { color: colors.primary }]}>
-            {result.matches.length} Career Pathways Unlocked
+            {result.matches?.length ?? 0} Career Pathways Unlocked
             {result.answers?.apsTotal
               ? ` · APS ${result.answers.apsTotal}`
               : ""}

@@ -6,6 +6,7 @@ import * as WebBrowser from "expo-web-browser";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { AccessibilityProvider } from "../contexts/AccessibilityContext";
 import { LocaleProvider } from "../contexts/LocaleContext";
+import { LocaleProfileSync } from "../contexts/LocaleProfileSync";
 import { colors } from "../theme";
 import { href } from "../utils/href";
 
@@ -95,6 +96,7 @@ export default function RootLayout() {
     <AccessibilityProvider>
       <AuthProvider>
         <LocaleProvider>
+          <LocaleProfileSync />
           <StatusBar style="dark" />
           <AuthGate>
             <Stack screenOptions={{ headerShown: false }} />
