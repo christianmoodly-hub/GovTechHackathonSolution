@@ -13,13 +13,20 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "za.gov.ncap.careeradvice"
+      "bundleIdentifier": "za.gov.ncap.careeradvice",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Khetha uses your location to show nearby public universities and TVET colleges on the DHET register."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#006A4E"
       },
       "package": "za.gov.ncap.careeradvice",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
@@ -54,7 +61,13 @@
         }
       ],
       "expo-web-browser",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Khetha to use your location to find nearby DHET learning providers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

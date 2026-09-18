@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   Linking,
@@ -12,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
 import { Screen, EmptyState, LoadingState } from "../../../../components/Screen";
 import { SearchField } from "../../../../components/SearchField";
 import { MaterialIcon } from "../../../../components/MaterialIcon";
@@ -24,6 +26,15 @@ import {
   OFFLINE_VAULT_STATS,
 } from "../../../../data/staticContent";
 import { getProviderPage } from "../../../../services/ncapData";
+import {
+  formatDistanceKm,
+  hasGoogleMapsApiKey,
+  openNearbyEducationSearch,
+  openProviderInMaps,
+  rankProvidersByDistance,
+  type LatLng,
+  type ProviderWithDistance,
+} from "../../../../services/providerGeo";
 import type { PageCursor, ProviderSummary } from "../../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
@@ -49,6 +60,8 @@ import {
 } from "../../../../utils/providerPresentation";
 
 const PAGE_SIZE = 20;
+const NEAR_ME_GEOCODE_LIMIT = 35;
+const NEAR_ME_SHOW = 10;
 
 export default function ProvidersDirectoryScreen() {
   const router = useRouter();
@@ -64,6 +77,12 @@ export default function ProvidersDirectoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
+
+  const [nearMeLoading, setNearMeLoading] = useState(false);
+  const [nearMeError, setNearMeError] = useState<string | null>(null);
+  const [nearMeProgress, setNearMeProgress] = useState<string | null>(null);
+  const [userCoords, setUserCoords] = useState<LatLng | null>(null);
+  const [nearby, setNearby] = useState<ProviderWithDistance[]>([]);
 
   const load = useCallback(
     async (opts?: { refresh?: boolean; next?: PageCursor | null }) => {
@@ -109,6 +128,67 @@ export default function ProvidersDirectoryScreen() {
       return item.searchText.includes(q);
     });
   }, [items, query, typeFilter, province]);
+
+  const runNearMe = useCallback(async () => {
+    setNearMeLoading(true);
+    setNearMeError(null);
+    setNearMeProgress("Getting your location…");
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        setNearMeError(
+          "Location permission is required to show institutions near you.",
+        );
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const origin: LatLng = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+      setUserCoords(origin);
+
+      if (!hasGoogleMapsApiKey()) {
+        setNearby([]);
+        setNearMeProgress(null);
+        setNearMeError(
+          "Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (Geocoding API) to rank providers by distance. You can still open Google Maps near you.",
+        );
+        return;
+      }
+
+      const pool = filtered.length ? filtered : items;
+      setNearMeProgress(`Mapping campuses (0/${Math.min(pool.length, NEAR_ME_GEOCODE_LIMIT)})…`);
+      const ranked = await rankProvidersByDistance(pool, origin, {
+        limit: NEAR_ME_GEOCODE_LIMIT,
+        onProgress: (done, total) => {
+          setNearMeProgress(`Mapping campuses (${done}/${total})…`);
+        },
+      });
+      setNearby(ranked.slice(0, NEAR_ME_SHOW));
+      setNearMeProgress(null);
+    } catch (err) {
+      setNearMeError(
+        err instanceof Error
+          ? err.message
+          : "Could not determine nearby providers.",
+      );
+      setNearMeProgress(null);
+    } finally {
+      setNearMeLoading(false);
+    }
+  }, [filtered, items]);
+
+  useEffect(() => {
+    if (viewMode === "map" && !nearby.length && !nearMeLoading && !nearMeError) {
+      void runNearMe();
+    }
+    // Only auto-run when switching into map mode
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   const totalCached = OFFLINE_VAULT_STATS.providersCached;
   const typeFilters = providerTypeFilterDefs();
@@ -304,14 +384,129 @@ export default function ProvidersDirectoryScreen() {
 
       {viewMode === "map" ? (
         <View style={styles.mapPanel}>
-          <MaterialIcon name="pin_drop" size={28} color={colors.primary} />
-          <Text style={styles.mapTitle}>Interactive DHET GIS</Text>
-          <Text style={styles.mapBody}>
-            Showing nationwide public educational nodes · Near Me
-          </Text>
+          <View style={styles.mapPanelHead}>
+            <MaterialIcon name="pin_drop" size={28} color={colors.primary} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.mapTitle}>Interactive DHET GIS</Text>
+              <Text style={styles.mapBody}>
+                Nationwide public educational nodes · Near Me
+              </Text>
+            </View>
+          </View>
           <Text style={styles.mapHint}>
-            Map view preview — open a provider card for campus details.
+            Near Me uses your location and Google Maps. Distances are approximate
+            from campus addresses on the national register.
           </Text>
+
+          <View style={styles.nearMeActions}>
+            <Pressable
+              style={[styles.nearMePrimary, nearMeLoading && styles.disabled]}
+              disabled={nearMeLoading}
+              onPress={() => void runNearMe()}
+            >
+              {nearMeLoading ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <>
+                  <MaterialIcon
+                    name="my_location"
+                    size={18}
+                    color={colors.onPrimary}
+                  />
+                  <Text style={styles.nearMePrimaryText}>Use my location</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.nearMeSecondary}
+              disabled={!userCoords && nearMeLoading}
+              onPress={() => {
+                if (userCoords) {
+                  void openNearbyEducationSearch(userCoords);
+                  return;
+                }
+                void (async () => {
+                  const permission =
+                    await Location.requestForegroundPermissionsAsync();
+                  if (!permission.granted) {
+                    setNearMeError(
+                      "Location permission is required to open Google Maps near you.",
+                    );
+                    return;
+                  }
+                  const position = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                  });
+                  const origin = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                  };
+                  setUserCoords(origin);
+                  await openNearbyEducationSearch(origin);
+                })();
+              }}
+            >
+              <MaterialIcon name="map" size={18} color={colors.primary} />
+              <Text style={styles.nearMeSecondaryText}>Open Google Maps</Text>
+            </Pressable>
+          </View>
+
+          {nearMeProgress ? (
+            <Text style={styles.nearMeProgress}>{nearMeProgress}</Text>
+          ) : null}
+          {nearMeError ? (
+            <Text style={styles.nearMeError}>{nearMeError}</Text>
+          ) : null}
+
+          {nearby.length ? (
+            <View style={styles.nearList}>
+              <Text style={styles.nearListTitle}>
+                Closest from your filters ({nearby.length})
+              </Text>
+              {nearby.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.nearRow}
+                  onPress={() =>
+                    router.push(href(`/directory/providers/${item.id}`))
+                  }
+                >
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Text style={styles.nearName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.nearMeta} numberOfLines={1}>
+                      {formatDistanceKm(item.distanceKm)}
+                      {item.streetAddress
+                        ? ` · ${providerLocationLabel(item.name, item.streetAddress)}`
+                        : ""}
+                    </Text>
+                  </View>
+                  <Pressable
+                    style={styles.nearMapsBtn}
+                    onPress={() =>
+                      void openProviderInMaps(
+                        item.name,
+                        item.streetAddress,
+                        item.coords,
+                      )
+                    }
+                    accessibilityLabel={`Open ${item.name} in maps`}
+                  >
+                    <MaterialIcon
+                      name="directions"
+                      size={18}
+                      color={colors.primary}
+                    />
+                  </Pressable>
+                </Pressable>
+              ))}
+            </View>
+          ) : !nearMeLoading && !nearMeError ? (
+            <Text style={styles.mapHint}>
+              Tap Use my location to rank campuses near you.
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -767,20 +962,96 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondarySubtle,
     borderRadius: radii.xl,
     padding: spacing.xl,
+    gap: spacing.md,
+  },
+  mapPanelHead: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   mapTitle: { ...typography.headlineSm, color: colors.text },
   mapBody: {
     ...typography.bodySm,
     color: colors.textSecondary,
-    textAlign: "center",
   },
   mapHint: {
     ...typography.caption,
     color: colors.textMuted,
-    textAlign: "center",
   },
+  nearMeActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  nearMePrimary: {
+    flexGrow: 1,
+    minHeight: 44,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  nearMePrimaryText: {
+    ...typography.labelMd,
+    color: colors.onPrimary,
+    fontWeight: "800",
+  },
+  nearMeSecondary: {
+    flexGrow: 1,
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.card,
+  },
+  nearMeSecondaryText: {
+    ...typography.labelMd,
+    color: colors.primary,
+    fontWeight: "700",
+  },
+  nearMeProgress: {
+    ...typography.caption,
+    color: colors.secondary,
+    fontWeight: "600",
+  },
+  nearMeError: {
+    ...typography.caption,
+    color: colors.error,
+  },
+  nearList: { gap: spacing.sm },
+  nearListTitle: {
+    ...typography.labelLg,
+    color: colors.text,
+    fontWeight: "800",
+  },
+  nearRow: {
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  nearName: { ...typography.labelLg, color: colors.text, fontWeight: "700" },
+  nearMeta: { ...typography.caption, color: colors.textSecondary },
+  nearMapsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  disabled: { opacity: 0.65 },
   resetBtn: {
     alignSelf: "center",
     minHeight: 44,
