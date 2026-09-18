@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Image,
   Linking,
@@ -17,6 +17,7 @@ import {
 } from "../../../components/KhethaBrandBar";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useLocale } from "../../../contexts/LocaleContext";
+import { useAssistantActions } from "../../../contexts/AssistantContext";
 import { HELPLINE } from "../../../data/staticContent";
 import { useVaultStats } from "../../../hooks/useVaultStats";
 import {
@@ -25,6 +26,7 @@ import {
 } from "../../../data/learningPaths";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { href } from "../../../utils/href";
+import type { ScreenActionSet } from "../../../services/ai/screenActions";
 
 import type { UserProfile } from "../../../services/types";
 
@@ -242,6 +244,57 @@ export default function QuestionnairesHub() {
 
   const resumeTarget =
     PATHWAYS.find((p) => statuses[p.key] !== "completed") ?? PATHWAYS[0];
+
+  const pathwaysRef = useRef(PATHWAYS);
+  pathwaysRef.current = PATHWAYS;
+  const statusesRef = useRef(statuses);
+  statusesRef.current = statuses;
+  const completedRef = useRef(completedCount);
+  completedRef.current = completedCount;
+
+  const assistantActions = useMemo<ScreenActionSet>(
+    () => ({
+      title: "Decisions",
+      describe: () => {
+        const list = pathwaysRef.current
+          .map((p) => `${p.title} (${statusesRef.current[p.key]})`)
+          .join(", ");
+        return `Decisions hub. ${completedRef.current} of ${pathwaysRef.current.length} questionnaires completed. ${list}. APS calculator is also here.`;
+      },
+      results: () => [
+        ...pathwaysRef.current.map((p) => ({
+          id: p.key,
+          title: p.title,
+          detail: p.subtitle,
+        })),
+        {
+          id: "apsCalculator",
+          title: "APS calculator",
+          detail: "Work out an NSC Admission Point Score",
+        },
+      ],
+      activateResult: (position) => {
+        const rows = [
+          ...pathwaysRef.current.map((p) => ({
+            id: p.key,
+            title: p.title,
+            href: p.href,
+          })),
+          {
+            id: "apsCalculator",
+            title: "APS calculator",
+            href: "/questionnaires/aps-calculator",
+          },
+        ];
+        const item = rows[position - 1];
+        if (!item) return null;
+        router.push(href(item.href));
+        return { id: item.id, title: item.title };
+      },
+    }),
+    [router],
+  );
+  useAssistantActions(assistantActions);
 
   return (
     <Screen>

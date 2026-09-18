@@ -9,6 +9,10 @@ import { ConnectivityProvider } from "../contexts/ConnectivityContext";
 import { ConnectivitySync } from "../contexts/ConnectivitySync";
 import { LocaleProvider } from "../contexts/LocaleContext";
 import { LocaleProfileSync } from "../contexts/LocaleProfileSync";
+import { AssistantProvider } from "../contexts/AssistantContext";
+import { AssistantOverlay } from "../components/assistant/AssistantOverlay";
+import { AssistantLauncher } from "../components/assistant/AssistantLauncher";
+import { HandsFreeTriggers } from "../components/assistant/HandsFreeTriggers";
 import { colors } from "../theme";
 import { href } from "../utils/href";
 
@@ -16,6 +20,13 @@ import { href } from "../utils/href";
 WebBrowser.maybeCompleteAuthSession();
 
 const PUBLIC_ROUTES = new Set(["sign-in", "register", "recover"]);
+const ASSISTANT_HIDDEN_ROUTES = new Set([
+  "sign-in",
+  "register",
+  "recover",
+  "verify-email",
+  "onboarding",
+]);
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoading, profile, emailVerificationRequired } = useAuth();
@@ -90,7 +101,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  const root = String(segments[0] ?? "");
+  const showAssistant =
+    isSignedIn && !emailVerificationRequired && !ASSISTANT_HIDDEN_ROUTES.has(root);
+
+  return (
+    <>
+      {children}
+      {showAssistant ? (
+        <>
+          <HandsFreeTriggers />
+          <AssistantLauncher />
+          <AssistantOverlay />
+        </>
+      ) : null}
+    </>
+  );
 }
 
 export default function RootLayout() {
@@ -99,12 +125,14 @@ export default function RootLayout() {
       <ConnectivityProvider>
         <AuthProvider>
           <LocaleProvider>
-            <LocaleProfileSync />
-            <ConnectivitySync />
-            <StatusBar style="dark" />
-            <AuthGate>
-              <Stack screenOptions={{ headerShown: false }} />
-            </AuthGate>
+            <AssistantProvider>
+              <LocaleProfileSync />
+              <ConnectivitySync />
+              <StatusBar style="dark" />
+              <AuthGate>
+                <Stack screenOptions={{ headerShown: false }} />
+              </AuthGate>
+            </AssistantProvider>
           </LocaleProvider>
         </AuthProvider>
       </ConnectivityProvider>

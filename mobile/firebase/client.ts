@@ -7,6 +7,7 @@ import {
   getReactNativePersistence,
 } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getFunctions, type Functions } from "firebase/functions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { publicEnv } from "../utils/publicEnv";
 
@@ -81,4 +82,11 @@ export function getFirebaseAuth(): Auth {
 
 export function getDb(): Firestore {
   return getFirestore(getFirebaseApp());
+}
+
+/** Callable Functions region — keep in sync with functions/src/index.ts. */
+const FUNCTIONS_REGION = "us-central1";
+
+export function getFirebaseFunctions(): Functions {
+  return getFunctions(getFirebaseApp(), FUNCTIONS_REGION);
 }

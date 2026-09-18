@@ -34,6 +34,10 @@ export {
 } from "./questionnaires/subjectChooser";
 export { getApsStrings, type ApsStrings } from "./questionnaires/aps";
 export {
+  getAssistantStrings,
+  type AssistantStrings,
+} from "./assistant";
+export {
   APP_LOCALES,
   LOCALE_LABELS,
   isAppLocale,

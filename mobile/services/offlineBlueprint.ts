@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
+import {
+  escapePdfHtml,
+  sanitizePdfFileName,
+  shareExistingPdf,
+  writeAndSharePdf,
+} from "./pdfDownload";
 import type { QuestionnaireId, QuestionnaireResult } from "./types";
 
 const INDEX_KEY = "ncap.offlineBlueprints.v1";
@@ -22,14 +25,6 @@ const QUESTIONNAIRE_TITLES: Record<QuestionnaireId, string> = {
   jobFit: "Job Fit Blueprint",
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 function buildBlueprintHtml(
   questionnaireId: QuestionnaireId,
   result: QuestionnaireResult,
@@ -43,7 +38,7 @@ function buildBlueprintHtml(
     .sort((a, b) => b[1] - a[1])
     .map(
       ([key, score]) =>
-        `<li><strong>${escapeHtml(key)}</strong>: ${Math.round(score)}%</li>`,
+        `<li><strong>${escapePdfHtml(key)}</strong>: ${Math.round(score)}%</li>`,
     )
     .join("");
   const matches = (result.matches ?? [])
@@ -52,8 +47,8 @@ function buildBlueprintHtml(
       (match, index) =>
         `<tr>
           <td>${index + 1}</td>
-          <td>${escapeHtml(match.title)}</td>
-          <td>${escapeHtml(match.occupationCode)}</td>
+          <td>${escapePdfHtml(match.title)}</td>
+          <td>${escapePdfHtml(match.occupationCode)}</td>
           <td>${Math.round(match.score)}%</td>
         </tr>`,
     )
@@ -63,7 +58,7 @@ function buildBlueprintHtml(
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(title)}</title>
+  <title>${escapePdfHtml(title)}</title>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; color: #0F172A; padding: 32px; }
     h1 { color: #006A4E; margin-bottom: 4px; }
@@ -76,12 +71,12 @@ function buildBlueprintHtml(
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(title)}</h1>
+  <h1>${escapePdfHtml(title)}</h1>
   <p class="sub">DHET · Khetha NCAP · Offline Career Blueprint</p>
   <div class="card">
-    <p><strong>Learner:</strong> ${escapeHtml(displayName || "Guest explorer")}</p>
-    <p><strong>Assessment:</strong> ${escapeHtml(questionnaireId)}</p>
-    <p><strong>Completed:</strong> ${escapeHtml(completed)}</p>
+    <p><strong>Learner:</strong> ${escapePdfHtml(displayName || "Guest explorer")}</p>
+    <p><strong>Assessment:</strong> ${escapePdfHtml(questionnaireId)}</p>
+    <p><strong>Completed:</strong> ${escapePdfHtml(completed)}</p>
   </div>
   ${
     domains
@@ -124,6 +119,12 @@ export async function listOfflineBlueprints(): Promise<OfflineBlueprint[]> {
   return readIndex();
 }
 
+export async function openOfflineBlueprint(
+  item: OfflineBlueprint,
+): Promise<void> {
+  await shareExistingPdf(item.uri, { dialogTitle: item.title });
+}
+
 /**
  * Writes a PDF blueprint to app storage and opens the native share sheet
  * so the learner can save it to Files / Drive / WhatsApp.
@@ -135,24 +136,23 @@ export async function downloadOfflineBlueprint(options: {
 }): Promise<OfflineBlueprint> {
   const { questionnaireId, result, displayName } = options;
   const stamp = new Date().toISOString().slice(0, 10);
-  const fileName = `khetha-${questionnaireId}-blueprint-${stamp}.pdf`;
+  const fileName = sanitizePdfFileName(
+    `khetha-${questionnaireId}-blueprint-${stamp}.pdf`,
+  );
   const html = buildBlueprintHtml(questionnaireId, result, displayName);
 
-  const printed = await Print.printToFileAsync({ html });
-  const dir = FileSystem.documentDirectory;
-  if (!dir) {
-    throw new Error("Device storage is unavailable for offline downloads.");
-  }
-
-  const dest = `${dir}${fileName}`;
-  await FileSystem.copyAsync({ from: printed.uri, to: dest });
+  const saved = await writeAndSharePdf({
+    html,
+    fileName,
+    dialogTitle: "Save your Khetha career blueprint",
+  });
 
   const entry: OfflineBlueprint = {
     id: `${questionnaireId}-${Date.now()}`,
     questionnaireId,
     title: QUESTIONNAIRE_TITLES[questionnaireId],
-    fileName,
-    uri: dest,
+    fileName: saved.fileName,
+    uri: saved.uri,
     savedAt: new Date().toISOString(),
     matchCount: result.matches?.length ?? 0,
   };
@@ -169,14 +169,6 @@ export async function downloadOfflineBlueprint(options: {
     ),
   ].slice(0, 20);
   await writeIndex(next);
-
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(dest, {
-      mimeType: "application/pdf",
-      dialogTitle: "Save your Khetha career blueprint",
-      UTI: "com.adobe.pdf",
-    });
-  }
 
   return entry;
 }

@@ -18,6 +18,7 @@ import { getCareerChoiceStrings } from "../i18n/questionnaires/careerChoice";
 import { getJobFitStrings } from "../i18n/questionnaires/jobFit";
 import { getSubjectChooserStrings } from "../i18n/questionnaires/subjectChooser";
 import { getApsStrings } from "../i18n/questionnaires/aps";
+import { getAssistantStrings } from "../i18n/assistant";
 
 type Getter = (locale: string) => unknown;
 
@@ -36,6 +37,7 @@ const BUNDLES: { name: string; get: Getter }[] = [
   { name: "questionnaires.jobFit", get: getJobFitStrings },
   { name: "questionnaires.subjectChooser", get: getSubjectChooserStrings },
   { name: "questionnaires.aps", get: getApsStrings },
+  { name: "assistant", get: getAssistantStrings },
 ];
 
 function collectEmptyStrings(

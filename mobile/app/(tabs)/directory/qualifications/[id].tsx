@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   Linking,
   Pressable,
@@ -17,6 +18,7 @@ import {
   OfflineStatusBar,
 } from "../../../../components/KhethaBrandBar";
 import { getQualification } from "../../../../services/ncapData";
+import { downloadQualificationCurriculumPdf } from "../../../../services/qualificationCurriculumPdf";
 import { stableUrlId } from "../../../../services/ids";
 import type { Qualification } from "../../../../services/types";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
@@ -140,13 +142,22 @@ export default function QualificationDetailScreen() {
     }
   };
 
-  const onDownload = () => {
-    if (downloadState !== "idle") return;
+  const onDownload = async () => {
+    if (!qualification || downloadState !== "idle") return;
     setDownloadState("saving");
-    setTimeout(() => {
+    try {
+      await downloadQualificationCurriculumPdf(qualification);
       setDownloadState("done");
       setTimeout(() => setDownloadState("idle"), 2800);
-    }, 1100);
+    } catch (err) {
+      setDownloadState("idle");
+      Alert.alert(
+        "Could not download PDF",
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while creating the curriculum PDF.",
+      );
+    }
   };
 
   const providers = qualification?.providers?.length
@@ -661,7 +672,11 @@ export default function QualificationDetailScreen() {
             </Text>
           </Pressable>
 
-          <Pressable style={styles.downloadBtn} onPress={onDownload}>
+          <Pressable
+            style={styles.downloadBtn}
+            onPress={() => void onDownload()}
+            disabled={downloadState === "saving"}
+          >
             <MaterialIcon
               name={
                 downloadState === "done"

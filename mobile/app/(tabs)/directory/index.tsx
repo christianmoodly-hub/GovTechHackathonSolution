@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Linking,
@@ -21,11 +21,13 @@ import {
 } from "../../../components/KhethaBrandBar";
 import { HELPLINE } from "../../../data/staticContent";
 import { useLocale } from "../../../contexts/LocaleContext";
+import { useAssistantActions } from "../../../contexts/AssistantContext";
 import { parseCareerFilterParam } from "../../../data/learningPaths";
 import { getOccupationSummaries } from "../../../services/ncapData";
 import type { OccupationSummary } from "../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { href } from "../../../utils/href";
+import type { ScreenActionSet } from "../../../services/ai/screenActions";
 import {
   careerFilterDefs,
   matchesCareerFilter,
@@ -153,6 +155,95 @@ export default function CareersDirectoryScreen() {
 
   const page = filtered.slice(0, visibleCount);
   const filters = careerFilterDefs();
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const filteredRef = useRef(filtered);
+  filteredRef.current = filtered;
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
+  const gradeRef = useRef(gradeFilter);
+  gradeRef.current = gradeFilter;
+  const mathRef = useRef(mathFilter);
+  mathRef.current = mathFilter;
+
+  const assistantActions = useMemo<ScreenActionSet>(
+    () => ({
+      title: "Careers directory",
+      describe: () => {
+        const q = queryRef.current.trim();
+        const rows = pageRef.current;
+        const grade = gradeRef.current;
+        const math = mathRef.current;
+        return `Careers directory. Showing ${rows.length} of ${filteredRef.current.length} occupations${q ? `, search “${q}”` : ""}. Field filter ${filterRef.current}. Grade ${grade}. Maths ${math}.`;
+      },
+      setQuery,
+      currentQuery: () => queryRef.current,
+      filters: [
+        {
+          name: "field",
+          description: "Career field chip row",
+          options: careerFilterDefs().map((f) => ({ value: f.id, label: f.label })),
+          get current() {
+            return filterRef.current;
+          },
+          apply: (value) => setFilter(value as CareerFilterId),
+        },
+        {
+          name: "grade",
+          description: "Highest education / grade filter",
+          options: [
+            { value: "any", label: "Any grade" },
+            { value: "grade9", label: "Grade 9+" },
+            { value: "grade10", label: "Grade 10+" },
+            { value: "grade11", label: "Grade 11+" },
+            { value: "grade12-dip", label: "Grade 12 diploma" },
+            { value: "grade12-deg", label: "Grade 12 degree" },
+            { value: "n3", label: "N3 / NC(V) 4" },
+          ],
+          get current() {
+            return gradeRef.current;
+          },
+          apply: (value) => setGradeFilter(value as GradeFilterId),
+        },
+        {
+          name: "maths",
+          description: "Mathematics subject filter",
+          options: [
+            { value: "any", label: "Any maths" },
+            { value: "pure", label: "Mathematics" },
+            { value: "lit", label: "Mathematical Literacy" },
+            { value: "tech", label: "Technical Maths" },
+            { value: "none", label: "No maths" },
+          ],
+          get current() {
+            return mathRef.current;
+          },
+          apply: (value) => setMathFilter(value as MathFilterId),
+        },
+      ],
+      results: () =>
+        pageRef.current.map((row) => ({
+          id: row.occupationCode,
+          title: row.title,
+        })),
+      activateResult: (position) => {
+        const item = pageRef.current[position - 1];
+        if (!item) return null;
+        router.push(href(`/directory/occupations/${item.occupationCode}`));
+        return { id: item.occupationCode, title: item.title };
+      },
+      reset: () => {
+        setQuery("");
+        setFilter("all");
+        setGradeFilter("any");
+        setMathFilter("any");
+      },
+    }),
+    [router],
+  );
+  useAssistantActions(assistantActions);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(
     totalPages,

@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "za.gov.ncap.careeradvice",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Khetha uses your location to show nearby public universities and TVET colleges on the DHET register."
+        "NSLocationWhenInUseUsageDescription": "Khetha uses your location to show nearby public universities and TVET colleges on the DHET register.",
+        "NSMicrophoneUsageDescription": "Khetha uses your microphone so you can speak to the career assistant instead of typing."
       }
     },
     "android": {
@@ -31,7 +32,9 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
       ],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
@@ -72,6 +75,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow Khetha to use your location to find nearby DHET learning providers."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Khetha to use your microphone so you can speak to the career assistant."
         }
       ]
     ],

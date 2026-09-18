@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -19,6 +19,7 @@ import {
 } from "./KhethaBrandBar";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocale } from "../contexts/LocaleContext";
+import { useAssistantActions } from "../contexts/AssistantContext";
 import { useVaultStats } from "../hooks/useVaultStats";
 import { getOccupationSummaries, updateProfile } from "../services/ncapData";
 import {
@@ -35,6 +36,7 @@ import type { QuestionnaireDefinition } from "../questionnaires/domains";
 import { matchOccupations, scoreAnswers } from "../questionnaires/scoring";
 import { colors, radii, shadows, spacing, typography } from "../theme";
 import { href } from "../utils/href";
+import type { ScreenActionSet } from "../services/ai/screenActions";
 
 type Props = {
   definition: QuestionnaireDefinition;
@@ -118,11 +120,11 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
     router.replace(href("/questionnaires"));
   };
 
-  const onNext = async () => {
-    if (!question || !selected) return;
+  const advanceWith = async (optionId: string) => {
+    if (!question) return;
 
     if (step < total - 1) {
-      const nextAnswers = { ...answers, [question.id]: selected };
+      const nextAnswers = { ...answers, [question.id]: optionId };
       setAnswers(nextAnswers);
       setStep((value) => value + 1);
       if (user?.uid) {
@@ -146,14 +148,14 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
     try {
       const domainScores = scoreAnswers(definition, {
         ...answers,
-        [question.id]: selected,
+        [question.id]: optionId,
       });
       const { summaries } = await getOccupationSummaries();
       const matches = matchOccupations(domainScores, summaries, 12);
       const nextResult: QuestionnaireResult = {
         questionnaireId: definition.id,
         completedAt: new Date().toISOString(),
-        answers: { ...answers, [question.id]: selected },
+        answers: { ...answers, [question.id]: optionId },
         domainScores,
         matches,
       };
@@ -178,6 +180,93 @@ export function QuestionnaireScreen({ definition, resultKey }: Props) {
       setBusy(false);
     }
   };
+
+  const onNext = async () => {
+    if (!question || !selected) return;
+    await advanceWith(selected);
+  };
+
+  const questionRef = useRef(question);
+  questionRef.current = question;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const advanceWithRef = useRef(advanceWith);
+  advanceWithRef.current = advanceWith;
+  const startFreshRef = useRef(startFresh);
+  startFreshRef.current = startFresh;
+
+  const assistantActions = useMemo<ScreenActionSet>(
+    () => ({
+      title: definition.title,
+      describe: () => {
+        if (phaseRef.current === "intro") {
+          return `${definition.title}. Introduction screen. Say start to begin.`;
+        }
+        const q = questionRef.current;
+        if (!q) return `${definition.title}.`;
+        const options = q.options.map((o, i) => `${i + 1}: ${o.label}`).join(". ");
+        return `${definition.title}, question ${stepRef.current + 1} of ${definition.questions.length}. ${q.prompt} Options: ${options}.`;
+      },
+      currentQuestion: () => {
+        if (phaseRef.current === "intro") {
+          return {
+            prompt: `Start ${definition.title}?`,
+            options: [{ id: "start", label: "Start" }],
+          };
+        }
+        const q = questionRef.current;
+        if (!q) return null;
+        return {
+          prompt: q.prompt,
+          options: q.options.map((o) => ({ id: o.id, label: o.label })),
+        };
+      },
+      results: () => {
+        if (phaseRef.current === "intro") {
+          return [{ id: "start", title: "Start" }];
+        }
+        const q = questionRef.current;
+        if (!q) return [];
+        return q.options.map((o) => ({ id: o.id, title: o.label }));
+      },
+      activateResult: (position) => {
+        if (phaseRef.current === "intro") {
+          if (position !== 1) return null;
+          startFreshRef.current();
+          return { id: "start", title: "Start" };
+        }
+        const q = questionRef.current;
+        const option = q?.options[position - 1];
+        if (!option) return null;
+        void advanceWithRef.current(option.id);
+        return { id: option.id, title: option.label };
+      },
+      answer: (value) => {
+        if (phaseRef.current === "intro") {
+          startFreshRef.current();
+          return { selected: "Start" };
+        }
+        const q = questionRef.current;
+        if (!q) return null;
+        const lowered = value.trim().toLowerCase();
+        const byPos = Number(value);
+        const option =
+          q.options.find(
+            (o) =>
+              o.id.toLowerCase() === lowered ||
+              o.label.toLowerCase() === lowered,
+          ) ??
+          (Number.isFinite(byPos) && byPos >= 1 ? q.options[byPos - 1] : undefined);
+        if (!option) return null;
+        void advanceWithRef.current(option.id);
+        return { selected: option.label };
+      },
+    }),
+    [definition.title, definition.questions.length],
+  );
+  useAssistantActions(assistantActions);
 
   return (
     <Screen>

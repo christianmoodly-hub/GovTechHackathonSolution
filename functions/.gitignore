@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+# Compiled JavaScript
+lib/
+# Local env / secrets (use Firebase secrets for QFRENCY_API_KEY)
+.env
+*.local
+firebase-debug.log
+firebase-debug.*.log

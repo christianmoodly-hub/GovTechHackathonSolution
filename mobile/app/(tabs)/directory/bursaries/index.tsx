@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -18,10 +18,12 @@ import {
   OfflineStatusBar,
 } from "../../../../components/KhethaBrandBar";
 import { useVaultStats } from "../../../../hooks/useVaultStats";
+import { useAssistantActions } from "../../../../contexts/AssistantContext";
 import { getBursaryPage } from "../../../../services/ncapData";
 import type { BursarySummary, PageCursor } from "../../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
+import type { ScreenActionSet } from "../../../../services/ai/screenActions";
 import {
   BURSARY_FIELD_FILTERS,
   bursaryFieldAccent,
@@ -98,6 +100,77 @@ export default function BursariesDirectoryScreen() {
   }, [items, query, fieldFilter, closingFilter]);
 
   const totalCached = Math.max(vault.bursariesCached, items.length);
+
+  const filteredRef = useRef(filtered);
+  filteredRef.current = filtered;
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const fieldRef = useRef(fieldFilter);
+  fieldRef.current = fieldFilter;
+  const closingRef = useRef(closingFilter);
+  closingRef.current = closingFilter;
+
+  const assistantActions = useMemo<ScreenActionSet>(
+    () => ({
+      title: "Bursaries directory",
+      describe: () => {
+        const q = queryRef.current.trim();
+        const rows = filteredRef.current;
+        const field =
+          BURSARY_FIELD_FILTERS.find((f) => f.id === fieldRef.current)?.label ??
+          fieldRef.current;
+        return `Bursaries directory. Showing ${rows.length} listings${q ? `, search “${q}”` : ""}. Field ${field}. Closing filter ${closingRef.current}.`;
+      },
+      setQuery,
+      currentQuery: () => queryRef.current,
+      filters: [
+        {
+          name: "field",
+          description: "Study field",
+          options: BURSARY_FIELD_FILTERS.map((f) => ({
+            value: f.id,
+            label: f.label,
+          })),
+          get current() {
+            return fieldRef.current;
+          },
+          apply: (value) => setFieldFilter(value),
+        },
+        {
+          name: "closing",
+          description: "Closing-date filter",
+          options: [
+            { value: "all", label: "All" },
+            { value: "soon", label: "Closing soon" },
+            { value: "open", label: "Open all year" },
+          ],
+          get current() {
+            return closingRef.current;
+          },
+          apply: (value) => setClosingFilter(value as ClosingFilter),
+        },
+      ],
+      results: () =>
+        filteredRef.current.slice(0, 20).map((row) => ({
+          id: row.id,
+          title: row.title,
+          detail: row.fieldLabel,
+        })),
+      activateResult: (position) => {
+        const item = filteredRef.current[position - 1];
+        if (!item) return null;
+        router.push(href(`/directory/bursaries/${item.id}`));
+        return { id: item.id, title: item.title };
+      },
+      reset: () => {
+        setQuery("");
+        setFieldFilter("all");
+        setClosingFilter("all");
+      },
+    }),
+    [router],
+  );
+  useAssistantActions(assistantActions);
 
   const listHeader = (
     <View style={styles.headerBlock}>

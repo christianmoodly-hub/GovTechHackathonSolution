@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import * as Sharing from "expo-sharing";
 import { Screen } from "../../components/Screen";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import {
@@ -23,6 +22,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useAccessibility } from "../../contexts/AccessibilityContext";
 import { useConnectivity } from "../../contexts/ConnectivityContext";
 import { useLocale } from "../../contexts/LocaleContext";
+import { useAssistantActions } from "../../contexts/AssistantContext";
 import {
   LANGUAGES,
   LEARNER_ROLES,
@@ -30,8 +30,10 @@ import {
 import { useVaultStats } from "../../hooks/useVaultStats";
 import {
   listOfflineBlueprints,
+  openOfflineBlueprint,
   type OfflineBlueprint,
 } from "../../services/offlineBlueprint";
+import { downloadCareerPortfolio } from "../../services/careerPortfolioPdf";
 import {
   prepareOfflinePack,
   syncVault,
@@ -45,6 +47,7 @@ import type {
 } from "../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { href } from "../../utils/href";
+import type { ScreenActionSet } from "../../services/ai/screenActions";
 import {
   domainBadges,
   occupationPathwayHint,
@@ -74,6 +77,7 @@ export default function SavedScreen() {
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [blueprints, setBlueprints] = useState<OfflineBlueprint[]>([]);
   const [vaultBusy, setVaultBusy] = useState(false);
+  const [portfolioBusy, setPortfolioBusy] = useState(false);
   const [personaMode, setPersonaMode] = useState<"learner" | "seeker">(() =>
     profile?.demographics?.role === "work_seeker" ? "seeker" : "learner",
   );
@@ -194,23 +198,35 @@ export default function SavedScreen() {
 
   const openBlueprint = async (item: OfflineBlueprint) => {
     try {
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert(
-          t.blueprintSavedTitle,
-          `${item.fileName} ${t.blueprintSavedBody}`,
-        );
-        return;
-      }
-      await Sharing.shareAsync(item.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: item.title,
-        UTI: "com.adobe.pdf",
-      });
+      await openOfflineBlueprint(item);
     } catch (err) {
       Alert.alert(
         t.couldNotOpenBlueprint,
         err instanceof Error ? err.message : t.downloadAgain,
       );
+    }
+  };
+
+  const onGeneratePortfolio = async () => {
+    if (portfolioBusy) return;
+    setPortfolioBusy(true);
+    try {
+      const saved = await downloadCareerPortfolio({
+        profile,
+        displayName,
+        refId,
+      });
+      Alert.alert(
+        t.portfolioGeneratedTitle,
+        `${saved.fileName} ${t.portfolioGeneratedBody}`,
+      );
+    } catch (err) {
+      Alert.alert(
+        t.couldNotOpenBlueprint,
+        err instanceof Error ? err.message : t.tryAgainShortly,
+      );
+    } finally {
+      setPortfolioBusy(false);
     }
   };
 
@@ -232,6 +248,59 @@ export default function SavedScreen() {
     }
     router.push(href(`/directory/providers/${id}`));
   };
+
+  const favouritesRef = useRef(filteredFavourites);
+  favouritesRef.current = filteredFavourites;
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
+  const displayNameRef = useRef(displayName);
+  displayNameRef.current = displayName;
+  const countsRef = useRef(counts);
+  countsRef.current = counts;
+  const diagnosticsRef = useRef(diagnostics);
+  diagnosticsRef.current = diagnostics;
+
+  const assistantActions = useMemo<ScreenActionSet>(
+    () => ({
+      title: "Saved",
+      describe: () => {
+        const c = countsRef.current;
+        return `Saved screen for ${displayNameRef.current}. ${c.all} saved items, ${diagnosticsRef.current.length} completed questionnaires. Filter ${filterRef.current}. High contrast and language settings are on this screen.`;
+      },
+      filters: [
+        {
+          name: "type",
+          description: "Saved-item type",
+          options: [
+            { value: "all", label: "All" },
+            { value: "occupation", label: "Careers" },
+            { value: "qualification", label: "Qualifications" },
+            { value: "provider", label: "Campuses" },
+            { value: "bursary", label: "Bursaries" },
+          ],
+          get current() {
+            return filterRef.current;
+          },
+          apply: (value) => setFilter(value as VaultFilter),
+        },
+      ],
+      results: () =>
+        favouritesRef.current.slice(0, 20).map((item) => ({
+          id: item.entityId ?? item.url,
+          title: item.title,
+          detail: item.type,
+        })),
+      activateResult: (position) => {
+        const item = favouritesRef.current[position - 1];
+        if (!item) return null;
+        void openFavourite(item);
+        return { id: item.entityId ?? item.url, title: item.title };
+      },
+      reset: () => setFilter("all"),
+    }),
+    [router],
+  );
+  useAssistantActions(assistantActions);
 
   const learnerPersonaLabel = roleLabel.includes("Work")
     ? t.grade11Learner
@@ -639,17 +708,13 @@ export default function SavedScreen() {
           {t.exportBody}
         </Text>
         <Pressable
-          style={styles.exportBtn}
-          onPress={() =>
-            Alert.alert(
-              t.portfolioGeneratedTitle,
-              `DHET-Portfolio-ZA${refId}.pdf ${t.portfolioGeneratedBody}`,
-            )
-          }
+          style={[styles.exportBtn, portfolioBusy && { opacity: 0.7 }]}
+          onPress={() => void onGeneratePortfolio()}
+          disabled={portfolioBusy}
         >
           <MaterialIcon name="picture_as_pdf" size={20} color={colors.text} />
           <Text style={styles.exportBtnText}>
-            {t.generatePortfolio}
+            {portfolioBusy ? t.working : t.generatePortfolio}
           </Text>
         </Pressable>
         <Text style={styles.exportHint}>

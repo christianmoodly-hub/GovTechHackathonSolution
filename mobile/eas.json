@@ -9,6 +9,19 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "APP_ENV": "development",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDGdu31-s3g5B8DLVr87dBFxzderO8uo70",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nationalcreeradviceapp.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nationalcreeradviceapp",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "nationalcreeradviceapp.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1059931069454",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1059931069454:web:fbd7688ef75d973af8f05f",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-LJ93RX72M7",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1059931069454-pl4qegd1fv7nhsmesdftcav6gs2f100h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCmJXeDdVmdLZR_PxibdeqNSeiGCq_1qbU",
+        "EXPO_PUBLIC_ASSISTANT_MODEL": "gemini-3.6-flash"
       }
     },
     "preview": {
@@ -26,7 +39,8 @@
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1059931069454:web:fbd7688ef75d973af8f05f",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-LJ93RX72M7",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1059931069454-pl4qegd1fv7nhsmesdftcav6gs2f100h.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCmJXeDdVmdLZR_PxibdeqNSeiGCq_1qbU"
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCmJXeDdVmdLZR_PxibdeqNSeiGCq_1qbU",
+        "EXPO_PUBLIC_ASSISTANT_MODEL": "gemini-3.6-flash"
       }
     },
     "production": {
@@ -42,7 +56,8 @@
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1059931069454:web:fbd7688ef75d973af8f05f",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-LJ93RX72M7",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1059931069454-pl4qegd1fv7nhsmesdftcav6gs2f100h.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCmJXeDdVmdLZR_PxibdeqNSeiGCq_1qbU"
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCmJXeDdVmdLZR_PxibdeqNSeiGCq_1qbU",
+        "EXPO_PUBLIC_ASSISTANT_MODEL": "gemini-3.6-flash"
       }
     }
   },
