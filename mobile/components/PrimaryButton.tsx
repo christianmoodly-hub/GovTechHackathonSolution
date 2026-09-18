@@ -6,7 +6,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, layout, radii, spacing, typography } from "../theme";
+import { useAccessibility } from "../contexts/AccessibilityContext";
+import { layout, radii, spacing, typography } from "../theme";
 
 type Variant = "primary" | "secondary" | "gold";
 
@@ -27,16 +28,29 @@ export function PrimaryButton({
   variant = "primary",
   style,
 }: Props) {
+  const { colors, highContrast } = useAccessibility();
   const isDisabled = disabled || busy;
+
+  const bg =
+    variant === "primary"
+      ? colors.primary
+      : variant === "gold"
+        ? highContrast
+          ? colors.primary
+          : "#F2A900"
+        : "transparent";
+
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
       style={[
         styles.base,
-        variant === "primary" && styles.primary,
-        variant === "secondary" && styles.secondary,
-        variant === "gold" && styles.gold,
+        {
+          backgroundColor: bg,
+          borderWidth: variant === "secondary" || highContrast ? 2 : 0,
+          borderColor: colors.primary,
+        },
         isDisabled && styles.disabled,
         style,
       ]}
@@ -49,8 +63,14 @@ export function PrimaryButton({
         <Text
           style={[
             styles.label,
-            variant === "secondary" && styles.secondaryLabel,
-            variant === "gold" && styles.goldLabel,
+            {
+              color:
+                variant === "secondary"
+                  ? colors.primary
+                  : variant === "gold" && !highContrast
+                    ? "#0F172A"
+                    : colors.onPrimary,
+            },
           ]}
         >
           {label}
@@ -68,15 +88,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primary: { backgroundColor: colors.primary },
-  secondary: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  gold: { backgroundColor: colors.gold },
   disabled: { opacity: 0.45 },
-  label: { ...typography.labelLg, color: colors.onPrimary },
-  secondaryLabel: { color: colors.primary },
-  goldLabel: { color: colors.text },
+  label: { ...typography.labelLg },
 });

@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import { colors, typography } from "../../theme";
+import { useAccessibility } from "../../contexts/AccessibilityContext";
+import { typography } from "../../theme";
 
 function TabIcon({
   name,
@@ -13,12 +14,14 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const { colors, highContrast } = useAccessibility();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarInactiveTintColor: highContrast ? "#444444" : colors.textMuted,
         tabBarLabelStyle: {
           ...typography.caption,
           fontWeight: "600",
@@ -26,6 +29,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
+          borderTopWidth: highContrast ? 2 : 1,
           height: 64,
           paddingBottom: 8,
           paddingTop: 6,

@@ -21,6 +21,32 @@ export const colors = {
   onPrimary: "#FFFFFF",
 } as const;
 
+export type AppColors = { readonly [K in keyof typeof colors]: string };
+
+/** Black-on-white palette for daylight / low-vision readability (not text zoom). */
+export const highContrastColors: AppColors = {
+  primary: "#000000",
+  primaryDark: "#000000",
+  primaryMuted: "#FFFFFF",
+  secondary: "#000000",
+  secondarySubtle: "#FFFFFF",
+  gold: "#000000",
+  goldHover: "#000000",
+  ochre: "#000000",
+  canvas: "#FFFFFF",
+  card: "#FFFFFF",
+  muted: "#FFFFFF",
+  border: "#000000",
+  borderStrong: "#000000",
+  text: "#000000",
+  textSecondary: "#000000",
+  textMuted: "#000000",
+  success: "#006600",
+  warning: "#7A4F00",
+  error: "#8B0000",
+  onPrimary: "#FFFFFF",
+};
+
 export const spacing = {
   xs: 4,
   sm: 8,

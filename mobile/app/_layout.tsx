@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { AccessibilityProvider } from "../contexts/AccessibilityContext";
 import { colors } from "../theme";
 import { href } from "../utils/href";
 
@@ -90,11 +91,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <StatusBar style="dark" />
-      <AuthGate>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthGate>
-    </AuthProvider>
+    <AccessibilityProvider>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <AuthGate>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthGate>
+      </AuthProvider>
+    </AccessibilityProvider>
   );
 }

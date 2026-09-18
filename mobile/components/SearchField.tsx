@@ -1,6 +1,7 @@
 import { Platform, StyleSheet, TextInput, View, Text } from "react-native";
 import { MaterialIcon } from "./MaterialIcon";
-import { colors, layout, radii, shadows, spacing, typography } from "../theme";
+import { useAccessibility } from "../contexts/AccessibilityContext";
+import { layout, radii, shadows, spacing, typography } from "../theme";
 
 type Props = {
   value: string;
@@ -15,10 +16,24 @@ export function SearchField({
   placeholder = "Search…",
   label,
 }: Props) {
+  const { colors, highContrast } = useAccessibility();
+
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.field}>
+      {label ? (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      ) : null}
+      <View
+        style={[
+          styles.field,
+          {
+            backgroundColor: colors.card,
+            borderWidth: highContrast ? 2 : 0,
+            borderColor: colors.border,
+          },
+          !highContrast && shadows.card,
+        ]}
+      >
         <View style={styles.iconSlot} pointerEvents="none">
           <MaterialIcon name="search" size={20} color={colors.textSecondary} />
         </View>
@@ -26,9 +41,11 @@ export function SearchField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="rgba(111,122,115,0.85)"
+          placeholderTextColor={
+            highContrast ? "#444444" : "rgba(111,122,115,0.85)"
+          }
           underlineColorAndroid="transparent"
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           autoCorrect={false}
           autoCapitalize="none"
           clearButtonMode="while-editing"
@@ -40,17 +57,15 @@ export function SearchField({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm, width: "100%" },
-  label: { ...typography.labelLg, color: colors.text },
+  label: { ...typography.labelLg },
   field: {
     minHeight: layout.minTouch,
     height: 48,
-    backgroundColor: colors.card,
     borderRadius: radii.xl,
     paddingLeft: spacing.md,
     paddingRight: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    ...shadows.card,
   },
   iconSlot: {
     width: 24,
@@ -67,7 +82,6 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === "android" ? 10 : 12,
     fontSize: 15,
     fontWeight: "400",
-    color: colors.text,
     ...(Platform.OS === "android" ? { includeFontPadding: false } : null),
   },
 });

@@ -18,6 +18,7 @@ import {
 } from "../../components/KhethaBrandBar";
 import { FavouriteToggle } from "../../components/FavouriteToggle";
 import { useAuth } from "../../contexts/AuthContext";
+import { useAccessibility } from "../../contexts/AccessibilityContext";
 import {
   LANGUAGES,
   LEARNER_ROLES,
@@ -51,8 +52,9 @@ type VaultFilter = "all" | FavouriteType;
 export default function SavedScreen() {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
+  const { highContrast, setHighContrast, textScale, zoomLabel } =
+    useAccessibility();
   const [filter, setFilter] = useState<VaultFilter>("all");
-  const [highContrast, setHighContrast] = useState(true);
   const [personaMode, setPersonaMode] = useState<"learner" | "seeker">(() =>
     profile?.demographics?.role === "work_seeker" ? "seeker" : "learner",
   );
@@ -230,7 +232,9 @@ export default function SavedScreen() {
               <MaterialIcon name="tune" size={12} color={colors.ochre} />{" "}
               Assistive View
             </Text>
-            <Text style={styles.infoBadgeValue}>Dynamic Text +115%</Text>
+            <Text style={styles.infoBadgeValue}>
+              {zoomLabel} · {Math.round(textScale * 100)}%
+            </Text>
           </View>
         </View>
 
@@ -240,7 +244,7 @@ export default function SavedScreen() {
             <View>
               <Text style={styles.contrastTitle}>High Contrast Palette</Text>
               <Text style={styles.contrastSub}>
-                Enhances daylight readability
+                Black-on-white colours (same as the contrast icon in the header)
               </Text>
             </View>
           </View>
