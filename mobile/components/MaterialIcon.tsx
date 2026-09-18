@@ -83,6 +83,8 @@ const MATERIAL_MAP: Record<string, MaterialIconName> = {
   cloud_sync: "cloud-sync",
   offline_pin: "offline-pin",
   chevron_left: "chevron-left",
+  remove: "remove",
+  add: "add",
   translate: "translate",
   location_on: "location-on",
   groups: "groups",

@@ -31,6 +31,7 @@ import type {
 } from "../../../../services/types";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { href } from "../../../../utils/href";
+import { parseApsFilterParam } from "../../../../utils/aps";
 import {
   APS_OPTIONS,
   matchesApsFilter,
@@ -53,7 +54,7 @@ const PAGE_SIZE = 20;
 
 export default function QualificationsDirectoryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ type?: string | string[] }>();
+  const params = useLocalSearchParams<{ type?: string | string[]; aps?: string | string[] }>();
   const [items, setItems] = useState<QualificationSummary[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
   const [query, setQuery] = useState("");
@@ -70,6 +71,11 @@ export default function QualificationsDirectoryScreen() {
     const fromParam = parseQualTypeParam(params.type);
     if (fromParam) setTypeFilter(fromParam);
   }, [params.type]);
+
+  useEffect(() => {
+    const fromAps = parseApsFilterParam(params.aps);
+    if (fromAps) setApsFilter(fromAps);
+  }, [params.aps]);
 
   const load = useCallback(
     async (opts?: { refresh?: boolean; next?: PageCursor | null }) => {

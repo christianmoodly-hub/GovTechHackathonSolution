@@ -486,12 +486,25 @@ export default function SubjectChooserRoute() {
 
           <Pressable
             style={styles.secondaryBtn}
-            onPress={() =>
-              Alert.alert(
-                "APS Calculator",
-                "APS simulation will use your subject package in a later release. Your package is saved with unlocked careers.",
-              )
-            }
+            onPress={() => {
+              if (electives.length !== MAX_ELECTIVES) {
+                Alert.alert(
+                  "Choose 3 electives",
+                  "Select exactly 3 elective subjects before calculating APS.",
+                );
+                return;
+              }
+              const qs = new URLSearchParams({
+                grade,
+                homeLanguage,
+                falLanguage,
+                math,
+                electives: electives.join(","),
+              });
+              router.push(
+                href(`/questionnaires/aps-calculator?${qs.toString()}`),
+              );
+            }}
           >
             <MaterialIcon name="calculate" size={18} color={colors.primary} />
             <Text style={styles.secondaryBtnText}>

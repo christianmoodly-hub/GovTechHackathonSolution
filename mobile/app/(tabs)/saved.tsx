@@ -738,6 +738,9 @@ function DiagnosticCard({
           <MaterialIcon name="lock_open" size={16} color={colors.primary} />
           <Text style={[styles.demandText, { color: colors.primary }]}>
             {result.matches.length} Career Pathways Unlocked
+            {result.answers?.apsTotal
+              ? ` · APS ${result.answers.apsTotal}`
+              : ""}
           </Text>
         </View>
         <Pressable style={styles.simulateBtn} onPress={onOpen}>

@@ -35,6 +35,8 @@ export default function QuestionnaireResultsScreen() {
     topTwo.length >= 2
       ? `${topTwo[0].label} & ${topTwo[1].label}`
       : topTwo[0]?.label ?? "Realistic & Investigative";
+  const savedAps = result?.answers?.apsTotal;
+  const savedApsBand = result?.answers?.apsBand;
 
   const displayName =
     profile?.demographics?.fullName?.trim() ||
@@ -176,6 +178,38 @@ export default function QuestionnaireResultsScreen() {
           <Text style={styles.freeText}>FREE</Text>
         </View>
       </Pressable>
+
+      {key === "subjectChooser" ? (
+        <Pressable
+          style={styles.downloadCard}
+          onPress={() => router.push(href("/questionnaires/aps-calculator"))}
+          accessibilityRole="button"
+          accessibilityLabel="Open APS calculator"
+        >
+          <View style={styles.downloadLeft}>
+            <View style={styles.downloadIcon}>
+              <MaterialIcon name="calculate" size={24} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.downloadTitle}>
+                {savedAps
+                  ? `Indicative APS ${savedAps}`
+                  : "Calculate Admission Point Score"}
+              </Text>
+              <Text style={styles.downloadMeta}>
+                {savedApsBand
+                  ? `Saved band APS ${savedApsBand}+ · Tap to adjust levels`
+                  : "Use your subject package with NSC levels 1–7"}
+              </Text>
+            </View>
+          </View>
+          <MaterialIcon
+            name="chevron_right"
+            size={20}
+            color={colors.textSecondary}
+          />
+        </Pressable>
+      ) : null}
 
       <MatchResultsList
         matches={result.matches}
